@@ -1,0 +1,5387 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-fazenda",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -56272,
+        42128
+      ],
+      "id": "ee506115-0a3f-4947-847b-25d31a475e61",
+      "name": "Webhook",
+      "webhookId": "077d99eb-33e5-4014-907a-7e73b2291870"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "operation": "get",
+        "tableId": "usuarios_whatsapp",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "telefone",
+              "keyValue": "={{ $json.body.data.key.remoteJid.split('@')[0] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -56016,
+        42128
+      ],
+      "id": "16d80e95-5335-4e7f-976d-916cee5fa865",
+      "name": "Identificar Usuario",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const usuario = $('Identificar Usuario').first().json;\nconst webhook = $('Webhook').first().json;\nconst aiItem = $input.first().json;\n\nlet parsed;\n\ntry {\n    // 1. Pega a string que está dentro da chave 'output'\n    let rawText = aiItem.output || '';\n    \n    // Se por acaso vier de outra forma, tenta o objeto completo\n    if (!rawText && typeof aiItem === 'string') {\n        rawText = aiItem;\n    }\n\n    // 2. Limpa qualquer resquício de Markdown ou quebra de linha que a OpenAI possa colocar\n    let cleanText = String(rawText)\n        .replace(/```json/gi, '')\n        .replace(/```/g, '')\n        .trim();\n\n    // 3. Captura o que está entre as chaves { ... }\n    const match = cleanText.match(/\\{[\\s\\S]*\\}/);\n    let jsonString = match ? match[0] : cleanText;\n\n    // 4. Transforma a string em um objeto JavaScript real\n    parsed = JSON.parse(jsonString);\n\n} catch (e) {\n    // Fallback de segurança caso o JSON venha corrompido\n    parsed = { \n        intencao: 'outro', \n        entidades: {}, \n        resposta_sugerida: 'Não foi possível processar o formato da resposta da IA.' \n    };\n}\n\n// Mapeamento seguro da mensagem vinda do webhook do WhatsApp\nlet mensagemOriginal = '';\nif (webhook.body?.data?.message) {\n    const m = webhook.body.data.message;\n    mensagemOriginal = m.conversation || m.extendedTextMessage?.text || m.text || '';\n}\n\n// Normaliza a intencao contra o enum valido, corrigindo erros comuns da IA\nconst INTENCOES_VALIDAS = ['registrar_parto','registrar_leite','registrar_cobertura',\n    'consultar_vaca','consultar_relatorio','cadastrar_vaca','atualizar_registro','atualizar_vaca','deletar_registro','diagnosticar_prenhez',\n    'registrar_financeiro','consultar_financeiro','atualizar_financeiro','deletar_financeiro'];\nconst ALIASES_INTENCAO = {\n    'consult_vaca': 'consultar_vaca',\n    'consultar_relatório': 'consultar_relatorio',\n    'registrar_cobertura ': 'registrar_cobertura'\n};\nfunction normalizarIntencao(raw) {\n    if (!raw) return 'outro';\n    let v = String(raw).trim().toLowerCase();\n    if (INTENCOES_VALIDAS.includes(v)) return v;\n    if (ALIASES_INTENCAO[v]) return ALIASES_INTENCAO[v];\n    // tenta achar a intencao valida mais proxima por prefixo/substring (nunca cai em registrar_* ou deletar_* por seguranca)\n    const candidata = INTENCOES_VALIDAS.find(i => i.startsWith(v) || v.startsWith(i));\n    if (candidata && !candidata.startsWith('deletar')) return candidata;\n    return 'outro';\n}\n\n// 5. Retorno limpo e estruturado para o seu banco/Supabase\nreturn [{\n    json: {\n        intencao: normalizarIntencao(parsed.intencao),\n        entidades: {\n            numero_vaca: parsed.entidades?.numero_vaca ?? null,\n            data: parsed.entidades?.data ?? null,\n            litros: parsed.entidades?.litros ?? null,\n            periodo: parsed.entidades?.periodo ?? null,\n            sexo_bezerro: parsed.entidades?.sexo_bezerro ?? null,\n            touro_semen: parsed.entidades?.touro_semen ?? null,\n            observacao: parsed.entidades?.observacao ?? null,\n            tipo_relatorio: parsed.entidades?.tipo_relatorio ?? null,\n            periodo_dias: parsed.entidades?.periodo_dias ?? null,\n            resultado_diagnostico: parsed.entidades?.resultado_diagnostico ?? null,\n            numero_mae: parsed.entidades?.numero_mae ?? null,\n            status_produtivo: parsed.entidades?.status_produtivo ?? null,\n            status_reprodutivo: parsed.entidades?.status_reprodutivo ?? null,\n            tipo_financeiro: parsed.entidades?.tipo_financeiro ?? null,\n            categoria: parsed.entidades?.categoria ?? null,\n            valor: parsed.entidades?.valor ?? null\n        },\n        resposta_sugerida: parsed.resposta_sugerida || '',\n        propriedade_id: usuario?.propriedade_id || null,\n        telefone: usuario?.telefone || null,\n        mensagem_original: mensagemOriginal || 'vaca 10 produziu 12 litros'\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -52528,
+        42016
+      ],
+      "id": "6f0ebf33-9226-4f6f-8db3-138cfe657d1f",
+      "name": "Parsear Resposta IA"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intencao }}",
+                    "rightValue": "registrar_leite",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "5aacf917-1ba4-4003-a084-cf0ec2c68015"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "registrar_leite"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "bba0bb31-1d53-4af3-8418-80df83acf7a3",
+                    "leftValue": "={{ $json.intencao }}",
+                    "rightValue": "registrar_parto",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "registrar_parto"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "edf82241-746b-45b2-9892-5dce0e1304dc",
+                    "leftValue": "={{ $json.intencao }}",
+                    "rightValue": "registrar_cobertura",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "registrar_cobertura"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c73761b7-3207-43dc-a81a-8792d18d4d2e",
+                    "leftValue": "={{$json.intencao}}",
+                    "rightValue": "consultar_vaca",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "=consultar_vaca"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b50bd252-1fec-4080-97e7-fbe05c034ae0",
+                    "leftValue": "={{$json.intencao}}",
+                    "rightValue": "consultar_relatorio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "consultar_relatorio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b86d18a0-5503-496d-ab0d-998bac3586c7",
+                    "leftValue": "={{$json.intencao}}",
+                    "rightValue": "cadastrar_vaca",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cadastrar_vaca"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "8f3f80ce-aaa5-41fd-8a0b-d2595f3fc833",
+                    "leftValue": "={{ $json.intencao }}",
+                    "rightValue": "atualizar_registro",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "atualizar_registro"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7f8505dd-ca0b-451a-8f30-1ee1dbe51d1b",
+                    "leftValue": "={{ $json.intencao }}",
+                    "rightValue": "deletar_registro",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "deletar_registro"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7d721b3e-ce20-472a-b61f-096635377779",
+                    "leftValue": "={{ $json.intencao }}",
+                    "rightValue": "diagnosticar_prenhez",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "diagnosticar_prenhez"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7fc8407c-992d-4580-92da-a2febbb637c4",
+                    "leftValue": "={{ $json.intencao }}",
+                    "rightValue": "atualizar_vaca",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "atualizar_vaca"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "07758a82-4f3f-4665-8386-00a6aa42a8f7",
+                    "leftValue": "={{ $json.intencao }}",
+                    "rightValue": "registrar_financeiro",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "registrar_financeiro"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "76afdf55-401d-4db2-a325-a60f4aafc994",
+                    "leftValue": "={{ $json.intencao }}",
+                    "rightValue": "consultar_financeiro",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "consultar_financeiro"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b364245c-6626-4b9f-a14c-026fb1709bca",
+                    "leftValue": "={{ $json.intencao }}",
+                    "rightValue": "atualizar_financeiro",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "atualizar_financeiro"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "8b38689e-6e49-4e61-8f3f-b44f374934e2",
+                    "leftValue": "={{ $json.intencao }}",
+                    "rightValue": "deletar_financeiro",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "deletar_financeiro"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -52272,
+        41888
+      ],
+      "id": "3f5d4c02-ec4f-4a59-b588-1b4acb524c24",
+      "name": "Rotear Intencao"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "vacas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "numero_identificacao",
+              "keyValue": "={{ $json.entidades.numero_vaca }}"
+            },
+            {
+              "keyName": "propriedade_id",
+              "keyValue": "={{ $json.propriedade_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51568,
+        41904
+      ],
+      "id": "eadd7899-2cce-422b-956d-d95bbcc928d3",
+      "name": "Buscar Vaca (Leite)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "controle_leite",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "vaca_id",
+              "fieldValue": "={{ $('Buscar Vaca (Leite)').item.json.id }}"
+            },
+            {
+              "fieldId": "parto_id",
+              "fieldValue": "={{ $('Buscar Parto Ativo (Leite)').item.json.id }}"
+            },
+            {
+              "fieldId": "litros",
+              "fieldValue": "={{ $('Rotear Intencao').item.json.entidades.litros }}"
+            },
+            {
+              "fieldId": "data_controle",
+              "fieldValue": "={{ $('Rotear Intencao').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51136,
+        41904
+      ],
+      "id": "302e37f3-6dae-429b-b203-89dfa591b354",
+      "name": "Inserir Controle Leite",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "Assis Rubens",
+        "remoteJid": "558588503418",
+        "messageText": "={{ $json.resposta_sugerida }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        -46576,
+        41984
+      ],
+      "id": "39f1158f-31ab-4706-91a1-d0233cd80b28",
+      "name": "Enviar texto",
+      "credentials": {
+        "evolutionApi": {
+          "id": "4KHj6VZl0o9j7a3Y",
+          "name": "Evolution Assis"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Buffer - Ler Final').item.json.data }}",
+        "options": {
+          "systemMessage": "=Você é o assistente de um agente de WhatsApp para gestão zootécnica de gado leiteiro (metodologia PAEZ/Balde Cheio). Sua tarefa é interpretar a mensagem do produtor rural e retornar APENAS um JSON válido, sem texto adicional, sem markdown, seguindo este formato:{\"intencao\": \"registrar_parto | registrar_leite | registrar_cobertura | consultar_vaca | consultar_relatorio | cadastrar_vaca | atualizar_registro | atualizar_vaca | deletar_registro | diagnosticar_prenhez | registrar_financeiro | consultar_financeiro | atualizar_financeiro | deletar_financeiro | outro\", \"entidades\": {\"numero_vaca\": string|null, \"data\": \"YYYY-MM-DD\"|null, \"litros\": number|null, \"periodo\": \"manha|tarde|dia_inteiro\"|null, \"sexo_bezerro\": \"macho|femea|natimorto\"|null, \"touro_semen\": string|null, \"observacao\": string|null, \"tipo_relatorio\": \"leite | reprodutivo | cadastro | geral\"|null, \"periodo_dias\": number|null, \"resultado_diagnostico\": \"positivo | negativo | pendente\"|null, \"numero_mae\": string|null, \"status_produtivo\": \"novilha | lactacao | seca\"|null, \"status_reprodutivo\": \"vazia | prenhe | vazia_em_servico\"|null, \"tipo_financeiro\": \"despesa | receita\"|null, \"categoria\": string|null, \"valor\": number|null}, \"resposta_sugerida\": string}Regras: use a data de hoje quando o produtor disser \"hoje\"; converta datas relativas para YYYY-MM-DD; se a mensagem não se encaixar em nenhuma intenção, use \"outro\" e explique em resposta_sugerida; nunca invente números de vaca ou valores que não estejam na mensagem.Exemplos:Mensagem: \"vaca 12 pariu hoje, bezerra\" -> {\"intencao\":\"registrar_parto\",\"entidades\":{\"numero_vaca\":\"12\",\"data\":\"<hoje>\",\"sexo_bezerro\":\"femea\"},\"resposta_sugerida\":\"Parto da vaca 12 registrado (bezerra).\"}Mensagem: \"leite vaca 45: 14 litros manhã\" -> {\"intencao\":\"registrar_leite\",\"entidades\":{\"numero_vaca\":\"45\",\"litros\":14,\"periodo\":\"manha\"},\"resposta_sugerida\":\"Registrado 14L da vaca 45 (manhã).\"}Mensagem: \"quais vacas estão secando esse mês?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{},\"resposta_sugerida\":\"Buscando vacas com previsão de secagem neste mês.\"} Regras adicionais para atualizar_registro e deletar_registro: use \"atualizar_registro\" quando o produtor quiser corrigir um registro de leite já lançado (ex: \"corrige o leite da vaca 10 de ontem para 15 litros\"), preenchendo numero_vaca, data, periodo e litros com o valor NOVO. use \"deletar_registro\" quando o produtor quiser apagar um registro de leite já lançado (ex: \"apaga o leite da vaca 10 de ontem\" ou \"lancei errado, remove esse registro\"), preenchendo numero_vaca, data e periodo. Nunca execute a exclusão ou atualização você mesmo: apenas identifique a intenção e as entidades; a confirmação e execução são feitas por outra etapa do sistema. Exemplos adicionais: Mensagem: \"corrige a vaca 22 de hoje pra 18 litros de manha\" -> {\"intencao\":\"atualizar_registro\",\"entidades\":{\"numero_vaca\":\"22\",\"data\":\"<hoje>\",\"litros\":18,\"periodo\":\"manha\"},\"resposta_sugerida\":\"Atualizando registro da vaca 22.\"} Mensagem: \"apaga o leite da vaca 8 de ontem a tarde\" -> {\"intencao\":\"deletar_registro\",\"entidades\":{\"numero_vaca\":\"8\",\"data\":\"<ontem>\",\"periodo\":\"tarde\"},\"resposta_sugerida\":\"Localizando o registro da vaca 8 para exclusão.\"} Regra para tipo_relatorio: quando a intencao for consultar_vaca ou consultar_relatorio, defina tipo_relatorio=\"reprodutivo\" se a pergunta for sobre cobertura, prenhez, parto, secagem ou IEP; defina tipo_relatorio=\"leite\" se for sobre produção/litros; caso a pergunta seja genérica (ex: status geral da vaca), use \"geral\". Exemplo cobertura: Mensagem: \"cobri a vaca 15 hoje com sêmen do touro Tarzan\" -> {\"intencao\":\"registrar_cobertura\",\"entidades\":{\"numero_vaca\":\"15\",\"data\":\"<hoje>\",\"touro_semen\":\"Tarzan\"},\"resposta_sugerida\":\"Cobertura da vaca 15 registrada.\"} Exemplo relatório reprodutivo: Mensagem: \"quais vacas estão secando esse mês?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando vacas com previsão de secagem neste mês.\"} Exemplo relatório reprodutivo individual: Mensagem: \"quando a vaca 10 deve parir?\" -> {\"intencao\":\"consultar_vaca\",\"entidades\":{\"numero_vaca\":\"10\",\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando previsão de parto da vaca 10.\"} Regra adicional: use tipo_relatorio=\"cadastro\" quando a pergunta for sobre quantidade/contagem de vacas cadastradas no rebanho (ex: \"quantas vacas eu tenho?\", \"quantas vacas cadastradas?\"). Exemplo: Mensagem: \"quantas vacas cadastradas?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"cadastro\"},\"resposta_sugerida\":\"Buscando o total de vacas cadastradas.\"} IMPORTANTE: o campo intencao deve ser copiado EXATAMENTE e por extenso como aparece na lista de opcoes acima (ex: \"consultar_vaca\", nunca \"consult_vaca\" ou qualquer forma abreviada). Nao invente, abrevie ou modifique os nomes das intencoes. Regra para periodo_dias: em relatorios gerais de leite (sem numero de vaca), se o produtor pedir historico/ultimos dias, defina periodo_dias com a quantidade de dias (ex: \"ultima semana\"=7, \"esse mes\"=30, \"ultimos 3 dias\"=3). Se ele so perguntar \"producao de hoje\" ou nao especificar periodo, deixe periodo_dias=null (mostra so hoje). Exemplo: Mensagem: \"quero ver o historico de producao\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"leite\",\"periodo_dias\":7},\"resposta_sugerida\":\"Buscando o historico de producao dos ultimos 7 dias.\"} Regra critica: se um numero de vaca aparecer na mensagem (ex: \"vaca 1\", \"vaca numero 5\"), SEMPRE preencha numero_vaca com esse numero, mesmo que a palavra \"relatorio\" tambem apareca na frase. A ausencia de numero_vaca deve ser reservada apenas para perguntas genuinamente sobre o rebanho inteiro, sem nenhuma vaca especifica mencionada. Exemplo: Mensagem: \"relatorio reprodutivo da vaca 1\" -> {\"intencao\":\"consultar_vaca\",\"entidades\":{\"numero_vaca\":\"1\",\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando relatorio reprodutivo da vaca 1.\"} Regra para diagnosticar_prenhez: use essa intencao quando o produtor quiser informar o RESULTADO de um diagnostico de prenhez de uma cobertura ja registrada (toque, ultrassom, etc), preenchendo numero_vaca e resultado_diagnostico (\"positivo\" para prenha/positiva/confirmada, \"negativo\" para vazia/negativa/nao prenha). NAO confunda com registrar_cobertura (que cria uma cobertura nova). Exemplos: Mensagem: \"registrar prenhez vaca 4 hoje\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"4\",\"resultado_diagnostico\":\"positivo\"},\"resposta_sugerida\":\"Registrando diagnostico positivo da vaca 4.\"} Mensagem: \"vaca 7 negativa no toque\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"7\",\"resultado_diagnostico\":\"negativo\"},\"resposta_sugerida\":\"Registrando diagnostico negativo da vaca 7.\"} Regra de correcao: se o produtor pedir para corrigir/voltar um diagnostico ja registrado (ex: \"corrige o diagnostico da vaca 4 pra pendente\", \"volta a vaca 4 pra pendente\"), use diagnosticar_prenhez com resultado_diagnostico=\"pendente\". Exemplo: Mensagem: \"corrige o diagnostico da vaca 4 pra pendente\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"4\",\"resultado_diagnostico\":\"pendente\"},\"resposta_sugerida\":\"Corrigindo diagnostico da vaca 4 para pendente.\"} Regra para cadastrar_vaca: use numero_vaca para o numero da vaca NOVA sendo cadastrada. Se o produtor mencionar a mae (ex: \"filha da vaca 5\", \"cria da vaca 12\"), preencha numero_mae com o numero da mae; caso contrario deixe numero_mae null (cadastro de vaca sem mae rastreada, ex: comprada). Exemplos: Mensagem: \"cadastra a vaca 30, filha da vaca 5\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":\"30\",\"numero_mae\":\"5\"},\"resposta_sugerida\":\"Cadastrando a vaca 30.\"} Mensagem: \"cadastra a vaca 31\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":\"31\",\"numero_mae\":null},\"resposta_sugerida\":\"Cadastrando a vaca 31.\"} Regra para numero_vaca vazio no cadastro: se o produtor pedir para cadastrar uma vaca SEM informar numero (ex: \"cadastre uma vaca nova\"), deixe numero_vaca null - o sistema gera o proximo numero disponivel automaticamente. Regra para atualizar_vaca: use essa intencao quando o produtor quiser corrigir o status produtivo/reprodutivo de uma vaca JA cadastrada (nao um lancamento de leite - isso e atualizar_registro), preenchendo numero_vaca e status_produtivo e/ou status_reprodutivo com os valores exatos do enum. Exemplo: Mensagem: \"cadastre uma vaca nova\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":null},\"resposta_sugerida\":\"Cadastrando nova vaca com numero automatico.\"} Exemplo: Mensagem: \"corrige o status da vaca 7 pra seca\" -> {\"intencao\":\"atualizar_vaca\",\"entidades\":{\"numero_vaca\":\"7\",\"status_produtivo\":\"seca\"},\"resposta_sugerida\":\"Atualizando status da vaca 7 para seca.\"} Regras do modulo financeiro: use registrar_financeiro quando o produtor lancar um gasto ou uma venda/recebimento (preencha tipo_financeiro='despesa' ou 'receita', valor, categoria e data). Se o produtor nao informar a categoria, INFIRA uma categoria curta e padronizada em minusculas e sem acentuacao inconsistente a partir do contexto da mensagem (ex: racao, veterinario, combustivel, mao de obra, manutencao, venda de leite, venda de animal, insumos, outros). Sempre normalize a categoria pra minusculo e no mesmo padrao mesmo quando o produtor informar. Use consultar_financeiro para pedidos de relatorio/balanco financeiro (preencha tipo_financeiro apenas se o produtor pedir so despesas ou so receitas, senao deixe null; preencha periodo_dias quando pedir historico especifico, igual as regras de relatorio de leite). Use atualizar_financeiro para corrigir um lancamento ja feito (preencha categoria e/ou data para localizar o lancamento, e valor com o valor NOVO). Use deletar_financeiro para apagar um lancamento ja feito (preencha categoria e/ou data para localizar; a exclusao So acontece apos confirmacao, nao execute voce mesmo). Exemplos: Mensagem: \"gastei 200 reais com racao hoje\" -> {\"intencao\":\"registrar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\",\"valor\":200,\"categoria\":\"racao\",\"data\":\"<hoje>\"},\"resposta_sugerida\":\"Lancando despesa de racao.\"} Mensagem: \"vendi 500 reais de leite pro laticinio\" -> {\"intencao\":\"registrar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"receita\",\"valor\":500,\"categoria\":\"venda de leite\"},\"resposta_sugerida\":\"Lancando receita de venda de leite.\"} Mensagem: \"quanto gastei esse mes\" -> {\"intencao\":\"consultar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\"},\"resposta_sugerida\":\"Buscando as despesas do periodo.\"} Mensagem: \"relatorio financeiro\" -> {\"intencao\":\"consultar_financeiro\",\"entidades\":{},\"resposta_sugerida\":\"Buscando o relatorio financeiro.\"} Mensagem: \"corrige a despesa de racao de hoje pra 250\" -> {\"intencao\":\"atualizar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\",\"categoria\":\"racao\",\"data\":\"<hoje>\",\"valor\":250},\"resposta_sugerida\":\"Corrigindo o lancamento de racao.\"} Mensagem: \"apaga o lancamento de racao de hoje\" -> {\"intencao\":\"deletar_financeiro\",\"entidades\":{\"categoria\":\"racao\",\"data\":\"<hoje>\"},\"resposta_sugerida\":\"Localizando o lancamento de racao para exclusao.\"}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -52928,
+        42016
+      ],
+      "id": "0ad13f20-00d2-4911-bb46-738a21da7fdb",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -52992,
+        42304
+      ],
+      "id": "f04f4091-c139-4eed-ac7e-28a3a70a836b",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "kmMGxTfDic8jahYF",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Identificar Usuario').item.json.telefone }}",
+        "contextWindowLength": 15
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.6,
+      "position": [
+        -52736,
+        42304
+      ],
+      "id": "a3f1a0dc-9343-47bb-b6a4-aa02b66ef631",
+      "name": "Redis Chat Memory",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f64a9ea1-9975-4882-aaaa-f673f829d20d",
+              "name": "telefone",
+              "value": "={{ $('Identificar Usuario').item.json.telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "7b546cc6-f466-4a5f-af72-890172ece9b2",
+              "name": "mensagemAtual",
+              "value": "={{ $json.textoTranscrito || $('Webhook').item.json.body.data.message.conversation }}",
+              "type": "string"
+            },
+            {
+              "id": "c75114a9-0ca5-4501-b09b-a5f3dec53a1c",
+              "name": "timestamp",
+              "value": "={{  Date.now() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -55776,
+        42512
+      ],
+      "id": "2c8a20f8-66bd-4f41-806e-081bd5531966",
+      "name": "Preparar Dados Buffer"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "data",
+        "key": "=buffer:{{  $('Preparar Dados Buffer').item.json.telefone }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -55568,
+        42512
+      ],
+      "id": "94f47726-4c6b-49f2-9bcc-10e455ed0b75",
+      "name": "Buffer - Ler Existente",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const anterior = $input.first().json.data || '';\nconst atual = $('Preparar Dados Buffer').first().json.mensagemAtual;\nconst novoBuffer = anterior ? (anterior + '\\n' + atual) : atual;\nreturn [{ json: { novoBuffer } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -55360,
+        42512
+      ],
+      "id": "e7f216a8-284d-42fb-bc86-d0039141e070",
+      "name": "Concatenar Mensagem"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=buffer:{{  $('Preparar Dados Buffer').item.json.telefone }}",
+        "value": "={{  $json.novoBuffer }}",
+        "expire": true,
+        "ttl": 120
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -55152,
+        42512
+      ],
+      "id": "e822d07b-395b-4140-8cd0-a1a87de1459d",
+      "name": "Buffer - Salvar",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=last_ts:{{  $('Preparar Dados Buffer').item.json.telefone }}",
+        "value": "={{  $('Preparar Dados Buffer').item.json.timestamp }}",
+        "expire": true,
+        "ttl": 120
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -54944,
+        42512
+      ],
+      "id": "cb3738fd-5989-4c5a-93b1-a37f82629e17",
+      "name": "Timestamp - Salvar",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -54736,
+        42512
+      ],
+      "id": "01a28d3d-80cc-4931-8963-728c07566076",
+      "name": "Aguardar Mensagens",
+      "webhookId": "4ec44f8b-138d-4807-86bd-bcabbd21106e"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "data",
+        "key": "=last_ts:{{  $('Preparar Dados Buffer').item.json.telefone }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -54528,
+        42512
+      ],
+      "id": "58694172-d925-41a7-ab4e-d05f179f479b",
+      "name": "Timestamp - Ler",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "140d94c5-a0ad-4dc8-93bb-60e6a3af1feb",
+              "leftValue": "={{  $json.data }}",
+              "rightValue": "={{  $('Preparar Dados Buffer').item.json.timestamp }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -54320,
+        42512
+      ],
+      "id": "8cdd8d1d-fe51-4141-8bbc-6481a3ded257",
+      "name": "É a Última Mensagem?"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "data",
+        "key": "=buffer:{{  $('Preparar Dados Buffer').item.json.telefone }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -54144,
+        42144
+      ],
+      "id": "94871f50-3b9e-4d96-ae5d-106f3218787b",
+      "name": "Buffer - Ler Final",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "24c0bd03-3a72-4400-8102-cb81f6fecbc4",
+              "name": "telefone",
+              "value": "={{  $('Preparar Dados Buffer').item.json.telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "a90daff0-6158-4c9e-b6ad-310bdf3e5ae7",
+              "name": "mensagem_compilada",
+              "value": "={{  $json.data }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -53872,
+        42144
+      ],
+      "id": "a2dd87d4-85a1-44fa-aae8-c171c4bbe3be",
+      "name": "Preparar Entrada Agente"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -54112,
+        42608
+      ],
+      "id": "0d15281a-e121-4122-83a5-fd251d75e341",
+      "name": "Não é a última - Parar"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "=buffer:{{  $('Preparar Dados Buffer').item.json.telefone }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -53616,
+        42304
+      ],
+      "id": "058fd0aa-f7c9-4e3c-b68b-4a0ab5dfa8d3",
+      "name": "Buffer - Limpar",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "vacas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "propriedade_id",
+              "keyValue": "={{ $json.propriedade_id }}"
+            },
+            {
+              "keyName": "numero_identificacao",
+              "keyValue": "={{ $json.entidades.numero_vaca }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -49200,
+        44016
+      ],
+      "id": "39d883da-6177-413b-ab23-89c5f9552a55",
+      "name": "Buscar Vaca (Relatório)",
+      "alwaysOutputData": true,
+      "retryOnFail": false,
+      "executeOnce": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "controle_leite",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vaca_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Buscar Vaca (Relatório)').item.json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -48288,
+        43664
+      ],
+      "id": "30ac514a-5b77-497e-baa0-bffa6ad874ca",
+      "name": "Buscar Histórico Leite",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst vaca = $('Buscar Vaca (Relatório)').first().json;\nlet registros = dedupeById($input.all().map(i => i.json));\nregistros.sort((a, b) => new Date(b.data_controle) - new Date(a.data_controle));\nregistros = registros.slice(0, 10);\nlet texto = `Relatório da vaca ${vaca.numero_identificacao}:\\n`;\nif (registros.length === 0) {\n  texto += 'Nenhum registro de leite encontrado.';\n} else {\n  const total = registros.reduce((s, r) => s + (Number(r.litros) || 0), 0);\n  texto += registros.map(r => `- ${r.data_controle}: ${r.litros}L`).join('\\n');\n  texto += `\\nTotal no período consultado: ${total}L`;\n}\nreturn [{ json: { resposta_sugerida: texto } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -47696,
+        43584
+      ],
+      "id": "af996360-64a8-4072-8a15-38c1ba004193",
+      "name": "Montar Relatório Individual"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "controle_leite",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "data_controle",
+              "condition": "gt",
+              "keyValue": "={{ $json.dataInicio }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -47632,
+        44064
+      ],
+      "id": "213330d0-b768-4314-9af6-e74032be76f2",
+      "name": "Buscar Produção Geral (Hoje)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst { periodoDias, label, dataInicio } = $('Calcular Período Geral').item.json;\n\nconst hoje = new Date();\nconst hojeStr = hoje.toISOString().slice(0, 10);\n\nlet registros = dedupeById($input.all().map(i => i.json));\nregistros = registros.filter(r => r.data_controle >= dataInicio && r.data_controle <= hojeStr);\n\nlet texto;\nif (registros.length === 0) {\n  texto = `Nenhum registro de leite encontrado (${label}).`;\n} else {\n  const total = registros.reduce((s, r) => s + (Number(r.litros) || 0), 0);\n  if (periodoDias > 0) {\n    const porDia = {};\n    for (const r of registros) {\n      porDia[r.data_controle] = (porDia[r.data_controle] || 0) + (Number(r.litros) || 0);\n    }\n    const dias = Object.keys(porDia).sort();\n    texto = `Produção (${label}): ${total}L em ${registros.length} lançamento(s).\\n\\n`;\n    texto += dias.map(d => `- ${d}: ${porDia[d]}L`).join('\\n');\n  } else {\n    texto = `Produção de hoje: ${total}L em ${registros.length} lançamento(s).`;\n  }\n}\nreturn [{ json: { resposta_sugerida: texto } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -47344,
+        44064
+      ],
+      "id": "ff49d906-d076-4166-93ff-31ce39f6d63e",
+      "name": "Montar Relatório Geral"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "vacas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "numero_identificacao",
+              "keyValue": "={{ $json.entidades.numero_vaca }}"
+            },
+            {
+              "keyName": "propriedade_id",
+              "keyValue": "={{ $json.propriedade_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51616,
+        42320
+      ],
+      "id": "5e2214a7-110a-46eb-8aa8-026df2b8bcb3",
+      "name": "Buscar Vaca (Atualizar)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "controle_leite",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vaca_id",
+              "keyValue": "={{ $('Buscar Vaca (Atualizar)').item.json.id }}"
+            },
+            {
+              "keyName": "data_controle",
+              "keyValue": "={{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
+            },
+            {
+              "keyName": "periodo",
+              "keyValue": "={{ $('Parsear Resposta IA').item.json.entidades.periodo || 'dia_inteiro' }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51328,
+        42320
+      ],
+      "id": "cb5e674d-00d5-4406-9e28-849e9027b51e",
+      "name": "Buscar Registro Leite (Atualizar)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "controle_leite",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "litros",
+              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.litros }}"
+            },
+            {
+              "fieldId": "periodo",
+              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.periodo || $json.periodo }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51040,
+        42320
+      ],
+      "id": "7f3af0dc-164f-4e69-97a3-344b1f452bd0",
+      "name": "Atualizar Registro Leite",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0f3e1ade-4184-4d86-8701-c0ca9249531c",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=Registro atualizado: vaca {{ $('Buscar Vaca (Atualizar)').item.json.numero_identificacao }} agora com {{ $('Parsear Resposta IA').item.json.entidades.litros }}L em {{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -50752,
+        42320
+      ],
+      "id": "060d9974-c1fc-400a-8a24-f75d1a1b82f6",
+      "name": "Confirmar Atualização"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "vacas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "numero_identificacao",
+              "keyValue": "={{ $json.entidades.numero_vaca }}"
+            },
+            {
+              "keyName": "propriedade_id",
+              "keyValue": "={{ $json.propriedade_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51616,
+        42624
+      ],
+      "id": "b26dbd03-957a-4936-87f5-c9e51f7b3e0e",
+      "name": "Buscar Vaca (Deletar)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const registro = $input.first().json;\nconst vaca = $('Buscar Vaca (Deletar)').first().json;\nconst telefone = $('Parsear Resposta IA').first().json.telefone;\nconst pendencia = {\n  tipo: 'leite',\n  registro_id: registro.id,\n  numero_vaca: vaca.numero_identificacao,\n  data_controle: registro.data_controle,\n  periodo: registro.periodo,\n  litros: registro.litros\n};\nconst texto = `Confirma excluir o registro da vaca ${vaca.numero_identificacao} (${registro.data_controle}, ${registro.periodo}, ${registro.litros}L)? Responda SIM para confirmar ou NAO para cancelar.`;\nreturn [{ json: { telefone, pendencia: JSON.stringify(pendencia), resposta_sugerida: texto } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -50832,
+        42624
+      ],
+      "id": "3cb29f12-369d-4cc4-90aa-b2c09b6213a0",
+      "name": "Preparar Pendência Delete"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "data",
+        "key": "=pendente_delete:{{ $json.telefone }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -53632,
+        41792
+      ],
+      "id": "bf30089b-d3a8-4d21-b38e-5f6601597a38",
+      "name": "Checar Pendência Delete",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "eff13f98-c600-43c9-a41e-7aecd4a2f9fa",
+              "leftValue": "={{ $json.data }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "name": "filter.operator.isNotEmpty"
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -53408,
+        41792
+      ],
+      "id": "b5f5365a-285c-4c41-9007-f8bb967f2c2d",
+      "name": "Tem Pendência Delete?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = (String($('Preparar Entrada Agente').first().json.mensagem_compilada || '')).toLowerCase();\nconst pendencia = JSON.parse($input.first().json.data);\nconst telefone = $('Preparar Entrada Agente').first().json.telefone;\nconst confirmado = /\\b(sim|confirma|confirmar|pode)\\b/.test(msg);\nconst cancelado = /\\b(nao|não|cancela|cancelar)\\b/.test(msg);\nreturn [{ json: { telefone, pendencia, confirmado: confirmado && !cancelado } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -52560,
+        41728
+      ],
+      "id": "55601bf2-4cc3-4b35-8318-6059abc98880",
+      "name": "Processar Confirmação Delete"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "edecd0bb-949f-4699-b2e5-e3186c441e24",
+              "leftValue": "={{ $json.confirmado }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -51584,
+        41584
+      ],
+      "id": "104978a7-00d2-4851-be62-eea9d99ff4c6",
+      "name": "Confirmado?"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "controle_leite",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.pendencia.registro_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51296,
+        41504
+      ],
+      "id": "b8728ca9-f8ac-46d5-bea2-86ba99800677",
+      "name": "Deletar Registro Leite",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "=pendente_delete:{{ $('Processar Confirmação Delete').item.json.telefone }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -50704,
+        41456
+      ],
+      "id": "93515855-d164-4bc3-a87e-496420e3e2f1",
+      "name": "Limpar Pendência (Excluído)",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "642ae0d4-2129-481e-b5be-ddb07b73fc6c",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=Registro da vaca {{ $('Processar Confirmação Delete').item.json.pendencia.numero_vaca }} ({{ $('Processar Confirmação Delete').item.json.pendencia.data_controle }}, {{ $('Processar Confirmação Delete').item.json.pendencia.periodo }}) excluído com sucesso."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -50240,
+        41520
+      ],
+      "id": "58c11dae-20f7-4c59-8a14-7bbf2b137b9d",
+      "name": "Confirmar Delete"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "=pendente_delete:{{ $('Processar Confirmação Delete').item.json.telefone }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -51296,
+        41664
+      ],
+      "id": "c6b0caa7-4b25-4171-9f40-64d5b670d815",
+      "name": "Limpar Pendência (Cancelado)",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2efce647-fb64-4063-8e8d-b75a30c0065e",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "Operação de exclusão cancelada. Nenhum registro foi apagado."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -51008,
+        41664
+      ],
+      "id": "7d63060f-cf73-465b-95c8-54e298560cba",
+      "name": "Cancelar Delete"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "partos",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vaca_id",
+              "keyValue": "={{ $json.id }}"
+            },
+            {
+              "keyName": "ativa",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51392,
+        41904
+      ],
+      "id": "ca0ec791-a105-4029-8def-2504542e32e6",
+      "name": "Buscar Parto Ativo (Leite)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "vacas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "numero_identificacao",
+              "keyValue": "={{ $json.entidades.numero_vaca }}"
+            },
+            {
+              "keyName": "propriedade_id",
+              "keyValue": "={{ $json.propriedade_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51728,
+        42864
+      ],
+      "id": "11a09f8b-db4e-4b38-a7a0-9bdce1f983f2",
+      "name": "Buscar Vaca (Parto)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "coberturas",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vaca_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Buscar Vaca (Parto)').item.json.id }}"
+            },
+            {
+              "keyName": "diagnostico_prenhez",
+              "condition": "eq",
+              "keyValue": "positivo"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51328,
+        42864
+      ],
+      "id": "64952f8e-8ed9-4869-9dc3-e1045f467acd",
+      "name": "Buscar Cobertura Recente (Parto)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "partos",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vaca_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Buscar Vaca (Parto)').item.json.id }}"
+            },
+            {
+              "keyName": "ativa",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "ativa",
+              "fieldValue": "false"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51040,
+        42864
+      ],
+      "id": "05a79f5b-b60a-4d42-9f3a-e8505e68e9b5",
+      "name": "Fechar Lactação Anterior",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst coberturas = dedupeById($('Buscar Cobertura Recente (Parto)').all().map(i => i.json));\nlet coberturaId = null;\nif (coberturas.length > 0) {\n  coberturas.sort((a, b) => new Date(b.data_cobertura) - new Date(a.data_cobertura));\n  coberturaId = coberturas[0].id;\n}\n\nlet iep = null;\nlet partoAnterior = null;\ntry { partoAnterior = $('Buscar Parto Anterior (Ativo)').first().json; } catch (e) {}\nif (partoAnterior && partoAnterior.data_parto) {\n  const dataPartoNovo = $('Parsear Resposta IA').item.json.entidades.data || new Date().toISOString().slice(0, 10);\n  const dNovo = new Date(dataPartoNovo);\n  const dAnterior = new Date(partoAnterior.data_parto);\n  iep = Math.round((dNovo - dAnterior) / 86400000);\n}\n\nreturn [{ json: { cobertura_id: coberturaId, iep } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -50752,
+        42864
+      ],
+      "id": "57040e0b-2785-470c-9678-54c7f70b3ab3",
+      "name": "Preparar Dados Parto"
+    },
+    {
+      "parameters": {
+        "tableId": "partos",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "vaca_id",
+              "fieldValue": "={{ $('Buscar Vaca (Parto)').item.json.id }}"
+            },
+            {
+              "fieldId": "cobertura_id",
+              "fieldValue": "={{ $json.cobertura_id }}"
+            },
+            {
+              "fieldId": "data_parto",
+              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
+            },
+            {
+              "fieldId": "ativa",
+              "fieldValue": "true"
+            },
+            {
+              "fieldId": "iep",
+              "fieldValue": "={{ $json.iep }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -50464,
+        42864
+      ],
+      "id": "5a6f3a38-f3b1-464a-ac64-79b5aee118f0",
+      "name": "Inserir Parto",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "vacas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Buscar Vaca (Parto)').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status_produtivo",
+              "fieldValue": "lactacao"
+            },
+            {
+              "fieldId": "status_reprodutivo",
+              "fieldValue": "vazia"
+            },
+            {
+              "fieldId": "data_parto",
+              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -50176,
+        42864
+      ],
+      "id": "0e9cbefc-696a-4898-92f8-a301dbd47f15",
+      "name": "Atualizar Vaca (Pós-Parto)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "bezerros",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "propriedade_id",
+              "fieldValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}"
+            },
+            {
+              "fieldId": "parto_id",
+              "fieldValue": "={{ $('Inserir Parto').item.json.id }}"
+            },
+            {
+              "fieldId": "mae_id",
+              "fieldValue": "={{ $('Buscar Vaca (Parto)').item.json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -49888,
+        42864
+      ],
+      "id": "ea46e530-a9ce-4947-b84e-3cfd6570db45",
+      "name": "Criar Bezerro",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6a5fb22e-eea7-4fce-8d0b-dcb8f7b0a3e4",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=Parto da vaca {{ $('Buscar Vaca (Parto)').item.json.numero_identificacao }} registrado em {{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}{{ $('Parsear Resposta IA').item.json.entidades.sexo_bezerro ? ' (bezerro(a): ' + $('Parsear Resposta IA').item.json.entidades.sexo_bezerro + ')' : '' }}. Lactação anterior encerrada."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -49600,
+        42864
+      ],
+      "id": "ef517730-9cf6-4d20-a3c7-aa5a16694d4f",
+      "name": "Confirmar Parto"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "vacas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "numero_identificacao",
+              "keyValue": "={{ $json.entidades.numero_vaca }}"
+            },
+            {
+              "keyName": "propriedade_id",
+              "keyValue": "={{ $json.propriedade_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51456,
+        43072
+      ],
+      "id": "0ba9d948-fa7a-4892-bb41-8c2399c1fbb2",
+      "name": "Buscar Vaca (Cobertura)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "coberturas",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "vaca_id",
+              "fieldValue": "={{ $('Buscar Vaca (Cobertura)').item.json.id }}"
+            },
+            {
+              "fieldId": "data_cobertura",
+              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
+            },
+            {
+              "fieldId": "diagnostico_prenhez",
+              "fieldValue": "pendente"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51184,
+        43072
+      ],
+      "id": "0c037d42-e20f-4a32-8a1a-46206ad9fa9a",
+      "name": "Inserir Cobertura",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "796d93a7-de2d-4d24-9196-d43a5f70c99a",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=Cobertura da vaca {{ $('Buscar Vaca (Cobertura)').item.json.numero_identificacao }} registrada em {{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}{{ $('Parsear Resposta IA').item.json.entidades.touro_semen ? ' (sêmen/touro: ' + $('Parsear Resposta IA').item.json.entidades.touro_semen + ')' : '' }}. Diagnóstico de prenhez: pendente."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -50928,
+        43072
+      ],
+      "id": "9f52454d-4374-4236-89a2-a1ad07d3b18f",
+      "name": "Confirmar Cobertura"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1406f377-0bbe-47a9-af26-522eed25dbe1",
+              "leftValue": "={{ $json.entidades.tipo_relatorio }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              },
+              "rightValue": "reprodutivo"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -51728,
+        43392
+      ],
+      "id": "98fd60c0-d271-4180-8d56-1c868d8fd687",
+      "name": "Tipo Relatório Reprodutivo?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2e7cd4b4-7cd0-4900-9166-5f09823f250a",
+              "leftValue": "={{ String($json.entidades.numero_vaca ?? '') }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "name": "filter.operator.isNotEmpty"
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "301c8c69-c16b-4a00-acb6-1cc630633146",
+              "leftValue": "={{ $json.entidades?.numero_vaca && $json.entidades.numero_vaca !== 'null' && $json.entidades.numero_vaca !== null ? 'valido' : '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -51424,
+        43344
+      ],
+      "id": "f632b276-3060-49b3-ab74-ce84a963ca65",
+      "name": "Tem Numero (Reprodutivo)?"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "vacas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "numero_identificacao",
+              "keyValue": "={{ $json.entidades.numero_vaca }}"
+            },
+            {
+              "keyName": "propriedade_id",
+              "keyValue": "={{ $json.propriedade_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51104,
+        43296
+      ],
+      "id": "25f0d3b0-9921-4594-a6e8-530c8e74c10b",
+      "name": "Buscar Vaca (Reprodutivo Individual)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "partos",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vaca_id",
+              "keyValue": "={{ $('Buscar Vaca (Reprodutivo Individual)').item.json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -50432,
+        43200
+      ],
+      "id": "68afd316-a8a5-4128-ab48-2501bc21ff9b",
+      "name": "Buscar Parto Ativo (Reprodutivo)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "coberturas",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vaca_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Buscar Vaca (Reprodutivo Individual)').item.json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -50848,
+        43280
+      ],
+      "id": "bf7d20a9-1b3b-4e74-85ef-e79c96c1a303",
+      "name": "Buscar Coberturas (Reprodutivo Individual)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst vaca = $('Buscar Vaca (Reprodutivo Individual)').first().json;\nlet parto = null;\ntry { parto = $('Buscar Parto Ativo (Reprodutivo)').first().json; } catch (e) {}\nconst coberturas = dedupeById($('Buscar Coberturas (Reprodutivo Individual)').all().map(i => i.json));\ncoberturas.sort((a, b) => new Date(b.data_cobertura) - new Date(a.data_cobertura));\nconst ultima = coberturas[0] || null;\n\nconst hoje = new Date();\nconst diffDias = (a, b) => Math.round((new Date(a) - new Date(b)) / 86400000);\n\nlet texto = `Status reprodutivo da vaca ${vaca.numero_identificacao}:\\n`;\ntexto += `Status reprodutivo cadastrado: ${vaca.status_reprodutivo || 'não informado'}\\n`;\n\nif (parto && parto.id) {\n  texto += `Lactação ativa desde ${parto.data_parto}.\\n`;\n  if (parto.iep != null) texto += `IEP: ${parto.iep} dias. `;\n\n  const coberturasPosParto = coberturas\n    .filter(c => new Date(c.data_cobertura) >= new Date(parto.data_parto))\n    .sort((a, b) => new Date(a.data_cobertura) - new Date(b.data_cobertura));\n  const coberturaConfirmada = coberturasPosParto.find(c => c.diagnostico_prenhez === 'positivo');\n  const diasEmAberto = coberturaConfirmada\n    ? diffDias(coberturaConfirmada.data_cobertura, parto.data_parto)\n    : diffDias(hoje, parto.data_parto);\n  texto += `Dias em aberto: ${diasEmAberto}. `;\n\n  const registrosLeite = dedupeById($('Buscar Controle Leite Ativo (Reprodutivo)').all().map(i => i.json));\n  const diasEmLactacao = Math.max(1, diffDias(hoje, parto.data_parto));\n  if (registrosLeite.length > 0) {\n    const totalLitros = registrosLeite.reduce((s, r) => s + (Number(r.litros) || 0), 0);\n    const projecao305 = Math.round((totalLitros / diasEmLactacao) * 305);\n    texto += `Projeção 305d: ${projecao305}L. `;\n\n    if (diasEmLactacao >= 60) {\n      const dataLimite1 = new Date(hoje); dataLimite1.setDate(dataLimite1.getDate() - 30);\n      const dataLimite2 = new Date(hoje); dataLimite2.setDate(dataLimite2.getDate() - 60);\n      const str1 = dataLimite1.toISOString().slice(0, 10);\n      const str2 = dataLimite2.toISOString().slice(0, 10);\n      const hojeStr = hoje.toISOString().slice(0, 10);\n      const janela1 = registrosLeite.filter(r => r.data_controle > str1 && r.data_controle <= hojeStr);\n      const janela2 = registrosLeite.filter(r => r.data_controle > str2 && r.data_controle <= str1);\n      const media1 = janela1.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n      const media2 = janela2.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n      if (media2 > 0) {\n        const persistencia = Math.round((media1 / media2) * 1000) / 10;\n        texto += `Persistência: ${persistencia}%. `;\n      }\n    }\n  }\n  texto += `\\n`;\n} else {\n  texto += `Sem lactação ativa registrada.\\n`;\n}\n\nif (ultima) {\n  texto += `Última cobertura: ${ultima.data_cobertura} (diagnóstico: ${ultima.diagnostico_prenhez}).\\n`;\n  if (ultima.diagnostico_prenhez === 'positivo') {\n    const dCob = new Date(ultima.data_cobertura);\n    const dParto = new Date(dCob.getTime() + 283 * 86400000);\n    const dSeca = new Date(dParto.getTime() - 60 * 86400000);\n    texto += `Previsão de parto: ${dParto.toISOString().slice(0,10)}. `;\n    texto += `Previsão de secagem: ${dSeca.toISOString().slice(0,10)}.\\n`;\n  }\n} else {\n  texto += `Nenhuma cobertura registrada.\\n`;\n}\n\nreturn [{ json: { resposta_sugerida: texto } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -49552,
+        43184
+      ],
+      "id": "0950a488-870e-4d00-a5da-03f9994210e4",
+      "name": "Montar Relatório Reprodutivo Individual"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "vacas",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "propriedade_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.propriedade_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51088,
+        43440
+      ],
+      "id": "b40012e8-4906-48e9-8aaa-d61d656f1d56",
+      "name": "Buscar Vacas Propriedade (Reprodutivo)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "coberturas",
+        "returnAll": true,
+        "filters": {
+          "conditions": []
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -50832,
+        43456
+      ],
+      "id": "2f246cb5-fde2-4b55-b7dd-ca9f1808f870",
+      "name": "Buscar Coberturas (Reprodutivo Geral)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "partos",
+        "returnAll": true,
+        "filters": {
+          "conditions": []
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -50560,
+        43472
+      ],
+      "id": "60a67929-14a9-4224-85c7-4a3cf99abb26",
+      "name": "Buscar Partos (Reprodutivo Geral)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst vacas = dedupeById($('Buscar Vacas Propriedade (Reprodutivo)').all().map(i => i.json));\nconst vacaIds = new Set(vacas.map(v => v.id));\nconst numeroPorId = Object.fromEntries(vacas.map(v => [v.id, v.numero_identificacao]));\n\nconst todasCoberturas = dedupeById($('Buscar Coberturas (Reprodutivo Geral)').all().map(i => i.json))\n  .filter(c => vacaIds.has(c.vaca_id));\nconst todosPartos = dedupeById($('Buscar Partos (Reprodutivo Geral)').all().map(i => i.json))\n  .filter(p => vacaIds.has(p.vaca_id));\nconst todoControleLeite = dedupeById($('Buscar Controle Leite (Reprodutivo Geral)').all().map(i => i.json));\n\nconst coberturaIdsComParto = new Set(todosPartos.filter(p => p.cobertura_id).map(p => p.cobertura_id));\n\nconst pendentes = todasCoberturas.filter(c => c.diagnostico_prenhez === 'pendente');\nconst positivasSemParto = todasCoberturas.filter(c => c.diagnostico_prenhez === 'positivo' && !coberturaIdsComParto.has(c.id));\n\nconst previsoes = positivasSemParto.map(c => {\n  const dCob = new Date(c.data_cobertura);\n  const dParto = new Date(dCob.getTime() + 283 * 86400000);\n  const dSeca = new Date(dParto.getTime() - 60 * 86400000);\n  return {\n    numero: numeroPorId[c.vaca_id] || '?',\n    dataParto: dParto.toISOString().slice(0,10),\n    dataSeca: dSeca.toISOString().slice(0,10)\n  };\n}).sort((a, b) => new Date(a.dataParto) - new Date(b.dataParto));\n\nconst partosAtivos = todosPartos.filter(p => p.ativa);\n\nconst hoje = new Date();\nconst diffDias = (a, b) => Math.round((new Date(a) - new Date(b)) / 86400000);\n\nconst leitePorParto = {};\nfor (const r of todoControleLeite) {\n  if (!leitePorParto[r.parto_id]) leitePorParto[r.parto_id] = [];\n  leitePorParto[r.parto_id].push(r);\n}\n\nconst indicadores = partosAtivos.map(p => {\n  const registros = leitePorParto[p.id] || [];\n  const diasEmLactacao = Math.max(1, diffDias(hoje, p.data_parto));\n\n  const coberturasVaca = todasCoberturas.filter(c => c.vaca_id === p.vaca_id);\n  const coberturasPosParto = coberturasVaca\n    .filter(c => new Date(c.data_cobertura) >= new Date(p.data_parto))\n    .sort((a, b) => new Date(a.data_cobertura) - new Date(b.data_cobertura));\n  const coberturaConfirmada = coberturasPosParto.find(c => c.diagnostico_prenhez === 'positivo');\n  const diasEmAberto = coberturaConfirmada\n    ? diffDias(coberturaConfirmada.data_cobertura, p.data_parto)\n    : diffDias(hoje, p.data_parto);\n\n  let projecao305 = null;\n  let persistencia = null;\n  if (registros.length > 0) {\n    const totalLitros = registros.reduce((s, r) => s + (Number(r.litros) || 0), 0);\n    projecao305 = Math.round((totalLitros / diasEmLactacao) * 305);\n\n    if (diasEmLactacao >= 60) {\n      const dataLimite1 = new Date(hoje); dataLimite1.setDate(dataLimite1.getDate() - 30);\n      const dataLimite2 = new Date(hoje); dataLimite2.setDate(dataLimite2.getDate() - 60);\n      const str1 = dataLimite1.toISOString().slice(0, 10);\n      const str2 = dataLimite2.toISOString().slice(0, 10);\n      const hojeStr = hoje.toISOString().slice(0, 10);\n      const janela1 = registros.filter(r => r.data_controle > str1 && r.data_controle <= hojeStr);\n      const janela2 = registros.filter(r => r.data_controle > str2 && r.data_controle <= str1);\n      const media1 = janela1.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n      const media2 = janela2.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n      if (media2 > 0) persistencia = Math.round((media1 / media2) * 1000) / 10;\n    }\n  }\n\n  return {\n    numero: numeroPorId[p.vaca_id] || '?',\n    iep: p.iep,\n    diasEmAberto,\n    persistencia,\n    projecao305\n  };\n});\n\nlet texto = 'Relatório reprodutivo do rebanho:\\n\\n';\n\ntexto += `Previsão de parto (${previsoes.length}):\\n`;\ntexto += previsoes.length\n  ? previsoes.map(p => `- Vaca ${p.numero}: parto em ${p.dataParto}`).join('\\n')\n  : 'Nenhuma prevista.';\ntexto += '\\n\\n';\n\ntexto += 'Vacas para secar (próximos 30 dias):\\n';\nconst secarProximas = previsoes.filter(p => {\n  const d = new Date(p.dataSeca);\n  const diff = (d - hoje) / 86400000;\n  return diff >= -5 && diff <= 30;\n});\ntexto += secarProximas.length\n  ? secarProximas.map(p => `- Vaca ${p.numero}: secar até ${p.dataSeca}`).join('\\n')\n  : 'Nenhuma vaca para secar no período.';\ntexto += '\\n\\n';\n\ntexto += `Coberturas com diagnóstico pendente (${pendentes.length}):\\n`;\ntexto += pendentes.length\n  ? pendentes.map(c => `- Vaca ${numeroPorId[c.vaca_id] || '?'}: cobertura em ${c.data_cobertura}`).join('\\n')\n  : 'Nenhuma pendência.';\ntexto += '\\n\\n';\n\ntexto += `Indicadores das lactações ativas (${indicadores.length}):\\n`;\ntexto += indicadores.length\n  ? indicadores.map(p => {\n      const partes = [`Vaca ${p.numero}`];\n      if (p.iep != null) partes.push(`IEP ${p.iep}d`);\n      partes.push(`dias em aberto ${p.diasEmAberto}`);\n      if (p.persistencia != null) partes.push(`persistência ${p.persistencia}%`);\n      if (p.projecao305 != null) partes.push(`proj. 305d ${p.projecao305}L`);\n      return '- ' + partes.join(', ');\n    }).join('\\n')\n  : 'Nenhuma lactação ativa.';\n\nreturn [{ json: { resposta_sugerida: texto } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -49712,
+        43376
+      ],
+      "id": "cf235a6c-bdd1-4f44-9dc5-e34b7388a1a3",
+      "name": "Compilar Relatório Reprodutivo Geral"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "84fa8a3b-362c-4330-82ab-23d0be8eb205",
+              "leftValue": "={{ $json.entidades.tipo_relatorio }}",
+              "rightValue": "cadastro",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -51360,
+        43696
+      ],
+      "id": "4bf5e456-fa7a-4040-a24f-259949e7fa54",
+      "name": "Tipo Relatório Cadastro?"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "vacas",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "propriedade_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.propriedade_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51056,
+        43616
+      ],
+      "id": "5a9fdbfc-1d18-4d18-8ef9-9134ca65f57c",
+      "name": "Buscar Vacas (Contagem)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst vacas = dedupeById($input.all().map(i => i.json));\n\nconst porStatusProdutivo = {};\nconst porStatusReprodutivo = {};\nfor (const v of vacas) {\n  const sp = v.status_produtivo || 'não informado';\n  const sr = v.status_reprodutivo || 'não informado';\n  porStatusProdutivo[sp] = (porStatusProdutivo[sp] || 0) + 1;\n  porStatusReprodutivo[sr] = (porStatusReprodutivo[sr] || 0) + 1;\n}\n\nlet texto = `Total de vacas cadastradas: ${vacas.length}\\n\\n`;\ntexto += 'Por status produtivo:\\n';\ntexto += Object.entries(porStatusProdutivo).map(([k, v]) => `- ${k}: ${v}`).join('\\n');\ntexto += '\\n\\nPor status reprodutivo:\\n';\ntexto += Object.entries(porStatusReprodutivo).map(([k, v]) => `- ${k}: ${v}`).join('\\n');\n\nreturn [{ json: { resposta_sugerida: texto } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -50736,
+        43648
+      ],
+      "id": "2d5358ee-c348-46d1-90a9-353853d1f740",
+      "name": "Montar Relatório Cadastro"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f362c765-ed5a-4271-a49d-1d17bc6276b5",
+              "leftValue": "={{ $('Webhook').item.json.body.data.messageType }}",
+              "rightValue": "audioMessage",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -54752,
+        44336
+      ],
+      "id": "1bd3c2a6-5efa-4a8b-926f-2ae13b79fd9f",
+      "name": "É Áudio?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $('Webhook').item.json.body.data.message;\nconst base64 = (msg.audioMessage && msg.audioMessage.base64) || msg.base64 || null;\nif (!base64) {\n  throw new Error('Audio recebido mas nenhum campo base64 foi encontrado no payload. Verifique a estrutura real do webhook de audio da Evolution API (body.data.message) e ajuste este node.');\n}\nreturn [{\n  json: {},\n  binary: {\n    audio: { data: base64, mimeType: 'audio/ogg', fileName: 'audio.ogg' }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -54464,
+        44240
+      ],
+      "id": "b0d3219f-58ba-4552-a2a9-379063db6b18",
+      "name": "Extrair Áudio Base64"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "whisper-1"
+            },
+            {
+              "name": "language",
+              "value": "pt"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "audio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -54176,
+        44240
+      ],
+      "id": "f691d605-525b-4eb9-962a-53e85351b0a3",
+      "name": "Transcrever Áudio (Whisper)",
+      "credentials": {
+        "openAiApi": {
+          "id": "kmMGxTfDic8jahYF",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bc87200d-8b8d-4c28-8db6-531b96d9d7f2",
+              "name": "textoTranscrito",
+              "type": "string",
+              "value": "={{ $json.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -53888,
+        44240
+      ],
+      "id": "c9ed92b7-3c51-4cee-91b7-04d042e7d672",
+      "name": "Definir Texto Transcrito"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c37ee6f6-8653-4d52-8671-8d6d692999b6",
+              "leftValue": "={{ String($('Parsear Resposta IA').item.json.entidades.numero_vaca ?? '') }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "name": "filter.operator.isNotEmpty"
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "ea81a4bc-4cb3-4497-9e29-05b4f3efb1d9",
+              "leftValue": "={{ $json.entidades?.numero_vaca && $json.entidades.numero_vaca !== 'null' && $json.entidades.numero_vaca !== null ? 'valido' : '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -49728,
+        44240
+      ],
+      "id": "66e4eaac-302d-4b61-ad0f-0eec2fca4a5c",
+      "name": "Numero Foi Informado?",
+      "alwaysOutputData": false,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const parsed = $('Parsear Resposta IA').item.json;\nconst periodoDiasClassificador = parsed.entidades.periodo_dias;\nconst mensagem = (parsed.mensagem_original || '').toLowerCase();\n\nconst hoje = new Date();\nlet inicio, label, periodoDias;\n\nif (periodoDiasClassificador && periodoDiasClassificador > 0) {\n  // classificador deu um numero especifico de dias (ex: \"ultimos 3 dias\")\n  periodoDias = periodoDiasClassificador;\n  inicio = new Date(hoje);\n  inicio.setDate(inicio.getDate() - periodoDias);\n  label = `últimos ${periodoDias} dias`;\n} else if (/\\bhoje\\b/.test(mensagem)) {\n  // pediu especificamente \"hoje\"\n  periodoDias = 0;\n  inicio = new Date(hoje);\n  label = 'hoje';\n} else {\n  // padrao para relatorio geral sem periodo especifico: mes atual + mes passado\n  inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);\n  const diffMs = hoje - inicio;\n  periodoDias = Math.ceil(diffMs / 86400000);\n  label = 'mês atual e mês passado';\n}\n\nconst dataInicio = inicio.toISOString().slice(0, 10);\nreturn [{ json: { dataInicio, periodoDias, label } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -49216,
+        44368
+      ],
+      "id": "489aef7e-4421-485f-9904-9e35b13c4d27",
+      "name": "Calcular Período Geral"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "vacas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "numero_identificacao",
+              "keyValue": "={{ $json.entidades.numero_vaca }}"
+            },
+            {
+              "keyName": "propriedade_id",
+              "keyValue": "={{ $json.propriedade_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -52128,
+        44864
+      ],
+      "id": "96cbd4d0-b89f-498d-84e9-bc26e358513e",
+      "name": "Buscar Vaca (Diagnóstico)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "coberturas",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vaca_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Buscar Vaca (Diagnóstico)').item.json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51840,
+        44864
+      ],
+      "id": "73c0ce77-025c-4bc7-8e04-43e64da5e5fe",
+      "name": "Buscar Cobertura Pendente (Diagnóstico)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "85885e0d-95e5-437e-b2ec-f671751b3676",
+              "leftValue": "={{ String($json.coberturaId ?? '') }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "name": "filter.operator.isNotEmpty"
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "987276eb-32ab-4485-8e91-0d97ad4b11ba",
+              "leftValue": "={{ $json.diagnostico_prenhez }}",
+              "rightValue": "={{ $json.diagnostico_prenhez }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -51392,
+        44864
+      ],
+      "id": "5f97632a-5007-4d7a-85bf-e8dd39183b2c",
+      "name": "Tem Cobertura Pendente?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "coberturas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vaca_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.vaca_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "diagnostico_prenhez",
+              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.resultado_diagnostico }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -50976,
+        44768
+      ],
+      "id": "04fa51bf-0b03-4bf2-9857-8c47ecfde9a0",
+      "name": "Atualizar Diagnóstico Cobertura",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "edb86a9a-2031-4bca-8ef1-c11102303007",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=Diagnostico da vaca {{ $('Buscar Vaca (Diagnóstico)').item.json.numero_identificacao }} registrado como {{ $('Parsear Resposta IA').item.json.entidades.resultado_diagnostico }} "
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -50688,
+        44768
+      ],
+      "id": "4e150a06-8503-4ce0-946a-057583e4404c",
+      "name": "Confirmar Diagnóstico"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "462fd270-948c-4bb2-a8b2-5e86911213f9",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=Não encontrei nenhuma cobertura registrada para a vaca {{ $('Buscar Vaca (Diagnóstico)').item.json.numero_identificacao }}. Registre a cobertura primeiro."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -50880,
+        45008
+      ],
+      "id": "e4e168df-bf28-4345-bbd2-6072f667804d",
+      "name": "Sem Cobertura Pendente"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "partos",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vaca_id",
+              "keyValue": "={{ $('Buscar Vaca (Parto)').item.json.id }}"
+            },
+            {
+              "keyName": "ativa",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51504,
+        42864
+      ],
+      "id": "343a6f64-8050-4214-87b9-8c5a26bbba56",
+      "name": "Buscar Parto Anterior (Ativo)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "controle_leite",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Buscar Coberturas (Reprodutivo Individual)').item.json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -50016,
+        43184
+      ],
+      "id": "a9ad3db4-f44a-4708-970d-53d7599db371",
+      "name": "Buscar Controle Leite Ativo (Reprodutivo)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "controle_leite",
+        "returnAll": true,
+        "filters": {
+          "conditions": []
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -50080,
+        43504
+      ],
+      "id": "40523752-227c-41c1-b299-0d2f842c61a1",
+      "name": "Buscar Controle Leite (Reprodutivo Geral)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const vaca = $('Buscar Vaca (Leite)').first().json;\nconst registro = $input.first().json; // saída do Inserir Controle Leite\n\nconst texto = `Registrado ${registro.litros}L da vaca ${vaca.numero_identificacao} em ${registro.data_controle}.`;\n\nreturn [{ json: { resposta_sugerida: texto } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -50720,
+        41904
+      ],
+      "id": "5400a5b9-8651-45aa-9d65-54d14c18c3f4",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "controle_leite",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "data_controle",
+              "condition": "eq",
+              "keyValue": "={{ $json.data_controle }}"
+            },
+            {
+              "keyName": "vaca_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.vaca_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51136,
+        42624
+      ],
+      "id": "708be3ed-d7e4-4b21-ab9b-12968309c9eb",
+      "name": "Delete a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "controle_leite",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vaca_id",
+              "keyValue": "={{ $('Buscar Vaca (Deletar)').item.json.id }}"
+            },
+            {
+              "keyName": "data_controle",
+              "keyValue": "={{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51344,
+        42624
+      ],
+      "id": "649bcb08-3adb-48a7-befb-a6ecad2e0d47",
+      "name": "Buscar Registro Leite (Deletar)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "vacas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "numero_identificacao",
+              "keyValue": "={{ $('Determinar Número da Vaca').item.json.numeroVaca }}"
+            },
+            {
+              "keyName": "propriedade_id",
+              "keyValue": "={{ $json.propriedade_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51088,
+        40848
+      ],
+      "id": "36259481-f56c-43ad-a871-909369906cec",
+      "name": "Verificar Vaca Existente (Cadastro)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "340ba16d-a38d-4c02-91ff-b702a7c4a4c7",
+              "leftValue": "={{ String($json.id ?? '') }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "name": "filter.operator.isNotEmpty"
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -50800,
+        40848
+      ],
+      "id": "3d695dd7-ccb5-4b25-8c3d-eac1f258f073",
+      "name": "Vaca Já Cadastrada?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "63f2ee2a-6cae-447e-a02a-41a0fa349604",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=A vaca {{ $('Determinar Número da Vaca').item.json.numeroVaca }} já está cadastrada nessa propriedade."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -50512,
+        40736
+      ],
+      "id": "89382f57-929c-4d66-8c01-3086054f1ef4",
+      "name": "Vaca Duplicada"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "vacas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "numero_identificacao",
+              "keyValue": "={{ $('Parsear Resposta IA').item.json.entidades.numero_mae }}"
+            },
+            {
+              "keyName": "propriedade_id",
+              "keyValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -50512,
+        40944
+      ],
+      "id": "46200131-3f16-4108-8c51-1cb68bc806db",
+      "name": "Buscar Vaca Mãe (Cadastro)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "bezerros",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "mae_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Buscar Vaca Mãe (Cadastro)').item.json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -50224,
+        40944
+      ],
+      "id": "ca273128-5199-43b1-8ea8-cfcc9d97c99a",
+      "name": "Buscar Bezerros da Mãe (Cadastro)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\nlet maeId = null;\nlet bezerroId = null;\n\nif (entidades.numero_mae) {\n  try {\n    const maeItem = $('Buscar Vaca Mãe (Cadastro)').first();\n    const mae = maeItem ? maeItem.json : null;\n    if (mae && mae.id) {\n      maeId = mae.id;\n      let bezerros = [];\n      try { bezerros = dedupeById($('Buscar Bezerros da Mãe (Cadastro)').all().map(i => i.json)); } catch (e) {}\n      const naoVinculados = bezerros.filter(b => !b.vaca_id_gerada);\n      naoVinculados.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));\n      if (naoVinculados.length > 0) bezerroId = naoVinculados[0].id;\n    }\n  } catch (e) {}\n}\n\nreturn [{ json: { maeId, bezerroId } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -49936,
+        40848
+      ],
+      "id": "d6437432-bdba-406a-808e-02c2257c35e8",
+      "name": "Preparar Dados Cadastro"
+    },
+    {
+      "parameters": {
+        "tableId": "vacas",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "propriedade_id",
+              "fieldValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}"
+            },
+            {
+              "fieldId": "numero_identificacao",
+              "fieldValue": "={{ $('Determinar Número da Vaca').item.json.numeroVaca }}"
+            },
+            {
+              "fieldId": "mae_id",
+              "fieldValue": "={{ $json.maeId }}"
+            },
+            {
+              "fieldId": "status_produtivo",
+              "fieldValue": "novilha"
+            },
+            {
+              "fieldId": "status_reprodutivo",
+              "fieldValue": "vazia"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -49648,
+        40848
+      ],
+      "id": "71d8bd9b-9b0f-46e6-91a0-118236afdcab",
+      "name": "Inserir Vaca",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e942edf5-09bf-4c69-9924-37ea9763b7e9",
+              "leftValue": "={{ String($('Preparar Dados Cadastro').item.json.bezerroId ?? '') }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "name": "filter.operator.isNotEmpty"
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -49360,
+        40848
+      ],
+      "id": "f3e416cd-f2e7-45d0-9910-16767747371c",
+      "name": "Tem Bezerro Pra Vincular?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "bezerros",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Preparar Dados Cadastro').item.json.bezerroId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "vaca_id_gerada",
+              "fieldValue": "={{ $('Inserir Vaca').item.json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -49072,
+        40768
+      ],
+      "id": "a7b35cef-74f1-4555-bb85-5c905414c115",
+      "name": "Vincular Bezerro",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "96fa7f67-fa41-4d24-99e4-357eca88a5bb",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=Vaca {{ $('Determinar Número da Vaca').item.json.numeroVaca }}{{ $('Determinar Número da Vaca').item.json.autoGerado ? ' (número gerado automaticamente)' : '' }} cadastrada com sucesso{{ $('Preparar Dados Cadastro').item.json.maeId ? ' (filha da vaca ' + $('Parsear Resposta IA').item.json.entidades.numero_mae + ')' : '' }}{{ $('Preparar Dados Cadastro').item.json.bezerroId ? ', vinculada ao registro de nascimento' : '' }}."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -48784,
+        40848
+      ],
+      "id": "0893acf4-fcd0-4306-a82c-31aecfd8a586",
+      "name": "Confirmar Cadastro"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "vacas",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "propriedade_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.propriedade_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -51376,
+        40848
+      ],
+      "id": "20892a91-6e64-4415-b372-4f58b2d75e8e",
+      "name": "Buscar Maior Número Vaca",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const entidades = $('Parsear Resposta IA').item.json.entidades;\nlet numeroVaca = entidades.numero_vaca;\nlet autoGerado = false;\n\nif (!numeroVaca) {\n  let vacas = [];\n  try { vacas = $('Buscar Maior Número Vaca').all().map(i => i.json); } catch (e) {}\n  const maior = vacas.reduce((max, v) => {\n    const n = Number(v.numero_identificacao) || 0;\n    return n > max ? n : max;\n  }, 0);\n  numeroVaca = maior + 1;\n  autoGerado = true;\n}\n\nreturn [{ json: { numeroVaca, autoGerado } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -51232,
+        40848
+      ],
+      "id": "11777532-544e-4798-a139-5bb619bfa421",
+      "name": "Determinar Número da Vaca"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "vacas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "numero_identificacao",
+              "keyValue": "={{ $json.entidades.numero_vaca }}"
+            },
+            {
+              "keyName": "propriedade_id",
+              "keyValue": "={{ $json.propriedade_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -50720,
+        41232
+      ],
+      "id": "1f182640-bd4f-48a5-991d-1b34de638f48",
+      "name": "Buscar Vaca (Atualizar Vaca)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f2a7dc3c-0057-4000-8a7e-ef3c7ab3e66c",
+              "leftValue": "={{ String($json.id ?? '') }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "name": "filter.operator.isNotEmpty"
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -50432,
+        41232
+      ],
+      "id": "a7c11f52-250b-41d7-9437-b0003861334c",
+      "name": "Vaca Encontrada (Atualizar Vaca)?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a715cd02-a4bb-4c27-87dd-c29c161e713d",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=Não encontrei a vaca {{ $('Parsear Resposta IA').item.json.entidades.numero_vaca }} cadastrada. Confira o número."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -50144,
+        41344
+      ],
+      "id": "ecd67df2-06f8-40f7-b6d0-97ae631bc056",
+      "name": "Vaca Não Encontrada (Atualizar Vaca)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const vaca = $input.first().json;\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\nconst statusProdutivo = entidades.status_produtivo || vaca.status_produtivo;\nconst statusReprodutivo = entidades.status_reprodutivo || vaca.status_reprodutivo;\nreturn [{ json: { statusProdutivo, statusReprodutivo } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -50144,
+        41136
+      ],
+      "id": "9c3ff54e-b045-4d76-9c40-53e83581a5fa",
+      "name": "Preparar Atualização Vaca"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "vacas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Buscar Vaca (Atualizar Vaca)').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status_produtivo",
+              "fieldValue": "={{ $json.statusProdutivo }}"
+            },
+            {
+              "fieldId": "status_reprodutivo",
+              "fieldValue": "={{ $json.statusReprodutivo }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -49856,
+        41136
+      ],
+      "id": "0b6d8195-0129-494d-828f-2a3c9244643b",
+      "name": "Atualizar Vaca (Dados)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bda023c6-0e34-440b-9a8d-f989e10c1322",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=Vaca {{ $('Buscar Vaca (Atualizar Vaca)').item.json.numero_identificacao }} atualizada: status produtivo = {{ $('Preparar Atualização Vaca').item.json.statusProdutivo }}, status reprodutivo = {{ $('Preparar Atualização Vaca').item.json.statusReprodutivo }}."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -49568,
+        41136
+      ],
+      "id": "7a30bfa4-f97a-4870-ad49-cc3621730fa6",
+      "name": "Confirmar Atualização Vaca"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=pendente_delete:{{ $json.telefone }}",
+        "value": "={{ $json.pendencia }}",
+        "expire": true,
+        "ttl": 300
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        2592,
+        780
+      ],
+      "id": "e1d276c6-d353-4658-a62d-20df4f823900",
+      "name": "Salvar Pendência Delete Leite",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "financeiro",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "propriedade_id",
+              "fieldValue": "={{ $json.propriedade_id }}"
+            },
+            {
+              "fieldId": "tipo",
+              "fieldValue": "={{ $json.entidades.tipo_financeiro }}"
+            },
+            {
+              "fieldId": "categoria",
+              "fieldValue": "={{ $json.entidades.categoria || 'outros' }}"
+            },
+            {
+              "fieldId": "valor",
+              "fieldValue": "={{ $json.entidades.valor }}"
+            },
+            {
+              "fieldId": "data",
+              "fieldValue": "={{ $json.entidades.data || $now.format('yyyy-MM-dd') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        2700
+      ],
+      "id": "86dc8981-88c9-4768-af1a-d5c8148c8649",
+      "name": "Inserir Financeiro",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "672f9570-b6b2-40dc-bf08-96b1875462fe",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=Lançado: {{ $('Parsear Resposta IA').item.json.entidades.tipo_financeiro }} de R$ {{ $('Parsear Resposta IA').item.json.entidades.valor }} ({{ $('Parsear Resposta IA').item.json.entidades.categoria || 'outros' }}) em {{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2016,
+        2700
+      ],
+      "id": "6bf64e55-142d-49fa-9fea-dcab389e250b",
+      "name": "Confirmar Financeiro"
+    },
+    {
+      "parameters": {
+        "jsCode": "const parsed = $('Parsear Resposta IA').item.json;\nconst periodoDiasClassificador = parsed.entidades.periodo_dias;\nconst mensagem = (parsed.mensagem_original || '').toLowerCase();\n\nconst hoje = new Date();\nlet inicio, label, periodoDias;\n\nif (periodoDiasClassificador && periodoDiasClassificador > 0) {\n  periodoDias = periodoDiasClassificador;\n  inicio = new Date(hoje);\n  inicio.setDate(inicio.getDate() - periodoDias);\n  label = `últimos ${periodoDias} dias`;\n} else if (/\\bhoje\\b/.test(mensagem)) {\n  periodoDias = 0;\n  inicio = new Date(hoje);\n  label = 'hoje';\n} else {\n  inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);\n  const diffMs = hoje - inicio;\n  periodoDias = Math.ceil(diffMs / 86400000);\n  label = 'mês atual e mês passado';\n}\n\nconst dataInicio = inicio.toISOString().slice(0, 10);\nreturn [{ json: { dataInicio, periodoDias, label } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        3000
+      ],
+      "id": "76555759-37cf-4bcb-b67b-a49889c86d78",
+      "name": "Calcular Período Financeiro"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "financeiro",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "propriedade_id",
+              "keyValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}",
+              "condition": "eq"
+            },
+            {
+              "keyName": "data",
+              "keyValue": "={{ $json.dataInicio }}",
+              "condition": "gte"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        3000
+      ],
+      "id": "147439a3-f676-47ee-b2d0-1118e827be7e",
+      "name": "Buscar Lançamentos Financeiros",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst { periodoDias, label, dataInicio } = $('Calcular Período Financeiro').item.json;\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\n\nconst hoje = new Date();\nconst hojeStr = hoje.toISOString().slice(0, 10);\n\nlet lancamentos = dedupeById($input.all().map(i => i.json));\nlancamentos = lancamentos.filter(l => l.data >= dataInicio && l.data <= hojeStr);\nif (entidades.tipo_financeiro) {\n  lancamentos = lancamentos.filter(l => l.tipo === entidades.tipo_financeiro);\n}\n\nlet texto;\nif (lancamentos.length === 0) {\n  texto = `Nenhum lançamento financeiro encontrado (${label}).`;\n} else {\n  const despesas = lancamentos.filter(l => l.tipo === 'despesa');\n  const receitas = lancamentos.filter(l => l.tipo === 'receita');\n  const totalDespesas = despesas.reduce((s, l) => s + (Number(l.valor) || 0), 0);\n  const totalReceitas = receitas.reduce((s, l) => s + (Number(l.valor) || 0), 0);\n\n  const porCategoria = {};\n  for (const l of lancamentos) {\n    const chave = `${l.tipo} - ${l.categoria || 'outros'}`;\n    porCategoria[chave] = (porCategoria[chave] || 0) + (Number(l.valor) || 0);\n  }\n\n  texto = `Financeiro (${label}):\\n\\n`;\n  if (!entidades.tipo_financeiro || entidades.tipo_financeiro === 'receita') {\n    texto += `Receitas: R$ ${totalReceitas.toFixed(2)}\\n`;\n  }\n  if (!entidades.tipo_financeiro || entidades.tipo_financeiro === 'despesa') {\n    texto += `Despesas: R$ ${totalDespesas.toFixed(2)}\\n`;\n  }\n  if (!entidades.tipo_financeiro) {\n    texto += `Saldo: R$ ${(totalReceitas - totalDespesas).toFixed(2)}\\n`;\n  }\n  texto += `\\nPor categoria:\\n`;\n  texto += Object.entries(porCategoria).map(([k, v]) => `- ${k}: R$ ${v.toFixed(2)}`).join('\\n');\n}\n\nreturn [{ json: { resposta_sugerida: texto } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        3000
+      ],
+      "id": "b004b669-0cde-483a-a97e-cbdd1619fdec",
+      "name": "Montar Relatório Financeiro"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "financeiro",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "propriedade_id",
+              "keyValue": "={{ $json.propriedade_id }}",
+              "condition": "eq"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        3300
+      ],
+      "id": "90120f01-0e08-4480-b6ac-fdb6f08f18f8",
+      "name": "Buscar Lançamentos (Atualizar Financeiro)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\nlet lancamentos = dedupeById($input.all().map(i => i.json));\n\nif (entidades.categoria) {\n  const cat = entidades.categoria.toLowerCase();\n  lancamentos = lancamentos.filter(l => (l.categoria || '').toLowerCase() === cat);\n}\nif (entidades.tipo_financeiro) {\n  lancamentos = lancamentos.filter(l => l.tipo === entidades.tipo_financeiro);\n}\nif (entidades.data) {\n  lancamentos = lancamentos.filter(l => l.data === entidades.data);\n}\n\nlancamentos.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));\nconst alvo = lancamentos[0] || null;\n\nreturn [{ json: { alvoId: alvo ? alvo.id : null, valorAtual: alvo ? alvo.valor : null, categoriaAtual: alvo ? alvo.categoria : null } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        3300
+      ],
+      "id": "30826b25-d5f0-4980-993c-60cdc8d85619",
+      "name": "Selecionar Lançamento Alvo (Atualizar)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5a011eae-033e-4ead-a2ca-2b56237d7aa4",
+              "leftValue": "={{ String($json.alvoId ?? '') }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "name": "filter.operator.isNotEmpty"
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2304,
+        3300
+      ],
+      "id": "4043c182-02ba-4eb2-9a62-6d6c31f4ef84",
+      "name": "Lançamento Encontrado (Atualizar)?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "financeiro",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.alvoId }}",
+              "condition": "eq"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "valor",
+              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.valor || $json.valorAtual }}"
+            },
+            {
+              "fieldId": "categoria",
+              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.categoria || $json.categoriaAtual }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2592,
+        3200
+      ],
+      "id": "73f15044-ce33-4571-8413-b3408219371e",
+      "name": "Atualizar Financeiro (Dados)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1291a20-3f9d-4204-9e26-0bfbee8adbc3",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=Lançamento atualizado para R$ {{ $json.valor }} ({{ $json.categoria }})."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2880,
+        3200
+      ],
+      "id": "a4e99e72-a10c-4875-aba2-adf9e2f44b37",
+      "name": "Confirmar Atualização Financeiro"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6d40419e-d785-42a9-a9f1-0d99c63a40b5",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "Não encontrei nenhum lançamento financeiro que bata com essa descrição. Confira a categoria e a data."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2592,
+        3400
+      ],
+      "id": "d1197980-7ad1-4d79-aeb0-07857c643c21",
+      "name": "Lançamento Não Encontrado (Atualizar)"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "financeiro",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "propriedade_id",
+              "keyValue": "={{ $json.propriedade_id }}",
+              "condition": "eq"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        3700
+      ],
+      "id": "f5442cb9-03a1-42a4-b99d-9d674dab928f",
+      "name": "Buscar Lançamentos (Deletar Financeiro)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\nlet lancamentos = dedupeById($input.all().map(i => i.json));\n\nif (entidades.categoria) {\n  const cat = entidades.categoria.toLowerCase();\n  lancamentos = lancamentos.filter(l => (l.categoria || '').toLowerCase() === cat);\n}\nif (entidades.tipo_financeiro) {\n  lancamentos = lancamentos.filter(l => l.tipo === entidades.tipo_financeiro);\n}\nif (entidades.data) {\n  lancamentos = lancamentos.filter(l => l.data === entidades.data);\n}\n\nlancamentos.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));\nconst alvo = lancamentos[0] || null;\n\nreturn [{ json: { alvoId: alvo ? alvo.id : null, alvo } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        3700
+      ],
+      "id": "78b3d0ae-6ff7-4e11-bfa1-bf8db53cc2de",
+      "name": "Selecionar Lançamento Alvo (Deletar)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e085c40f-3138-4ee9-9d8a-a41113e7c353",
+              "leftValue": "={{ String($json.alvoId ?? '') }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "name": "filter.operator.isNotEmpty"
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2304,
+        3700
+      ],
+      "id": "c5037365-3381-4695-81a7-37bf8a4c16c1",
+      "name": "Lançamento Encontrado (Deletar)?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const alvo = $json.alvo;\nconst telefone = $('Parsear Resposta IA').first().json.telefone;\nconst pendencia = {\n  tipo: 'financeiro',\n  lancamento_id: alvo.id,\n  tipo_financeiro: alvo.tipo,\n  categoria: alvo.categoria,\n  valor: alvo.valor,\n  data: alvo.data\n};\nconst texto = `Confirma excluir o lançamento de ${alvo.tipo} (${alvo.categoria || 'outros'}, R$ ${alvo.valor}, ${alvo.data})? Responda SIM para confirmar ou NAO para cancelar.`;\nreturn [{ json: { telefone, pendencia: JSON.stringify(pendencia), resposta_sugerida: texto } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2592,
+        3650
+      ],
+      "id": "b58eb31e-f27c-4cde-a4d9-04e8afa85f32",
+      "name": "Preparar Pendência Delete Financeiro"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=pendente_delete:{{ $json.telefone }}",
+        "value": "={{ $json.pendencia }}",
+        "expire": true,
+        "ttl": 300
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        2880,
+        3650
+      ],
+      "id": "b9486471-128e-41ee-8c5e-9115e5e90fb7",
+      "name": "Salvar Pendência Delete Financeiro",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cecf2733-444b-4b8f-b377-1cf8d13e1b8f",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "Não encontrei nenhum lançamento financeiro que bata com essa descrição. Confira a categoria e a data."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2592,
+        3800
+      ],
+      "id": "78777588-2822-4a18-8ec4-88940a8b3170",
+      "name": "Lançamento Não Encontrado (Deletar)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b3b2305c-2d40-4ac1-b8e4-6224c8325a7d",
+              "leftValue": "={{ $json.pendencia.tipo }}",
+              "rightValue": "financeiro",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1808,
+        -200
+      ],
+      "id": "d5b865e4-fc14-419b-8ddb-b3ff7dc36901",
+      "name": "Tipo de Pendência (Delete)?"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "financeiro",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.pendencia.lancamento_id }}",
+              "condition": "eq"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2096,
+        -260
+      ],
+      "id": "84b1acc4-4d18-465f-8981-edd678ebdc52",
+      "name": "Deletar Lançamento Financeiro",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9bce3cc0-efda-4a59-8a00-8246eed1db1a",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=Lançamento de {{ $('Processar Confirmação Delete').item.json.pendencia.tipo_financeiro }} ({{ $('Processar Confirmação Delete').item.json.pendencia.categoria }}, R$ {{ $('Processar Confirmação Delete').item.json.pendencia.valor }}, {{ $('Processar Confirmação Delete').item.json.pendencia.data }}) excluído com sucesso."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2384,
+        -260
+      ],
+      "id": "36f3f398-4a22-4169-ba24-b2868488be54",
+      "name": "Confirmar Delete Financeiro"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "81fdc52d-e281-4bbb-8b34-28996220e60b",
+              "leftValue": "={{ $('Processar Confirmação Delete').item.json.pendencia.tipo }}",
+              "rightValue": "financeiro",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2240,
+        -320
+      ],
+      "id": "cdcae070-a62e-440b-bcbb-a06a2cc9f4f5",
+      "name": "Tipo de Pendência (Confirmação)?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7f06aa9f-f4ec-41b4-8cf5-a3ceea8fdc8d",
+              "leftValue": "={{ String($json.id ?? '') }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "name": "filter.operator.isNotEmpty"
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2172,
+        -432
+      ],
+      "id": "c4891ddd-6fa1-4f06-8b53-f758bd70147a",
+      "name": "Tem Lactação Ativa?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d46bb50a-3572-4f3e-9b49-7e223089ee2a",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=A vaca {{ $('Buscar Vaca (Leite)').item.json.numero_identificacao }} não tem lactação ativa registrada, então não dá pra lançar leite dela agora. Pra resolver: registre o parto primeiro, dizendo algo como 'vaca {{ $('Buscar Vaca (Leite)').item.json.numero_identificacao }} pariu hoje'. Depois disso o lançamento de leite funciona normalmente."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2172,
+        -280
+      ],
+      "id": "93823e43-4949-4dcb-a834-210447a0616b",
+      "name": "Sem Lactação Ativa"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Identificar Usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identificar Usuario": {
+      "main": [
+        [
+          {
+            "node": "É Áudio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear Resposta IA": {
+      "main": [
+        [
+          {
+            "node": "Rotear Intencao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rotear Intencao": {
+      "main": [
+        [
+          {
+            "node": "Buscar Vaca (Leite)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Vaca (Parto)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Vaca (Cobertura)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tipo Relatório Reprodutivo?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tipo Relatório Reprodutivo?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Maior Número Vaca",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Vaca (Atualizar)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Vaca (Deletar)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Vaca (Diagnóstico)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Vaca (Atualizar Vaca)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Inserir Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calcular Período Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Lançamentos (Atualizar Financeiro)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Lançamentos (Deletar Financeiro)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Vaca (Leite)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Parto Ativo (Leite)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inserir Controle Leite": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parsear Resposta IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Dados Buffer": {
+      "main": [
+        [
+          {
+            "node": "Buffer - Ler Existente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buffer - Ler Existente": {
+      "main": [
+        [
+          {
+            "node": "Concatenar Mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Concatenar Mensagem": {
+      "main": [
+        [
+          {
+            "node": "Buffer - Salvar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buffer - Salvar": {
+      "main": [
+        [
+          {
+            "node": "Timestamp - Salvar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timestamp - Salvar": {
+      "main": [
+        [
+          {
+            "node": "Aguardar Mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aguardar Mensagens": {
+      "main": [
+        [
+          {
+            "node": "Timestamp - Ler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timestamp - Ler": {
+      "main": [
+        [
+          {
+            "node": "É a Última Mensagem?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É a Última Mensagem?": {
+      "main": [
+        [
+          {
+            "node": "Buffer - Ler Final",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Não é a última - Parar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buffer - Ler Final": {
+      "main": [
+        [
+          {
+            "node": "Preparar Entrada Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Entrada Agente": {
+      "main": [
+        [
+          {
+            "node": "Buffer - Limpar",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Checar Pendência Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Vaca (Relatório)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Histórico Leite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Histórico Leite": {
+      "main": [
+        [
+          {
+            "node": "Montar Relatório Individual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Relatório Individual": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Produção Geral (Hoje)": {
+      "main": [
+        [
+          {
+            "node": "Montar Relatório Geral",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Relatório Geral": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Vaca (Atualizar)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Registro Leite (Atualizar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Registro Leite (Atualizar)": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Registro Leite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Registro Leite": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Atualização",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Atualização": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Vaca (Deletar)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Registro Leite (Deletar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Pendência Delete": {
+      "main": [
+        [
+          {
+            "node": "Salvar Pendência Delete Leite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checar Pendência Delete": {
+      "main": [
+        [
+          {
+            "node": "Tem Pendência Delete?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Pendência Delete?": {
+      "main": [
+        [
+          {
+            "node": "Processar Confirmação Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar Confirmação Delete": {
+      "main": [
+        [
+          {
+            "node": "Confirmado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmado?": {
+      "main": [
+        [
+          {
+            "node": "Tipo de Pendência (Delete)?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Limpar Pendência (Cancelado)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deletar Registro Leite": {
+      "main": [
+        [
+          {
+            "node": "Limpar Pendência (Excluído)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpar Pendência (Excluído)": {
+      "main": [
+        [
+          {
+            "node": "Tipo de Pendência (Confirmação)?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Delete": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpar Pendência (Cancelado)": {
+      "main": [
+        [
+          {
+            "node": "Cancelar Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancelar Delete": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Parto Ativo (Leite)": {
+      "main": [
+        [
+          {
+            "node": "Tem Lactação Ativa?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Vaca (Parto)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Parto Anterior (Ativo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Cobertura Recente (Parto)": {
+      "main": [
+        [
+          {
+            "node": "Fechar Lactação Anterior",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fechar Lactação Anterior": {
+      "main": [
+        [
+          {
+            "node": "Preparar Dados Parto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Dados Parto": {
+      "main": [
+        [
+          {
+            "node": "Inserir Parto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inserir Parto": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Vaca (Pós-Parto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Vaca (Pós-Parto)": {
+      "main": [
+        [
+          {
+            "node": "Criar Bezerro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar Bezerro": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Parto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Parto": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Vaca (Cobertura)": {
+      "main": [
+        [
+          {
+            "node": "Inserir Cobertura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inserir Cobertura": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Cobertura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Cobertura": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo Relatório Reprodutivo?": {
+      "main": [
+        [
+          {
+            "node": "Tem Numero (Reprodutivo)?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tipo Relatório Cadastro?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Numero (Reprodutivo)?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Vaca (Reprodutivo Individual)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Vacas Propriedade (Reprodutivo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Vaca (Reprodutivo Individual)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Coberturas (Reprodutivo Individual)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Parto Ativo (Reprodutivo)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Controle Leite Ativo (Reprodutivo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Coberturas (Reprodutivo Individual)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Parto Ativo (Reprodutivo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Relatório Reprodutivo Individual": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Vacas Propriedade (Reprodutivo)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Coberturas (Reprodutivo Geral)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Coberturas (Reprodutivo Geral)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Partos (Reprodutivo Geral)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Partos (Reprodutivo Geral)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Controle Leite (Reprodutivo Geral)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compilar Relatório Reprodutivo Geral": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo Relatório Cadastro?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Vacas (Contagem)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Numero Foi Informado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Vacas (Contagem)": {
+      "main": [
+        [
+          {
+            "node": "Montar Relatório Cadastro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Relatório Cadastro": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Áudio?": {
+      "main": [
+        [
+          {
+            "node": "Extrair Áudio Base64",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Dados Buffer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Áudio Base64": {
+      "main": [
+        [
+          {
+            "node": "Transcrever Áudio (Whisper)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcrever Áudio (Whisper)": {
+      "main": [
+        [
+          {
+            "node": "Definir Texto Transcrito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Definir Texto Transcrito": {
+      "main": [
+        [
+          {
+            "node": "Preparar Dados Buffer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Numero Foi Informado?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Vaca (Relatório)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calcular Período Geral",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Período Geral": {
+      "main": [
+        [
+          {
+            "node": "Buscar Produção Geral (Hoje)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Vaca (Diagnóstico)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Cobertura Pendente (Diagnóstico)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Cobertura Pendente (Diagnóstico)": {
+      "main": [
+        [
+          {
+            "node": "Tem Cobertura Pendente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Cobertura Pendente?": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Diagnóstico Cobertura",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem Cobertura Pendente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Diagnóstico Cobertura": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Diagnóstico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Diagnóstico": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sem Cobertura Pendente": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Parto Anterior (Ativo)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Cobertura Recente (Parto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Controle Leite Ativo (Reprodutivo)": {
+      "main": [
+        [
+          {
+            "node": "Montar Relatório Reprodutivo Individual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Controle Leite (Reprodutivo Geral)": {
+      "main": [
+        [
+          {
+            "node": "Compilar Relatório Reprodutivo Geral",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete a row": {
+      "main": [
+        [
+          {
+            "node": "Preparar Pendência Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Registro Leite (Deletar)": {
+      "main": [
+        [
+          {
+            "node": "Delete a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Vaca Existente (Cadastro)": {
+      "main": [
+        [
+          {
+            "node": "Vaca Já Cadastrada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vaca Já Cadastrada?": {
+      "main": [
+        [
+          {
+            "node": "Vaca Duplicada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Vaca Mãe (Cadastro)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vaca Duplicada": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Vaca Mãe (Cadastro)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Bezerros da Mãe (Cadastro)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Bezerros da Mãe (Cadastro)": {
+      "main": [
+        [
+          {
+            "node": "Preparar Dados Cadastro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Dados Cadastro": {
+      "main": [
+        [
+          {
+            "node": "Inserir Vaca",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inserir Vaca": {
+      "main": [
+        [
+          {
+            "node": "Tem Bezerro Pra Vincular?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Bezerro Pra Vincular?": {
+      "main": [
+        [
+          {
+            "node": "Vincular Bezerro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Confirmar Cadastro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vincular Bezerro": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Cadastro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Cadastro": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Maior Número Vaca": {
+      "main": [
+        [
+          {
+            "node": "Determinar Número da Vaca",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Determinar Número da Vaca": {
+      "main": [
+        [
+          {
+            "node": "Verificar Vaca Existente (Cadastro)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Vaca (Atualizar Vaca)": {
+      "main": [
+        [
+          {
+            "node": "Vaca Encontrada (Atualizar Vaca)?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vaca Encontrada (Atualizar Vaca)?": {
+      "main": [
+        [
+          {
+            "node": "Preparar Atualização Vaca",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Vaca Não Encontrada (Atualizar Vaca)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vaca Não Encontrada (Atualizar Vaca)": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Atualização Vaca": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Vaca (Dados)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Vaca (Dados)": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Atualização Vaca",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Atualização Vaca": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Pendência Delete Leite": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inserir Financeiro": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Financeiro": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Período Financeiro": {
+      "main": [
+        [
+          {
+            "node": "Buscar Lançamentos Financeiros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Lançamentos Financeiros": {
+      "main": [
+        [
+          {
+            "node": "Montar Relatório Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Relatório Financeiro": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Lançamentos (Atualizar Financeiro)": {
+      "main": [
+        [
+          {
+            "node": "Selecionar Lançamento Alvo (Atualizar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Selecionar Lançamento Alvo (Atualizar)": {
+      "main": [
+        [
+          {
+            "node": "Lançamento Encontrado (Atualizar)?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lançamento Encontrado (Atualizar)?": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Financeiro (Dados)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lançamento Não Encontrado (Atualizar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Financeiro (Dados)": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Atualização Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Atualização Financeiro": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lançamento Não Encontrado (Atualizar)": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Lançamentos (Deletar Financeiro)": {
+      "main": [
+        [
+          {
+            "node": "Selecionar Lançamento Alvo (Deletar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Selecionar Lançamento Alvo (Deletar)": {
+      "main": [
+        [
+          {
+            "node": "Lançamento Encontrado (Deletar)?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lançamento Encontrado (Deletar)?": {
+      "main": [
+        [
+          {
+            "node": "Preparar Pendência Delete Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lançamento Não Encontrado (Deletar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Pendência Delete Financeiro": {
+      "main": [
+        [
+          {
+            "node": "Salvar Pendência Delete Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Pendência Delete Financeiro": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lançamento Não Encontrado (Deletar)": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de Pendência (Delete)?": {
+      "main": [
+        [
+          {
+            "node": "Deletar Lançamento Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Deletar Registro Leite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deletar Lançamento Financeiro": {
+      "main": [
+        [
+          {
+            "node": "Limpar Pendência (Excluído)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de Pendência (Confirmação)?": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Delete Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Confirmar Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Delete Financeiro": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Lactação Ativa?": {
+      "main": [
+        [
+          {
+            "node": "Inserir Controle Leite",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem Lactação Ativa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sem Lactação Ativa": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "f480a1e5-7ac6-4e47-8d51-e1150674085c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3c6254208dfc25270c0f6139aedc58cb4cf18d05739e92e54e373b12bd587439"
+  },
+  "nodeGroups": [],
+  "id": "kjxXbV3ykHB3t6cE",
+  "tags": []
+}
