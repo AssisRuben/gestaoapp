@@ -1,0 +1,9 @@
+tunnel: 11f1ed22-cabd-4632-bc55-a3b2d61a2c9c
+credentials-file: C:\Users\Assis Montenegro\.cloudflared\11f1ed22-cabd-4632-bc55-a3b2d61a2c9c.json
+
+ingress:
+  - hostname: assisrubens.shop
+    service: http://localhost:3000
+  - hostname: www.assisrubens.shop
+    service: http://localhost:3000
+  - service: http_status:404

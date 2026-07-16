@@ -1,44 +1,31 @@
-# Hospedagem no PC (assisrubens.shop)
+# Hospedagem no PC (assisrubens.shop via Cloudflare Tunnel)
 
-Visão geral: PM2 (`pm2-runtime`) roda o Next.js em produção na porta 3000;
-Caddy fica na frente como proxy reverso, cuidando de HTTPS automático
-(Let's Encrypt) pro domínio `assisrubens.shop`. Ambos sobem como **Serviço
-do Windows** via NSSM, então voltam sozinhos depois de reiniciar o PC — sem
-precisar estar logado.
+Visão geral: PM2 (`pm2-runtime`) roda o Next.js em produção na porta 3000
+local. O `cloudflared` conecta essa máquina na rede da Cloudflare por uma
+conexão de **saída** (outbound) e expõe `assisrubens.shop` /
+`www.assisrubens.shop` — sem abrir nenhuma porta no roteador, sem depender
+de IP fixo, e com HTTPS resolvido pela própria Cloudflare. Os dois processos
+sobem como **Serviço do Windows** via NSSM, então voltam sozinhos depois de
+reiniciar o PC, sem precisar estar logado.
 
-## Passo a passo (o que falta rodar manualmente)
+Por que Cloudflare Tunnel em vez de Caddy + port forwarding: o domínio já
+usa os nameservers da Cloudflare, então dá pra usar o Tunnel direto — mais
+simples, funciona mesmo atrás de CGNAT (comum em operadoras brasileiras), e
+não expõe a rede de casa a conexões de entrada da internet.
 
-### 1. `.env.local` (na raiz do projeto, nunca commitado)
+## Já feito nesta sessão
 
-```
-NEXT_PUBLIC_SUPABASE_URL=https://zlgtkcdscwzxgnltodhb.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon public key do dashboard>
-```
-Pegue a anon key em: Supabase Dashboard > seu projeto > Settings > API.
+- `cloudflared` instalado em `C:\cloudflared\cloudflared.exe`, autenticado
+  (`C:\Users\Assis Montenegro\.cloudflared\cert.pem`)
+- Tunnel `gestaoapp` criado (id `11f1ed22-cabd-4632-bc55-a3b2d61a2c9c`)
+- DNS já apontado na Cloudflare: `assisrubens.shop` e `www.assisrubens.shop`
+  → tunnel (CNAME automático, gerenciado pela Cloudflare)
+- Testado manualmente: `https://assisrubens.shop` respondendo HTTP 200
+- `deploy/cloudflared-config.yml` com o ingress pro `localhost:3000`
 
-### 2. DNS na Hostinger
+## O que falta rodar manualmente
 
-No painel da Hostinger, na zona DNS de `assisrubens.shop`, criar:
-- Registro `A`, host `@`, aponta pra `177.127.8.145` (IP público atual desta
-  máquina — **confirme se é fixo**; se a operadora trocar esse IP, o domínio
-  para de resolver até atualizar o registro de novo)
-- Registro `A`, host `www`, mesmo IP (ou `CNAME www -> assisrubens.shop`)
-
-### 3. Port forwarding no roteador de casa
-
-Encaminhar as portas **80** e **443** (TCP) do roteador pro IP local desta
-máquina na rede interna. Isso é feito no painel de administração do
-roteador (geralmente `192.168.0.1` ou `192.168.1.1`) — específico de cada
-modelo, não dá pra automatizar daqui.
-
-Depois de configurar, teste de fora da rede (ex: 4G no celular, sem wifi)
-se `http://assisrubens.shop` responde. Se não responder mesmo com o
-forwarding certo, o provedor de internet pode estar usando CGNAT (IP
-"público" que na real é compartilhado) — nesse caso port forwarding não
-funciona e a alternativa é um túnel (ex: Cloudflare Tunnel) em vez de expor
-a porta direto.
-
-### 4. Rodar o script de setup (uma vez, como Administrador)
+### 1. Rodar o script de setup (uma vez, como Administrador)
 
 Abrir PowerShell **como Administrador** e rodar:
 
@@ -47,17 +34,21 @@ cd "C:\Users\Assis Montenegro\Desktop\gestaoapp"
 .\deploy\setup-windows-services.ps1
 ```
 
-Isso cria a regra de firewall (80/443 entrada) e registra dois serviços
-do Windows: `GestaoAppNext` e `GestaoAppCaddy`, ambos com auto-start e
-auto-restart em caso de crash.
+Isso registra dois serviços do Windows com auto-start e auto-restart em
+crash:
+- `GestaoAppNext` — o site (Next.js via pm2-runtime)
+- `GestaoAppCloudflared` — o túnel
+
+Não precisa mexer em firewall nem no roteador — o tunnel só faz conexão de
+saída.
 
 ## Operação do dia a dia
 
 ```powershell
-Get-Service GestaoAppNext, GestaoAppCaddy      # status
-Restart-Service GestaoAppNext                  # aplicar novo deploy
-Get-Content C:\nssm\logs\next-err.log -Tail 50 # logs de erro do site
-Get-Content C:\nssm\logs\caddy-err.log -Tail 50
+Get-Service GestaoAppNext, GestaoAppCloudflared       # status
+Restart-Service GestaoAppNext                          # aplicar novo deploy
+Get-Content C:\nssm\logs\next-err.log -Tail 50          # logs de erro do site
+Get-Content C:\nssm\logs\cloudflared-err.log -Tail 50   # logs do tunnel
 ```
 
 ## Deploy de uma atualização de código
@@ -67,4 +58,11 @@ git pull
 npm install
 npm run build
 Restart-Service GestaoAppNext
+```
+
+## `.env.local` (na raiz do projeto, nunca commitado)
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://zlgtkcdscwzxgnltodhb.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon public key do dashboard>
 ```
