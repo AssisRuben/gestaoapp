@@ -22,14 +22,14 @@ $logDir       = "C:\nssm\logs"
 
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
-function Install-NssmService($name, $app, $args, $workDir, $stdout, $stderr) {
-    $existing = & $nssm status $name 2>$null
+function Install-NssmService($name, $app, $appArgs, $workDir, $stdout, $stderr) {
+    $existing = try { Get-Service -Name $name -ErrorAction Stop; & $nssm status $name 2>$null } catch { $null }
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Servico $name ja existe, removendo para recriar..."
         & $nssm stop $name confirm | Out-Null
         & $nssm remove $name confirm | Out-Null
     }
-    & $nssm install $name $app $args
+    & $nssm install $name $app $appArgs
     & $nssm set $name AppDirectory $workDir
     & $nssm set $name AppStdout $stdout
     & $nssm set $name AppStderr $stderr
@@ -40,13 +40,13 @@ function Install-NssmService($name, $app, $args, $workDir, $stdout, $stderr) {
 
 # --- Servico do site (Next.js via pm2-runtime) ---
 Install-NssmService -name "GestaoAppNext" -app $nodeExe `
-    -args "`"$pm2Runtime`" `"$appDir\ecosystem.config.js`"" `
+    -appArgs "`"$pm2Runtime`" `"$appDir\ecosystem.config.js`"" `
     -workDir $appDir `
     -stdout "$logDir\next-out.log" -stderr "$logDir\next-err.log"
 
 # --- Servico do Cloudflare Tunnel (substitui Caddy + port forwarding) ---
 Install-NssmService -name "GestaoAppCloudflared" -app $cloudflared `
-    -args "tunnel --config `"$tunnelConfig`" run" `
+    -appArgs "tunnel --config `"$tunnelConfig`" run" `
     -workDir "C:\cloudflared" `
     -stdout "$logDir\cloudflared-out.log" -stderr "$logDir\cloudflared-err.log"
 
