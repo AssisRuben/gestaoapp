@@ -72,9 +72,12 @@ bezerros
   parto_id uuid -> partos.id
   mae_id uuid -> vacas.id
   vaca_id_gerada uuid -> vacas.id   -- null até o bezerro ser cadastrado como vaca adulta
-  numero_identificacao integer
+  numero_identificacao integer     -- preenchido no momento do registro do parto (bezerros
+                                     -- antigos, cadastrados antes dessa mudança, podem estar com
+                                     -- este campo null — ver regra 4)
+  sexo text                        -- CHECK: 'macho' | 'femea' | 'natimorto'
+  data_nascimento date
   created_at timestamptz
-  -- GAP DE SCHEMA: não tem coluna de sexo. Fica só na mensagem de confirmação do bot, não persiste.
 
 controle_leite
   id uuid PK
@@ -140,7 +143,10 @@ o ideal é portar isso pra funções RPC no Postgres — assim bot e site chamam
      `cobertura_id` do novo parto, se existir
    - Atualizar a vaca: `status_produtivo='lactacao'`, `status_reprodutivo='vazia'` (ela precisa
      ser coberta de novo — **não** usar "lactante", esse valor não existe no vocabulário real)
-   - Criar um registro em `bezerros` (mae_id = vaca, parto_id = novo parto)
+   - Criar um registro em `bezerros` (mae_id = vaca, parto_id = novo parto), já preenchendo
+     `numero_identificacao`, `sexo` e `data_nascimento` — esses três campos são capturados neste
+     momento, não depois (ver regra 4 pra como isso é usado no cadastro da vaca gerada por esse
+     bezerro)
 
 2. **Registrar leite** exige que a vaca tenha um parto com `ativa=true`. Sem isso, o insert
    falha (`parto_id` é `NOT NULL`). Sempre checar e responder algo instrutivo antes de tentar
@@ -158,8 +164,19 @@ o ideal é portar isso pra funções RPC no Postgres — assim bot e site chamam
 
 4. **Cadastro de vaca nova**: se não vier número, usar `MAX(numero_identificacao) + 1` da
    propriedade. Sempre checar duplicata antes de inserir (número já pode existir). Se a vaca
-   tiver mãe informada, procurar um bezerro dessa mãe ainda sem `vaca_id_gerada` (o mais recente)
-   e vincular.
+   tiver mãe informada (`numero_mae`), o vínculo com o bezerro correspondente deve ser feito em
+   duas etapas, nesta ordem:
+   1. Tentar achar por número: `bezerros.numero_identificacao = <número da vaca sendo cadastrada>
+      AND bezerros.mae_id = <mãe>`. Esse é o caminho esperado agora que `numero_identificacao` de
+      `bezerros` é preenchido no registro do parto (ver schema acima).
+   2. Só se não encontrar nada por número, cair no fallback antigo: pegar o bezerro **sem**
+      `vaca_id_gerada` mais recente dessa mãe (`ORDER BY created_at DESC LIMIT 1`). Esse fallback
+      existe pra cobrir bezerros antigos, cadastrados antes dessa mudança, que ficaram sem
+      número.
+
+   **Nota de implementação**: a função `cadastrar_vaca` já implementada no site
+   (`supabase/migrations/0002_cadastrar_vaca.sql`) hoje só faz a etapa 2 (fallback) — precisa ser
+   atualizada pra tentar a etapa 1 primeiro.
 
 5. **Cálculos que NÃO devem ser lidos direto do banco** — `partos.dias_em_aberto`,
    `partos.persistencia`, `partos.projecao_305` ficam desatualizados assim que o tempo passa ou
@@ -209,6 +226,9 @@ o ideal é portar isso pra funções RPC no Postgres — assim bot e site chamam
 ```sql
 -- financeiro.tipo só aceita esses dois valores
 CHECK (tipo = ANY (ARRAY['receita'::text, 'despesa'::text]))
+
+-- bezerros.sexo só aceita esses três valores
+CHECK (sexo = ANY (ARRAY['macho'::text, 'femea'::text, 'natimorto'::text]))
 ```
 
 ## Bugs conhecidos no bot de WhatsApp (achados lendo o workflow n8n em 2026-07-16)
@@ -247,10 +267,7 @@ devem ser reintroduzidos ao portar lógica pro site/RPC.
 
 ## O que NÃO existe ainda (gaps conhecidos)
 
-- Sexo do bezerro não é persistido (só aparece na mensagem de confirmação do bot)
 - Touro/sêmen usado na cobertura não é persistido
-- `bezerros.numero_identificacao` existe como coluna no schema mas NENHUM nó do bot a preenche
-  (nem no insert do bezerro, nem no vínculo com a vaca gerada) — confirmado lendo o workflow
 - `patrimonio` não tem nenhuma integração com o bot ainda
 - Não existe tabela de vínculo técnico↔propriedades (necessária se o veterinário/zootecnista for
   atender mais de uma propriedade no site)

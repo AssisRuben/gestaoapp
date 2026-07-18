@@ -9,6 +9,7 @@ export type Propriedade = {
   nome_produtor: string;
   municipio: string | null;
   estado: string | null;
+  tecnico_responsavel: string | null;
 };
 
 export type VinculoPropriedade = {
@@ -26,7 +27,9 @@ export async function getPropriedadesDoUsuario(): Promise<VinculoPropriedade[]> 
 
   const { data } = await supabase
     .from("usuarios_propriedades")
-    .select("papel, propriedade:propriedades(id, nome_propriedade, nome_produtor, municipio, estado)")
+    .select(
+      "papel, propriedade:propriedades(id, nome_propriedade, nome_produtor, municipio, estado, tecnico_responsavel)",
+    )
     .eq("usuario_id", user.id);
 
   return (data ?? []) as unknown as VinculoPropriedade[];

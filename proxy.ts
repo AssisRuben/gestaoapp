@@ -1,7 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/proxy";
 
-const PUBLIC_PATHS = ["/login", "/esqueci-senha", "/redefinir-senha", "/auth/confirm"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/esqueci-senha",
+  "/redefinir-senha",
+  "/auth/confirm",
+  "/auth/callback",
+];
 
 export async function proxy(request: NextRequest) {
   const { supabaseResponse, user } = await updateSession(request);
