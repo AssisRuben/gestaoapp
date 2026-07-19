@@ -9,10 +9,11 @@ import {
   atualizarPatrimonio,
   deletarPatrimonio,
 } from "./fazenda-actions";
+import { logout } from "./actions";
 
 const CAMPO_CLASSES =
-  "rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/40";
-const LABEL_CLASSES = "text-sm font-medium text-black dark:text-zinc-50";
+  "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
+const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
 
 function SecaoHeader({ titulo, onNovo, rotuloNovo }: { titulo: string; onNovo: () => void; rotuloNovo: string }) {
   return (
@@ -163,8 +164,8 @@ function PatrimonioSecao({ itens }: { itens: PatrimonioItem[] }) {
     <div className="flex flex-col gap-2">
       <SecaoHeader titulo="Patrimônio" onNovo={() => setDrawerAberto(true)} rotuloNovo="+ Novo item" />
 
-      <div className="overflow-x-auto rounded-lg border border-black/[.08] dark:border-white/[.145]">
-        <table className="w-full min-w-[480px] text-left text-sm">
+      <div className="overflow-x-auto rounded-2xl border bg-surface border-black/[.08] dark:border-white/[.145]">
+        <table className="w-full min-w-[480px] text-left text-base">
           <thead>
             <tr className="border-b border-black/[.08] text-zinc-600 dark:border-white/[.145] dark:text-zinc-400">
               <th className="px-3 py-2 font-medium">Ativo</th>
@@ -206,7 +207,7 @@ function PatrimonioSecao({ itens }: { itens: PatrimonioItem[] }) {
           <div className="absolute inset-0 bg-black/30" onClick={() => setDrawerAberto(false)} />
           <form
             action={criarAction}
-            className="relative flex w-full max-w-sm flex-col gap-3 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-3 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <h4 className="text-base font-semibold text-black dark:text-zinc-50">Novo item de patrimônio</h4>
             <div className="flex flex-col gap-1">
@@ -261,7 +262,7 @@ function PatrimonioSecao({ itens }: { itens: PatrimonioItem[] }) {
           <form
             key={emEdicao.id}
             action={editarAction}
-            className="relative flex w-full max-w-sm flex-col gap-3 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-3 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="id" value={emEdicao.id} />
             <h4 className="text-base font-semibold text-black dark:text-zinc-50">Editar item de patrimônio</h4>
@@ -357,7 +358,7 @@ function PatrimonioSecao({ itens }: { itens: PatrimonioItem[] }) {
           <div className="absolute inset-0 bg-black/30" onClick={() => setParaExcluir(null)} />
           <form
             action={excluirAction}
-            className="relative flex w-full max-w-sm flex-col gap-3 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-3 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="id" value={paraExcluir.id} />
             <h4 className="text-base font-semibold text-black dark:text-zinc-50">Excluir item?</h4>
@@ -401,7 +402,7 @@ export function FazendaModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col gap-6 overflow-y-auto rounded-lg bg-white p-6 dark:bg-zinc-950">
+      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col gap-6 overflow-y-auto rounded-2xl bg-white p-6 dark:bg-zinc-950">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-black dark:text-zinc-50">{propriedade.nome_propriedade}</h2>
           <button
@@ -415,6 +416,15 @@ export function FazendaModal({
 
         <DadosGeraisForm propriedade={propriedade} usuarioWhatsapp={usuarioWhatsapp} />
         <PatrimonioSecao itens={patrimonios} />
+
+        <form action={logout} className="border-t border-black/[.08] pt-4 dark:border-white/[.145]">
+          <button
+            type="submit"
+            className="text-sm font-medium text-red-600 hover:underline dark:text-red-400"
+          >
+            Sair
+          </button>
+        </form>
       </div>
     </div>
   );

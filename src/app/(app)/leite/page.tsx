@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { getPropriedadeAtual } from "@/lib/propriedade";
+import { getControleLeiteCache, getVacasCache } from "@/lib/cached-data";
 import { LeiteClient } from "./leite-client";
 import type { RegistroLeite, VacaOpcao } from "./types";
 
@@ -17,24 +17,18 @@ export default async function LeitePage() {
     );
   }
 
-  const supabase = await createClient();
-
-  const [{ data: registrosData }, { data: vacasData }] = await Promise.all([
-    supabase
-      .from("controle_leite")
-      .select("*, vaca:vaca_id!inner(id, numero_identificacao, propriedade_id)")
-      .eq("vaca.propriedade_id", propriedadeAtual.id)
-      .order("numero_identificacao", { foreignTable: "vaca" })
-      .order("data_controle", { ascending: false }),
-    supabase
-      .from("vacas")
-      .select("id, numero_identificacao")
-      .eq("propriedade_id", propriedadeAtual.id)
-      .order("numero_identificacao"),
+  const [registrosData, vacasData] = await Promise.all([
+    getControleLeiteCache(propriedadeAtual.id),
+    getVacasCache(propriedadeAtual.id),
   ]);
 
-  const registros = (registrosData ?? []) as unknown as RegistroLeite[];
-  const vacas = (vacasData ?? []) as VacaOpcao[];
+  const registros = registrosData as unknown as RegistroLeite[];
+  const todasVacas = vacasData as unknown as { id: string; numero_identificacao: number; status_produtivo: string }[];
+  // Só dá pra lançar leite de vaca em lactação (regra 2 do CLAUDE.md) — o
+  // dropdown já vem filtrado pra evitar erro de constraint no banco.
+  const vacas: VacaOpcao[] = todasVacas
+    .filter((v) => v.status_produtivo === "lactacao")
+    .map((v) => ({ id: v.id, numero_identificacao: v.numero_identificacao }));
 
   return (
     <div className="flex flex-1 flex-col p-4 sm:p-6">

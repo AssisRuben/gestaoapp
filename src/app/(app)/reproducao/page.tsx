@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { getPropriedadeAtual } from "@/lib/propriedade";
+import { getCoberturasCache, getPartosCache, getVacasCache } from "@/lib/cached-data";
 import { ReproducaoClient } from "./reproducao-client";
 import type { Cobertura, Parto, VacaOpcao } from "./types";
 
@@ -17,31 +17,15 @@ export default async function ReproducaoPage() {
     );
   }
 
-  const supabase = await createClient();
-
-  const [{ data: coberturasData }, { data: partosData }, { data: vacasData }] = await Promise.all([
-    supabase
-      .from("coberturas")
-      .select("*, vaca:vaca_id!inner(id, numero_identificacao, propriedade_id)")
-      .eq("vaca.propriedade_id", propriedadeAtual.id)
-      .order("numero_identificacao", { foreignTable: "vaca" })
-      .order("data_cobertura", { ascending: false }),
-    supabase
-      .from("partos")
-      .select("*, vaca:vaca_id!inner(id, numero_identificacao, propriedade_id)")
-      .eq("vaca.propriedade_id", propriedadeAtual.id)
-      .order("numero_identificacao", { foreignTable: "vaca" })
-      .order("data_parto", { ascending: false }),
-    supabase
-      .from("vacas")
-      .select("id, numero_identificacao")
-      .eq("propriedade_id", propriedadeAtual.id)
-      .order("numero_identificacao"),
+  const [coberturasData, partosData, vacasData] = await Promise.all([
+    getCoberturasCache(propriedadeAtual.id),
+    getPartosCache(propriedadeAtual.id),
+    getVacasCache(propriedadeAtual.id),
   ]);
 
-  const coberturas = (coberturasData ?? []) as unknown as Cobertura[];
-  const partos = (partosData ?? []) as unknown as Parto[];
-  const vacas = (vacasData ?? []) as VacaOpcao[];
+  const coberturas = coberturasData as unknown as Cobertura[];
+  const partos = partosData as unknown as Parto[];
+  const vacas = vacasData as unknown as VacaOpcao[];
 
   return (
     <div className="flex flex-1 flex-col p-4 sm:p-6">

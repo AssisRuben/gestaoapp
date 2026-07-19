@@ -1,12 +1,14 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { registrarLeite, atualizarLeite, deletarLeite } from "./actions";
+import { MobileCardList, MobileCard, CardHeader, CardRow } from "../mobile-list";
 import type { RegistroLeite, VacaOpcao } from "./types";
 
 const CAMPO_CLASSES =
-  "rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/40";
-const LABEL_CLASSES = "text-sm font-medium text-black dark:text-zinc-50";
+  "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
+const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
 
 function hojeStr() {
   return new Date().toISOString().slice(0, 10);
@@ -59,29 +61,16 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
     [registros, inicio, fim],
   );
 
-  const { totalLitros, porVaca } = useMemo(() => {
-    let total = 0;
-    const mapa = new Map<number, number>();
-
-    for (const r of registrosFiltrados) {
-      total += Number(r.litros);
-      mapa.set(
-        r.vaca.numero_identificacao,
-        (mapa.get(r.vaca.numero_identificacao) ?? 0) + Number(r.litros),
-      );
-    }
-
-    return {
-      totalLitros: total,
-      porVaca: [...mapa.entries()].sort((a, b) => b[1] - a[1]),
-    };
-  }, [registrosFiltrados]);
+  const totalLitros = useMemo(
+    () => registrosFiltrados.reduce((soma, r) => soma + Number(r.litros), 0),
+    [registrosFiltrados],
+  );
 
   return (
     <div className="flex flex-1 flex-col gap-4 pb-20 sm:pb-0">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3">
-          <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-row items-end gap-3">
+          <div className="flex flex-1 flex-col gap-1">
             <label htmlFor="inicio" className={LABEL_CLASSES}>
               De
             </label>
@@ -90,10 +79,10 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
               type="date"
               value={inicio}
               onChange={(e) => setInicio(e.target.value)}
-              className={CAMPO_CLASSES}
+              className={`w-full ${CAMPO_CLASSES}`}
             />
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-1 flex-col gap-1">
             <label htmlFor="fim" className={LABEL_CLASSES}>
               Até
             </label>
@@ -102,7 +91,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
               type="date"
               value={fim}
               onChange={(e) => setFim(e.target.value)}
-              className={CAMPO_CLASSES}
+              className={`w-full ${CAMPO_CLASSES}`}
             />
           </div>
         </div>
@@ -115,36 +104,33 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
         </button>
       </div>
 
-      <div className="rounded-lg border border-black/[.08] p-4 dark:border-white/[.145]">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Total no período</p>
-        <p className="text-lg font-semibold text-black dark:text-zinc-50">
-          {formatarLitros(totalLitros)}
-        </p>
+      <div className="flex items-center gap-3 rounded-2xl border bg-surface border-black/[.08] p-4 dark:border-white/[.145]">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-leite-tint">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.6}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-5 w-5 text-leite-ink"
+            aria-hidden="true"
+          >
+            <rect x="7" y="8" width="10" height="13" />
+            <polyline points="7 8 9 4 15 4 17 8" />
+            <line x1="12" y1="4" x2="12" y2="2" />
+          </svg>
+        </span>
+        <div>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Total no período</p>
+          <p className="font-mono text-2xl font-bold tabular-nums text-black dark:text-zinc-50">
+            {formatarLitros(totalLitros)}
+          </p>
+        </div>
       </div>
 
-      {porVaca.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-black/[.08] dark:border-white/[.145]">
-          <table className="w-full min-w-[320px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-black/[.08] text-zinc-600 dark:border-white/[.145] dark:text-zinc-400">
-                <th className="px-4 py-2 font-medium">Vaca</th>
-                <th className="px-4 py-2 font-medium">Total no período</th>
-              </tr>
-            </thead>
-            <tbody>
-              {porVaca.map(([numero, total], i) => (
-                <tr key={numero} className={i % 2 === 1 ? "bg-black/[.02] dark:bg-white/[.03]" : undefined}>
-                  <td className="px-4 py-2 text-black dark:text-zinc-50">{numero}</td>
-                  <td className="px-4 py-2 text-black dark:text-zinc-50">{formatarLitros(total)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <div className="overflow-x-auto rounded-lg border border-black/[.08] dark:border-white/[.145]">
-        <table className="w-full min-w-[520px] text-left text-sm">
+      <div className="hidden overflow-x-auto rounded-2xl border bg-surface border-black/[.08] sm:block dark:border-white/[.145]">
+        <table className="w-full text-left text-base">
           <thead>
             <tr className="border-b border-black/[.08] text-zinc-600 dark:border-white/[.145] dark:text-zinc-400">
               <th className="px-4 py-2 font-medium">Vaca</th>
@@ -180,6 +166,28 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
           </tbody>
         </table>
       </div>
+
+      <MobileCardList>
+        {registrosFiltrados.map((registro) => (
+          <MobileCard key={registro.id} onClick={() => setRegistroEmEdicao(registro)}>
+            <CardHeader
+              title={`Vaca ${registro.vaca.numero_identificacao}`}
+              accentClassName="bg-leite"
+              badge={
+                <span className="font-medium text-black dark:text-zinc-50">
+                  {formatarLitros(Number(registro.litros))}
+                </span>
+              }
+            />
+            <CardRow label="Data" value={registro.data_controle} />
+          </MobileCard>
+        ))}
+        {registrosFiltrados.length === 0 && (
+          <p className="rounded-2xl border bg-surface border-black/[.08] p-4 text-center text-sm text-zinc-600 dark:border-white/[.145] dark:text-zinc-400">
+            Nenhum registro nesse período.
+          </p>
+        )}
+      </MobileCardList>
 
       <button
         type="button"
@@ -248,7 +256,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
               <p className="text-sm text-red-600 dark:text-red-400">{criarState.error}</p>
             )}
 
-            <div className="mt-auto flex gap-2">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setDrawerAberto(false)}
@@ -264,6 +272,14 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
                 {criarPending ? "Salvando..." : "Salvar"}
               </button>
             </div>
+
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Só aparecem vacas em lactação. Pra ativar uma vaca, registre o parto dela na aba{" "}
+              <Link href="/reproducao" className="text-reproducao-ink hover:underline">
+                Reprodução
+              </Link>
+              .
+            </p>
           </form>
         </div>
       )}
@@ -274,7 +290,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
           <form
             key={registroEmEdicao.id}
             action={editarAction}
-            className="relative flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="registro_id" value={registroEmEdicao.id} />
 
@@ -354,7 +370,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
           <div className="absolute inset-0 bg-black/30" onClick={() => setRegistroParaExcluir(null)} />
           <form
             action={excluirAction}
-            className="relative flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="registro_id" value={registroParaExcluir.id} />
 

@@ -1,19 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
-const CAMPO_CLASSES =
-  "rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/40";
-const LABEL_CLASSES = "text-sm font-medium text-black dark:text-zinc-50";
-
-function hojeStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function diffDias(a: string, b: string) {
-  const msPorDia = 24 * 60 * 60 * 1000;
-  return Math.round((new Date(`${a}T00:00:00`).getTime() - new Date(`${b}T00:00:00`).getTime()) / msPorDia);
-}
+import { useMemo } from "react";
 
 function formatarDataCurta(data: string) {
   const [, mes, dia] = data.split("-");
@@ -28,10 +15,10 @@ function niceCeil(valor: number) {
   return niceNormalizado * magnitude;
 }
 
-const PLOT_LEFT = 44;
-const PLOT_RIGHT = 12;
-const PLOT_TOP = 10;
-const PLOT_BOTTOM = 140;
+const PLOT_LEFT = 56;
+const PLOT_RIGHT = 16;
+const PLOT_TOP = 26;
+const PLOT_BOTTOM = 150;
 const LARGURA_TOTAL = 720;
 const LARGURA_UTIL = LARGURA_TOTAL - PLOT_LEFT - PLOT_RIGHT;
 
@@ -40,67 +27,47 @@ export function ProducaoLeiteChart({
 }: {
   registros: { data_controle: string; litros: number }[];
 }) {
-  const hoje = hojeStr();
-  const [inicio, setInicio] = useState(`${hoje.slice(0, 7)}-01`);
-  const [fim, setFim] = useState(hoje);
-
   const pontos = useMemo(() => {
     const somaPorDia = new Map<string, number>();
     for (const r of registros) {
-      if (r.data_controle < inicio || r.data_controle > fim) continue;
       somaPorDia.set(r.data_controle, (somaPorDia.get(r.data_controle) ?? 0) + Number(r.litros));
     }
-    return [...somaPorDia.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [registros, inicio, fim]);
+    return [...somaPorDia.entries()]
+      .filter(([, litros]) => litros > 0)
+      .sort((a, b) => a[0].localeCompare(b[0]));
+  }, [registros]);
 
-  const totalDiasRange = Math.max(diffDias(fim, inicio), 1);
-  const x = (data: string) => PLOT_LEFT + (diffDias(data, inicio) / totalDiasRange) * LARGURA_UTIL;
+  // Espaçamento igual entre pontos (por índice), não por distância real em
+  // dias — assim dias sem produção não geram espaço em branco no gráfico.
+  const x = (i: number) =>
+    pontos.length > 1 ? PLOT_LEFT + (i / (pontos.length - 1)) * LARGURA_UTIL : PLOT_LEFT;
   const maxLitrosDia = niceCeil(Math.max(...pontos.map(([, v]) => v), 1));
   const y = (v: number) => PLOT_BOTTOM - (v / maxLitrosDia) * (PLOT_BOTTOM - PLOT_TOP);
 
   const pathD = pontos
-    .map(([data, litros], i) => `${i === 0 ? "M" : "L"}${x(data).toFixed(1)},${y(litros).toFixed(1)}`)
+    .map(([, litros], i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(litros).toFixed(1)}`)
     .join(" ");
-  const ultimoPonto = pontos[pontos.length - 1];
+  const ultimoIndex = pontos.length - 1;
+  const ultimoPonto = pontos[ultimoIndex];
   const gridValues = [0, maxLitrosDia / 2, maxLitrosDia];
 
-  return (
-    <div className="rounded-lg border border-black/[.08] p-4 dark:border-white/[.145]">
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="dash_inicio" className={LABEL_CLASSES}>
-            De
-          </label>
-          <input
-            id="dash_inicio"
-            type="date"
-            value={inicio}
-            onChange={(e) => setInicio(e.target.value)}
-            className={CAMPO_CLASSES}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="dash_fim" className={LABEL_CLASSES}>
-            Até
-          </label>
-          <input
-            id="dash_fim"
-            type="date"
-            value={fim}
-            onChange={(e) => setFim(e.target.value)}
-            className={CAMPO_CLASSES}
-          />
-        </div>
-      </div>
+  const areaD = pontos.length
+    ? `${pathD} L${x(ultimoIndex).toFixed(1)},${PLOT_BOTTOM} L${x(0).toFixed(1)},${PLOT_BOTTOM} Z`
+    : "";
 
-      <p className="mb-2 text-sm text-zinc-600 dark:text-zinc-400">Produção de leite</p>
+  return (
+    <div className="rounded-2xl border bg-surface border-black/[.08] p-4 dark:border-white/[.145]">
+      <p className="mb-2 flex items-center gap-2 text-base font-semibold text-black dark:text-zinc-50">
+        <span className="h-2.5 w-2.5 rounded-full bg-leite" aria-hidden="true" />
+        Produção de leite
+      </p>
 
       {pontos.length === 0 ? (
         <p className="py-10 text-center text-sm text-zinc-600 dark:text-zinc-400">
           Nenhum registro nesse período.
         </p>
       ) : (
-        <svg viewBox={`0 0 ${LARGURA_TOTAL} 170`} className="h-auto w-full">
+        <svg viewBox={`0 0 ${LARGURA_TOTAL} 190`} className="h-auto w-full">
           {gridValues.map((v) => (
             <g key={v}>
               <line
@@ -112,59 +79,67 @@ export function ProducaoLeiteChart({
                 strokeWidth={1}
               />
               <text
-                x={PLOT_LEFT - 6}
+                x={PLOT_LEFT - 8}
                 y={y(v)}
                 textAnchor="end"
                 dominantBaseline="middle"
-                className="fill-zinc-600 dark:fill-zinc-400"
-                fontSize={11}
+                className="fill-zinc-600 font-mono tabular-nums dark:fill-zinc-400"
+                fontSize={22}
               >
                 {Math.round(v)}
               </text>
             </g>
           ))}
 
+          <path d={areaD} className="fill-leite-tint" />
+
           <path
             d={pathD}
             fill="none"
-            className="stroke-brand-green"
-            strokeWidth={2}
+            className="stroke-leite"
+            strokeWidth={3.5}
             strokeLinecap="round"
             strokeLinejoin="round"
           />
 
-          {pontos.map(([data, litros]) => (
-            <circle key={data} cx={x(data)} cy={y(litros)} r={3} className="fill-brand-green" />
+          {pontos.map(([data, litros], i) => (
+            <circle key={data} cx={x(i)} cy={y(litros)} r={5} className="fill-leite" />
           ))}
 
           {ultimoPonto && (
             <>
-              <circle cx={x(ultimoPonto[0])} cy={y(ultimoPonto[1])} r={6} className="fill-background" />
-              <circle cx={x(ultimoPonto[0])} cy={y(ultimoPonto[1])} r={4} className="fill-brand-green" />
+              <circle cx={x(ultimoIndex)} cy={y(ultimoPonto[1])} r={9} className="fill-background" />
+              <circle cx={x(ultimoIndex)} cy={y(ultimoPonto[1])} r={6} className="fill-leite" />
               <text
-                x={x(ultimoPonto[0]) - 8}
-                y={y(ultimoPonto[1]) - 10}
+                x={x(ultimoIndex) - 12}
+                y={y(ultimoPonto[1]) - 14}
                 textAnchor="end"
-                className="fill-black dark:fill-zinc-50"
-                fontSize={12}
-                fontWeight={600}
+                className="fill-black font-mono tabular-nums dark:fill-zinc-50"
+                fontSize={28}
+                fontWeight={700}
               >
                 {Math.round(ultimoPonto[1])} L
               </text>
             </>
           )}
 
-          <text x={PLOT_LEFT} y={162} textAnchor="start" className="fill-zinc-600 dark:fill-zinc-400" fontSize={11}>
-            {formatarDataCurta(inicio)}
+          <text
+            x={PLOT_LEFT}
+            y={181}
+            textAnchor="start"
+            className="fill-zinc-600 font-mono tabular-nums dark:fill-zinc-400"
+            fontSize={22}
+          >
+            {formatarDataCurta(pontos[0][0])}
           </text>
           <text
             x={LARGURA_TOTAL - PLOT_RIGHT}
-            y={162}
+            y={181}
             textAnchor="end"
-            className="fill-zinc-600 dark:fill-zinc-400"
-            fontSize={11}
+            className="fill-zinc-600 font-mono tabular-nums dark:fill-zinc-400"
+            fontSize={22}
           >
-            {formatarDataCurta(fim)}
+            {formatarDataCurta(ultimoPonto[0])}
           </text>
         </svg>
       )}

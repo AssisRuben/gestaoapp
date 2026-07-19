@@ -1,5 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { cache } from "react";
+import { USER_ID_HEADER } from "./user-header";
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -26,3 +28,24 @@ export async function createClient() {
     },
   );
 }
+
+// O middleware (proxy.ts) já chama supabase.auth.getUser() — um round-trip
+// real à API de Auth — pra validar a sessão em toda requisição, e repassa o
+// id já validado via header. Ler esse header aqui evita repetir o mesmo
+// round-trip de novo em cada Server Component. cache() ainda memoiza por
+// request, então mesmo chamado em layout + página, só lê uma vez.
+//
+// Se o header não vier (ex.: chamado fora do fluxo normal de middleware),
+// cai pro caminho antigo — chamar o Supabase de verdade — em vez de tratar
+// como "sem usuário", pra nunca derrubar sessões válidas por engano.
+export const getUser = cache(async (): Promise<{ id: string } | null> => {
+  const headerStore = await headers();
+  const id = headerStore.get(USER_ID_HEADER);
+  if (id) return { id };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user ? { id: user.id } : null;
+});

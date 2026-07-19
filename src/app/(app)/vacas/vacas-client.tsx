@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { cadastrarVaca, atualizarVaca, deletarVaca } from "./actions";
+import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../mobile-list";
 import type { Vaca } from "./types";
 
 const STATUS_PRODUTIVO_LABEL: Record<string, string> = {
@@ -16,9 +17,15 @@ const STATUS_REPRODUTIVO_LABEL: Record<string, string> = {
   vazia_em_servico: "Vazia em serviço",
 };
 
+const STATUS_PRODUTIVO_BADGE: Record<string, string> = {
+  novilha: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
+  lactacao: "bg-brand-green/10 text-brand-green",
+  seca: "bg-amber-500/10 text-amber-700 dark:text-amber-500",
+};
+
 const CAMPO_CLASSES =
-  "rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/40";
-const LABEL_CLASSES = "text-sm font-medium text-black dark:text-zinc-50";
+  "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
+const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
 
 function CamposVaca({
   vacas,
@@ -138,7 +145,7 @@ export function VacasClient({ vacas }: { vacas: Vaca[] }) {
 
   const vacasFiltradas = useMemo(() => {
     if (!busca.trim()) return vacas;
-    return vacas.filter((v) => String(v.numero_identificacao).includes(busca.trim()));
+    return vacas.filter((v) => String(v.numero_identificacao) === busca.trim());
   }, [vacas, busca]);
 
   return (
@@ -160,8 +167,8 @@ export function VacasClient({ vacas }: { vacas: Vaca[] }) {
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-black/[.08] dark:border-white/[.145]">
-        <table className="w-full min-w-[620px] text-left text-sm">
+      <div className="hidden overflow-x-auto rounded-2xl border bg-surface border-black/[.08] sm:block dark:border-white/[.145]">
+        <table className="w-full text-left text-base">
           <thead>
             <tr className="border-b border-black/[.08] text-zinc-600 dark:border-white/[.145] dark:text-zinc-400">
               <th className="px-4 py-2 font-medium">Número</th>
@@ -204,6 +211,32 @@ export function VacasClient({ vacas }: { vacas: Vaca[] }) {
         </table>
       </div>
 
+      <MobileCardList>
+        {vacasFiltradas.map((vaca) => (
+          <MobileCard key={vaca.id} onClick={() => setVacaEmEdicao(vaca)}>
+            <CardHeader
+              title={`Vaca ${vaca.numero_identificacao}`}
+              accentClassName="bg-vacas"
+              badge={
+                <span
+                  className={`rounded-full px-2 py-0.5 text-sm font-medium ${
+                    STATUS_PRODUTIVO_BADGE[vaca.status_produtivo] ?? "bg-zinc-500/10 text-zinc-600"
+                  }`}
+                >
+                  {STATUS_PRODUTIVO_LABEL[vaca.status_produtivo] ?? vaca.status_produtivo}
+                </span>
+              }
+            />
+            <CardRow
+              label="Status reprodutivo"
+              value={STATUS_REPRODUTIVO_LABEL[vaca.status_reprodutivo] ?? vaca.status_reprodutivo}
+            />
+            <CardRow label="Mãe" value={vaca.mae ? vaca.mae.numero_identificacao : "—"} />
+          </MobileCard>
+        ))}
+        {vacasFiltradas.length === 0 && <EmptyCard>Nenhuma vaca cadastrada ainda.</EmptyCard>}
+      </MobileCardList>
+
       <button
         type="button"
         onClick={() => setDrawerAberto(true)}
@@ -228,7 +261,7 @@ export function VacasClient({ vacas }: { vacas: Vaca[] }) {
               <p className="text-sm text-red-600 dark:text-red-400">{criarState.error}</p>
             )}
 
-            <div className="mt-auto flex gap-2">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setDrawerAberto(false)}
@@ -254,7 +287,7 @@ export function VacasClient({ vacas }: { vacas: Vaca[] }) {
           <form
             key={vacaEmEdicao.id}
             action={editarAction}
-            className="relative flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="vaca_id" value={vacaEmEdicao.id} />
 
@@ -314,7 +347,7 @@ export function VacasClient({ vacas }: { vacas: Vaca[] }) {
           <div className="absolute inset-0 bg-black/30" onClick={() => setVacaParaExcluir(null)} />
           <form
             action={excluirAction}
-            className="relative flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="vaca_id" value={vacaParaExcluir.id} />
 

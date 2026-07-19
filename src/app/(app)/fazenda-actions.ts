@@ -3,8 +3,36 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPropriedadeAtual } from "@/lib/propriedade";
+import type { UsuarioWhatsapp, PatrimonioItem } from "./fazenda-types";
 
 type ActionState = { error?: string; success?: boolean } | undefined;
+
+export async function getFazendaData(): Promise<{
+  usuarioWhatsapp: UsuarioWhatsapp | null;
+  patrimonios: PatrimonioItem[];
+}> {
+  const propriedadeAtual = await getPropriedadeAtual();
+  if (!propriedadeAtual) return { usuarioWhatsapp: null, patrimonios: [] };
+
+  const supabase = await createClient();
+  const [{ data: whatsappData }, { data: patrimonioData }] = await Promise.all([
+    supabase
+      .from("usuarios_whatsapp")
+      .select("id, propriedade_id, telefone, papel, ativo, created_at")
+      .eq("propriedade_id", propriedadeAtual.id)
+      .order("created_at"),
+    supabase
+      .from("patrimonio")
+      .select("id, propriedade_id, tipo_ativo, valor_total, taxa_juros, vida_util, created_at")
+      .eq("propriedade_id", propriedadeAtual.id)
+      .order("created_at"),
+  ]);
+
+  return {
+    usuarioWhatsapp: whatsappData?.[0] ?? null,
+    patrimonios: patrimonioData ?? [],
+  };
+}
 
 export async function atualizarPropriedade(
   _state: ActionState,

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export type RegistrarCoberturaState = { error?: string; success?: boolean } | undefined;
@@ -25,6 +25,7 @@ export async function registrarCobertura(
   }
 
   revalidatePath("/reproducao");
+  updateTag("coberturas");
   return { success: true };
 }
 
@@ -54,6 +55,13 @@ export async function registrarParto(
   revalidatePath("/reproducao");
   revalidatePath("/bezerros");
   revalidatePath("/vacas");
+  revalidatePath("/leite");
+  updateTag("partos");
+  updateTag("bezerros");
+  updateTag("vacas");
+  updateTag("coberturas");
+  // registrar_parto arquiva (remove) o leite da lactação que acabou de fechar
+  updateTag("leite");
   return { success: true };
 }
 
@@ -78,6 +86,8 @@ export async function atualizarParto(
 
   revalidatePath("/reproducao");
   revalidatePath("/bezerros");
+  updateTag("partos");
+  updateTag("bezerros");
   return { success: true };
 }
 
@@ -98,6 +108,8 @@ export async function deletarParto(
 
   revalidatePath("/reproducao");
   revalidatePath("/bezerros");
+  updateTag("partos");
+  updateTag("bezerros");
   return { success: true };
 }
 
@@ -125,6 +137,7 @@ export async function atualizarCobertura(
   }
 
   revalidatePath("/reproducao");
+  updateTag("coberturas");
   return { success: true };
 }
 
@@ -144,5 +157,6 @@ export async function deletarCobertura(
   }
 
   revalidatePath("/reproducao");
+  updateTag("coberturas");
   return { success: true };
 }

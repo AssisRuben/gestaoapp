@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
+import { cache } from "react";
+import { createClient, getUser } from "@/lib/supabase/server";
 
 export const PROPRIEDADE_COOKIE = "propriedade_id";
 
@@ -17,14 +18,11 @@ export type VinculoPropriedade = {
   propriedade: Propriedade;
 };
 
-export async function getPropriedadesDoUsuario(): Promise<VinculoPropriedade[]> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+export const getPropriedadesDoUsuario = cache(async (): Promise<VinculoPropriedade[]> => {
+  const user = await getUser();
   if (!user) return [];
 
+  const supabase = await createClient();
   const { data } = await supabase
     .from("usuarios_propriedades")
     .select(
@@ -33,7 +31,7 @@ export async function getPropriedadesDoUsuario(): Promise<VinculoPropriedade[]> 
     .eq("usuario_id", user.id);
 
   return (data ?? []) as unknown as VinculoPropriedade[];
-}
+});
 
 export async function getPropriedadeAtual(): Promise<Propriedade | null> {
   const vinculos = await getPropriedadesDoUsuario();

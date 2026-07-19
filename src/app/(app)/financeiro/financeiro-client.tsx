@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { registrarLancamento, atualizarLancamento, deletarLancamento } from "./actions";
+import { MobileCardList, MobileCard, CardHeader, CardRow } from "../mobile-list";
 import type { Lancamento } from "./types";
 
 const TIPO_LABEL: Record<string, string> = {
@@ -15,8 +16,8 @@ const TIPO_CLASSES: Record<string, string> = {
 };
 
 const CAMPO_CLASSES =
-  "rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/40";
-const LABEL_CLASSES = "text-sm font-medium text-black dark:text-zinc-50";
+  "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
+const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
 
 const formatarMoeda = (valor: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor);
@@ -189,31 +190,23 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
     [lancamentos, inicio, fim],
   );
 
-  const { totalReceitas, totalDespesas, grupos } = useMemo(() => {
+  const { totalReceitas, totalDespesas } = useMemo(() => {
     let receitas = 0;
     let despesas = 0;
-    const gruposMap = new Map<string, number>();
 
     for (const l of lancamentosFiltrados) {
       if (l.tipo === "receita") receitas += Number(l.valor);
       else despesas += Number(l.valor);
-
-      const chave = `${TIPO_LABEL[l.tipo] ?? l.tipo} - ${l.categoria ?? "outros"}`;
-      gruposMap.set(chave, (gruposMap.get(chave) ?? 0) + Number(l.valor));
     }
 
-    return {
-      totalReceitas: receitas,
-      totalDespesas: despesas,
-      grupos: [...gruposMap.entries()].sort((a, b) => b[1] - a[1]),
-    };
+    return { totalReceitas: receitas, totalDespesas: despesas };
   }, [lancamentosFiltrados]);
 
   return (
     <div className="flex flex-1 flex-col gap-4 pb-20 sm:pb-0">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3">
-          <div className="flex flex-col gap-1">
+        <div className="flex flex-row items-end gap-3">
+          <div className="flex flex-1 flex-col gap-1">
             <label htmlFor="inicio" className={LABEL_CLASSES}>
               De
             </label>
@@ -222,10 +215,10 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
               type="date"
               value={inicio}
               onChange={(e) => setInicio(e.target.value)}
-              className={CAMPO_CLASSES}
+              className={`w-full ${CAMPO_CLASSES}`}
             />
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-1 flex-col gap-1">
             <label htmlFor="fim" className={LABEL_CLASSES}>
               Até
             </label>
@@ -234,7 +227,7 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
               type="date"
               value={fim}
               onChange={(e) => setFim(e.target.value)}
-              className={CAMPO_CLASSES}
+              className={`w-full ${CAMPO_CLASSES}`}
             />
           </div>
         </div>
@@ -247,48 +240,45 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border border-black/[.08] p-4 dark:border-white/[.145]">
+      <div className="grid grid-cols-3 gap-2">
+        <div className="flex flex-col items-center gap-1.5 rounded-2xl border bg-surface border-black/[.08] p-3 text-center dark:border-white/[.145]">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-green/10">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-brand-green" aria-hidden="true">
+              <path d="M6 17L12 11L16 15L21 8" />
+              <path d="M15 8h6v6" />
+            </svg>
+          </span>
+          <p className="font-mono text-base font-bold tabular-nums text-brand-green">{formatarMoeda(totalReceitas)}</p>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">Receitas</p>
-          <p className="text-lg font-semibold text-brand-green">{formatarMoeda(totalReceitas)}</p>
         </div>
-        <div className="rounded-lg border border-black/[.08] p-4 dark:border-white/[.145]">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Despesas</p>
-          <p className="text-lg font-semibold text-red-600 dark:text-red-400">
+        <div className="flex flex-col items-center gap-1.5 rounded-2xl border bg-surface border-black/[.08] p-3 text-center dark:border-white/[.145]">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600/10 dark:bg-red-400/10">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true">
+              <path d="M6 8L12 14L16 10L21 17" />
+              <path d="M15 17h6v-6" />
+            </svg>
+          </span>
+          <p className="font-mono text-base font-bold tabular-nums text-red-600 dark:text-red-400">
             {formatarMoeda(totalDespesas)}
           </p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Despesas</p>
         </div>
-        <div className="rounded-lg border border-black/[.08] p-4 dark:border-white/[.145]">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Saldo</p>
-          <p className="text-lg font-semibold text-black dark:text-zinc-50">
+        <div className="flex flex-col items-center gap-1.5 rounded-2xl border bg-surface border-black/[.08] p-3 text-center dark:border-white/[.145]">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-financeiro-tint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-financeiro-ink" aria-hidden="true">
+              <rect x="3" y="6" width="18" height="12" rx="2" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </span>
+          <p className="font-mono text-base font-bold tabular-nums text-black dark:text-zinc-50">
             {formatarMoeda(totalReceitas - totalDespesas)}
           </p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Saldo</p>
         </div>
       </div>
 
-      {grupos.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-black/[.08] dark:border-white/[.145]">
-          <table className="w-full min-w-[420px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-black/[.08] text-zinc-600 dark:border-white/[.145] dark:text-zinc-400">
-                <th className="px-4 py-2 font-medium">Tipo - Categoria</th>
-                <th className="px-4 py-2 font-medium">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {grupos.map(([chave, total], i) => (
-                <tr key={chave} className={i % 2 === 1 ? "bg-black/[.02] dark:bg-white/[.03]" : undefined}>
-                  <td className="px-4 py-2 text-black dark:text-zinc-50">{chave}</td>
-                  <td className="px-4 py-2 text-black dark:text-zinc-50">{formatarMoeda(total)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <div className="overflow-x-auto rounded-lg border border-black/[.08] dark:border-white/[.145]">
-        <table className="w-full min-w-[560px] text-left text-sm">
+      <div className="hidden overflow-x-auto rounded-2xl border bg-surface border-black/[.08] sm:block dark:border-white/[.145]">
+        <table className="w-full text-left text-base">
           <thead>
             <tr className="border-b border-black/[.08] text-zinc-600 dark:border-white/[.145] dark:text-zinc-400">
               <th className="px-4 py-2 font-medium">Data</th>
@@ -329,6 +319,29 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
         </table>
       </div>
 
+      <MobileCardList>
+        {lancamentosFiltrados.map((lancamento) => (
+          <MobileCard key={lancamento.id} onClick={() => setLancamentoEmEdicao(lancamento)}>
+            <CardHeader
+              title={lancamento.categoria ?? "outros"}
+              accentClassName="bg-financeiro"
+              badge={
+                <span className={`font-medium ${TIPO_CLASSES[lancamento.tipo]}`}>
+                  {formatarMoeda(Number(lancamento.valor))}
+                </span>
+              }
+            />
+            <CardRow label="Tipo" value={TIPO_LABEL[lancamento.tipo] ?? lancamento.tipo} />
+            <CardRow label="Data" value={lancamento.data} />
+          </MobileCard>
+        ))}
+        {lancamentosFiltrados.length === 0 && (
+          <p className="rounded-2xl border bg-surface border-black/[.08] p-4 text-center text-sm text-zinc-600 dark:border-white/[.145] dark:text-zinc-400">
+            Nenhum lançamento nesse período.
+          </p>
+        )}
+      </MobileCardList>
+
       <button
         type="button"
         onClick={() => setDrawerAberto(true)}
@@ -353,7 +366,7 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
               <p className="text-sm text-red-600 dark:text-red-400">{criarState.error}</p>
             )}
 
-            <div className="mt-auto flex gap-2">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setDrawerAberto(false)}
@@ -379,7 +392,7 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
           <form
             key={lancamentoEmEdicao.id}
             action={editarAction}
-            className="relative flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="id" value={lancamentoEmEdicao.id} />
 
@@ -437,7 +450,7 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
           />
           <form
             action={excluirAction}
-            className="relative flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="id" value={lancamentoParaExcluir.id} />
 

@@ -4,8 +4,8 @@ import { useActionState } from "react";
 import { cadastrarNovaFazenda } from "./cadastro-actions";
 
 const CAMPO_CLASSES =
-  "rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/40";
-const LABEL_CLASSES = "text-sm font-medium text-black dark:text-zinc-50";
+  "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
+const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
 
 export function CadastroModal({ onClose }: { onClose: () => void }) {
   const [state, action, pending] = useActionState(cadastrarNovaFazenda, undefined);

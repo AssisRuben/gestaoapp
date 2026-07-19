@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS } from "./nav-items";
+import { NAV_ITEMS, ACCENT_ACTIVE_CLASSES } from "./nav-items";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -16,14 +16,12 @@ export function BottomNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-xs font-medium transition-colors ${
-              ativo
-                ? "bg-brand-green/10 text-brand-green"
-                : "text-zinc-600 dark:text-zinc-400"
+            className={`flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-xs font-medium transition-colors ${
+              ativo ? ACCENT_ACTIVE_CLASSES[item.accent] : "text-zinc-600 dark:text-zinc-400"
             }`}
           >
             <Icon className="h-5 w-5" />
-            {item.label}
+            <span className="w-full truncate text-center leading-tight">{item.label}</span>
           </Link>
         );
       })}

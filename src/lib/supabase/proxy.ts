@@ -1,8 +1,9 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { USER_ID_HEADER } from "./user-header";
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  const cookiesParaAtualizar: { name: string; value: string; options: CookieOptions }[] = [];
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,10 +17,7 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          );
+          cookiesParaAtualizar.push(...cookiesToSet);
         },
       },
     },
@@ -31,6 +29,21 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Repassa o user.id já validado aqui pros Server Components via header, pra
+  // eles não precisarem chamar getUser() de novo (outro round-trip à API de
+  // Auth) só pra saber quem está logado — a validação já aconteceu.
+  const requestHeaders = new Headers(request.headers);
+  if (user) {
+    requestHeaders.set(USER_ID_HEADER, user.id);
+  } else {
+    requestHeaders.delete(USER_ID_HEADER);
+  }
+
+  const supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } });
+  cookiesParaAtualizar.forEach(({ name, value, options }) =>
+    supabaseResponse.cookies.set(name, value, options),
+  );
 
   return { supabaseResponse, user };
 }

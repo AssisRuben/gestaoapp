@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# infra local de deploy (credenciais de túnel, binários, logs — nunca versionar)
+/deploy/*.json
+/deploy/*.exe
+/deploy/*.log
+/deploy/nssm-2.24/

@@ -9,6 +9,7 @@ import {
   atualizarParto,
   deletarParto,
 } from "./actions";
+import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../mobile-list";
 import type { Cobertura, Parto, VacaOpcao } from "./types";
 
 const SEXO_BEZERRO_LABEL: Record<string, string> = {
@@ -30,8 +31,8 @@ const DIAGNOSTICO_CLASSES: Record<string, string> = {
 };
 
 const CAMPO_CLASSES =
-  "rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/40";
-const LABEL_CLASSES = "text-sm font-medium text-black dark:text-zinc-50";
+  "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
+const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
 
 function hoje() {
   return new Date().toISOString().slice(0, 10);
@@ -118,11 +119,16 @@ export function ReproducaoClient({
 
   const coberturasFiltradas = useMemo(() => {
     if (!busca.trim()) return coberturas;
-    return coberturas.filter((c) => String(c.vaca.numero_identificacao).includes(busca.trim()));
+    return coberturas.filter((c) => String(c.vaca.numero_identificacao) === busca.trim());
   }, [coberturas, busca]);
 
+  const partosFiltrados = useMemo(() => {
+    if (!busca.trim()) return partos;
+    return partos.filter((p) => String(p.vaca.numero_identificacao) === busca.trim());
+  }, [partos, busca]);
+
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-4 pb-20 sm:pb-0">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Coberturas</h2>
         <button
@@ -142,8 +148,8 @@ export function ReproducaoClient({
         className={`w-full sm:max-w-xs ${CAMPO_CLASSES}`}
       />
 
-      <div className="overflow-x-auto rounded-lg border border-black/[.08] dark:border-white/[.145]">
-        <table className="w-full min-w-[820px] text-left text-sm">
+      <div className="hidden overflow-x-auto rounded-2xl border bg-surface border-black/[.08] sm:block dark:border-white/[.145]">
+        <table className="w-full text-left text-base">
           <thead>
             <tr className="border-b border-black/[.08] text-zinc-600 dark:border-white/[.145] dark:text-zinc-400">
               <th className="px-4 py-2 font-medium">Vaca</th>
@@ -202,6 +208,39 @@ export function ReproducaoClient({
         </table>
       </div>
 
+      <MobileCardList>
+        {coberturasFiltradas.map((cobertura) => {
+          const partoPrevisto =
+            cobertura.diagnostico_prenhez === "positivo"
+              ? somarDias(cobertura.data_cobertura, 283)
+              : null;
+          const secagemPrevista = partoPrevisto ? somarDias(partoPrevisto, -60) : null;
+
+          return (
+            <MobileCard key={cobertura.id} onClick={() => setCoberturaEmEdicao(cobertura)}>
+              <CardHeader
+                title={`Vaca ${cobertura.vaca.numero_identificacao}`}
+                accentClassName="bg-reproducao"
+                badge={
+                  <span
+                    className={`rounded-full bg-zinc-500/10 px-2 py-0.5 text-sm font-medium ${DIAGNOSTICO_CLASSES[cobertura.diagnostico_prenhez]}`}
+                  >
+                    {DIAGNOSTICO_LABEL[cobertura.diagnostico_prenhez] ?? cobertura.diagnostico_prenhez}
+                  </span>
+                }
+              />
+              <CardRow label="Data cobertura" value={cobertura.data_cobertura} />
+              <CardRow label="Touro/Sêmen" value={cobertura.touro_semen ?? "—"} />
+              <CardRow label="Parto previsto" value={partoPrevisto ?? "—"} />
+              <CardRow label="Secagem prevista" value={secagemPrevista ?? "—"} />
+            </MobileCard>
+          );
+        })}
+        {coberturasFiltradas.length === 0 && (
+          <EmptyCard>Nenhuma cobertura registrada ainda.</EmptyCard>
+        )}
+      </MobileCardList>
+
       <div className="mt-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Partos</h2>
         <button
@@ -213,8 +252,8 @@ export function ReproducaoClient({
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-black/[.08] dark:border-white/[.145]">
-        <table className="w-full min-w-[520px] text-left text-sm">
+      <div className="hidden overflow-x-auto rounded-2xl border bg-surface border-black/[.08] sm:block dark:border-white/[.145]">
+        <table className="w-full text-left text-base">
           <thead>
             <tr className="border-b border-black/[.08] text-zinc-600 dark:border-white/[.145] dark:text-zinc-400">
               <th className="px-4 py-2 font-medium">Vaca</th>
@@ -224,7 +263,7 @@ export function ReproducaoClient({
             </tr>
           </thead>
           <tbody>
-            {partos.map((parto, i) => (
+            {partosFiltrados.map((parto, i) => (
               <tr
                 key={parto.id}
                 onClick={() => setPartoEmEdicao(parto)}
@@ -242,7 +281,7 @@ export function ReproducaoClient({
                 </td>
               </tr>
             ))}
-            {partos.length === 0 && (
+            {partosFiltrados.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-6 text-center text-zinc-600 dark:text-zinc-400">
                   Nenhum parto registrado ainda.
@@ -252,6 +291,31 @@ export function ReproducaoClient({
           </tbody>
         </table>
       </div>
+
+      <MobileCardList>
+        {partosFiltrados.map((parto) => (
+          <MobileCard key={parto.id} onClick={() => setPartoEmEdicao(parto)}>
+            <CardHeader
+              title={`Vaca ${parto.vaca.numero_identificacao}`}
+              accentClassName="bg-reproducao"
+              badge={
+                <span
+                  className={`rounded-full px-2 py-0.5 text-sm font-medium ${
+                    parto.ativa
+                      ? "bg-brand-green/10 text-brand-green"
+                      : "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400"
+                  }`}
+                >
+                  {parto.ativa ? "Lactação atual" : "Encerrado"}
+                </span>
+              }
+            />
+            <CardRow label="Data do parto" value={parto.data_parto} />
+            <CardRow label="IEP (dias)" value={parto.iep ?? "—"} />
+          </MobileCard>
+        ))}
+        {partosFiltrados.length === 0 && <EmptyCard>Nenhum parto registrado ainda.</EmptyCard>}
+      </MobileCardList>
 
       {drawerPartoAberto && (
         <div className="fixed inset-0 z-50 flex justify-end">
@@ -334,7 +398,7 @@ export function ReproducaoClient({
               <p className="text-sm text-red-600 dark:text-red-400">{partoState.error}</p>
             )}
 
-            <div className="mt-auto flex gap-2">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setDrawerPartoAberto(false)}
@@ -360,7 +424,7 @@ export function ReproducaoClient({
           <form
             key={partoEmEdicao.id}
             action={editarPartoAction}
-            className="relative flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="parto_id" value={partoEmEdicao.id} />
 
@@ -474,7 +538,7 @@ export function ReproducaoClient({
               <p className="text-sm text-red-600 dark:text-red-400">{criarState.error}</p>
             )}
 
-            <div className="mt-auto flex gap-2">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setDrawerAberto(false)}
@@ -500,7 +564,7 @@ export function ReproducaoClient({
           <form
             key={coberturaEmEdicao.id}
             action={editarAction}
-            className="relative flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="cobertura_id" value={coberturaEmEdicao.id} />
 
@@ -596,7 +660,7 @@ export function ReproducaoClient({
           />
           <form
             action={excluirAction}
-            className="relative flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="cobertura_id" value={coberturaParaExcluir.id} />
 
@@ -637,7 +701,7 @@ export function ReproducaoClient({
           <div className="absolute inset-0 bg-black/30" onClick={() => setPartoParaExcluir(null)} />
           <form
             action={excluirPartoAction}
-            className="relative flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="parto_id" value={partoParaExcluir.id} />
 

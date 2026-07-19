@@ -32,6 +32,7 @@ export default function LoginPage() {
             alt="Gestão Pec"
             width={776}
             height={768}
+            sizes="100px"
             className="h-24 w-auto"
             priority
           />

@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { cadastrarBezerro, atualizarBezerro, deletarBezerro } from "./actions";
+import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../mobile-list";
 import type { Bezerro, VacaOpcao } from "./types";
 
 const SEXO_LABEL: Record<string, string> = {
@@ -11,8 +12,8 @@ const SEXO_LABEL: Record<string, string> = {
 };
 
 const CAMPO_CLASSES =
-  "rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/40";
-const LABEL_CLASSES = "text-sm font-medium text-black dark:text-zinc-50";
+  "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
+const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
 
 function CamposBezerro({
   vacas,
@@ -121,7 +122,7 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
 
   const bezerrosFiltrados = useMemo(() => {
     if (!busca.trim()) return bezerros;
-    return bezerros.filter((b) => String(b.numero_identificacao).includes(busca.trim()));
+    return bezerros.filter((b) => String(b.numero_identificacao) === busca.trim());
   }, [bezerros, busca]);
 
   return (
@@ -143,8 +144,8 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-black/[.08] dark:border-white/[.145]">
-        <table className="w-full min-w-[680px] text-left text-sm">
+      <div className="hidden overflow-x-auto rounded-2xl border bg-surface border-black/[.08] sm:block dark:border-white/[.145]">
+        <table className="w-full text-left text-base">
           <thead>
             <tr className="border-b border-black/[.08] text-zinc-600 dark:border-white/[.145] dark:text-zinc-400">
               <th className="px-4 py-2 font-medium">Número</th>
@@ -193,6 +194,33 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
         </table>
       </div>
 
+      <MobileCardList>
+        {bezerrosFiltrados.map((bezerro) => (
+          <MobileCard key={bezerro.id} onClick={() => setBezerroEmEdicao(bezerro)}>
+            <CardHeader
+              title={`Bezerro ${bezerro.numero_identificacao}`}
+              accentClassName="bg-bezerros"
+              badge={
+                <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  {bezerro.sexo ? SEXO_LABEL[bezerro.sexo] ?? bezerro.sexo : "—"}
+                </span>
+              }
+            />
+            <CardRow label="Mãe" value={bezerro.mae ? bezerro.mae.numero_identificacao : "—"} />
+            <CardRow label="Nascimento" value={bezerro.data_nascimento ?? "—"} />
+            <CardRow
+              label="Virou vaca?"
+              value={
+                bezerro.vaca_gerada
+                  ? `Vaca ${bezerro.vaca_gerada.numero_identificacao}`
+                  : "Ainda bezerro"
+              }
+            />
+          </MobileCard>
+        ))}
+        {bezerrosFiltrados.length === 0 && <EmptyCard>Nenhum bezerro cadastrado ainda.</EmptyCard>}
+      </MobileCardList>
+
       <button
         type="button"
         onClick={() => setDrawerAberto(true)}
@@ -217,7 +245,7 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
               <p className="text-sm text-red-600 dark:text-red-400">{criarState.error}</p>
             )}
 
-            <div className="mt-auto flex gap-2">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setDrawerAberto(false)}
@@ -243,7 +271,7 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
           <form
             key={bezerroEmEdicao.id}
             action={editarAction}
-            className="relative flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="bezerro_id" value={bezerroEmEdicao.id} />
 
@@ -302,7 +330,7 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
           <div className="absolute inset-0 bg-black/30" onClick={() => setBezerroParaExcluir(null)} />
           <form
             action={excluirAction}
-            className="relative flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-zinc-950"
+            className="relative flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="bezerro_id" value={bezerroParaExcluir.id} />
 

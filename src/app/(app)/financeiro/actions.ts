@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPropriedadeAtual } from "@/lib/propriedade";
 
@@ -36,6 +36,7 @@ export async function registrarLancamento(
   }
 
   revalidatePath("/financeiro");
+  updateTag("financeiro");
   return { success: true };
 }
 
@@ -63,6 +64,7 @@ export async function atualizarLancamento(
   }
 
   revalidatePath("/financeiro");
+  updateTag("financeiro");
   return { success: true };
 }
 
@@ -82,5 +84,6 @@ export async function deletarLancamento(
   }
 
   revalidatePath("/financeiro");
+  updateTag("financeiro");
   return { success: true };
 }

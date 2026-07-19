@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPropriedadeAtual } from "@/lib/propriedade";
 
@@ -32,6 +32,8 @@ export async function cadastrarVaca(
   }
 
   revalidatePath("/vacas");
+  updateTag("vacas");
+  updateTag("bezerros");
   return { success: true };
 }
 
@@ -51,6 +53,7 @@ export async function deletarVaca(
   }
 
   revalidatePath("/vacas");
+  updateTag("vacas");
   return { success: true };
 }
 
@@ -77,5 +80,6 @@ export async function atualizarVaca(
   }
 
   revalidatePath("/vacas");
+  updateTag("vacas");
   return { success: true };
 }

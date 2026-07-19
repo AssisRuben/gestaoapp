@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPropriedadeAtual } from "@/lib/propriedade";
 
@@ -34,6 +34,7 @@ export async function cadastrarBezerro(
   }
 
   revalidatePath("/bezerros");
+  updateTag("bezerros");
   return { success: true };
 }
 
@@ -53,6 +54,7 @@ export async function deletarBezerro(
   }
 
   revalidatePath("/bezerros");
+  updateTag("bezerros");
   return { success: true };
 }
 
@@ -81,5 +83,6 @@ export async function atualizarBezerro(
   }
 
   revalidatePath("/bezerros");
+  updateTag("bezerros");
   return { success: true };
 }

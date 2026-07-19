@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export type RegistrarLeiteState = { error?: string; success?: boolean } | undefined;
@@ -25,6 +25,7 @@ export async function registrarLeite(
   }
 
   revalidatePath("/leite");
+  updateTag("leite");
   return { success: true };
 }
 
@@ -50,6 +51,7 @@ export async function atualizarLeite(
   }
 
   revalidatePath("/leite");
+  updateTag("leite");
   return { success: true };
 }
 
@@ -69,5 +71,6 @@ export async function deletarLeite(
   }
 
   revalidatePath("/leite");
+  updateTag("leite");
   return { success: true };
 }

@@ -2,34 +2,41 @@
 
 import { useState } from "react";
 import { FazendaModal } from "./fazenda-modal";
+import { getFazendaData } from "./fazenda-actions";
 import type { Propriedade } from "@/lib/propriedade";
 import type { UsuarioWhatsapp, PatrimonioItem } from "./fazenda-types";
 
-export function FazendaTrigger({
-  propriedade,
-  usuarioWhatsapp,
-  patrimonios,
-}: {
-  propriedade: Propriedade;
-  usuarioWhatsapp: UsuarioWhatsapp | null;
-  patrimonios: PatrimonioItem[];
-}) {
+export function FazendaTrigger({ propriedade }: { propriedade: Propriedade }) {
   const [aberto, setAberto] = useState(false);
+  const [carregando, setCarregando] = useState(false);
+  const [dados, setDados] = useState<{
+    usuarioWhatsapp: UsuarioWhatsapp | null;
+    patrimonios: PatrimonioItem[];
+  } | null>(null);
+
+  async function abrir() {
+    setAberto(true);
+    if (dados) return;
+    setCarregando(true);
+    const data = await getFazendaData();
+    setDados(data);
+    setCarregando(false);
+  }
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setAberto(true)}
-        className="truncate text-sm font-medium text-black hover:underline dark:text-zinc-50"
+        onClick={abrir}
+        className="max-w-full truncate text-lg font-semibold text-black hover:underline sm:text-xl dark:text-zinc-50"
       >
         {propriedade.nome_propriedade}
       </button>
-      {aberto && (
+      {aberto && !carregando && dados && (
         <FazendaModal
           propriedade={propriedade}
-          usuarioWhatsapp={usuarioWhatsapp}
-          patrimonios={patrimonios}
+          usuarioWhatsapp={dados.usuarioWhatsapp}
+          patrimonios={dados.patrimonios}
           onClose={() => setAberto(false)}
         />
       )}
