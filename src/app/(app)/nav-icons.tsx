@@ -65,3 +65,36 @@ export function MilkIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export function TrophyIcon({ className }: { className?: string }) {
+  return (
+    <svg {...commonProps} className={className}>
+      <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" />
+      <path d="M8 5H5.5A2.5 2.5 0 0 0 8 8.5" />
+      <path d="M16 5h2.5A2.5 2.5 0 0 1 16 8.5" />
+      <line x1="12" y1="13" x2="12" y2="17" />
+      <line x1="9" y1="20" x2="15" y2="20" />
+      <line x1="12" y1="17" x2="12" y2="20" />
+    </svg>
+  );
+}
+
+export function AlertIcon({ className }: { className?: string }) {
+  return (
+    <svg {...commonProps} className={className}>
+      <path d="M12 4 L21 19 L3 19 Z" />
+      <line x1="12" y1="10" x2="12" y2="14" />
+      <circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function ChatIcon({ className }: { className?: string }) {
+  return (
+    <svg {...commonProps} className={className}>
+      <path d="M4 5h16v10H9l-4 4V5Z" />
+      <line x1="8" y1="9" x2="16" y2="9" />
+      <line x1="8" y1="12" x2="13" y2="12" />
+    </svg>
+  );
+}

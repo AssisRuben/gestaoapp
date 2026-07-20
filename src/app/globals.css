@@ -29,6 +29,18 @@
   --financeiro: #b23a2e; /* vermelho celeiro */
   --financeiro-tint: #f5e1de;
   --financeiro-ink: #93301f;
+
+  --ranking: #2f6f6b; /* verde-azulado do tanque de resfriamento */
+  --ranking-tint: #dcefed;
+  --ranking-ink: #1f5551;
+
+  --alerta: #b8600f; /* laranja de aviso */
+  --alerta-tint: #faead2;
+  --alerta-ink: #8f4a0c;
+
+  --agente: #3d5a80; /* azul-slate do chat */
+  --agente-tint: #e2e8f2;
+  --agente-ink: #2c4360;
 }
 
 @theme inline {
@@ -58,6 +70,18 @@
   --color-financeiro: var(--financeiro);
   --color-financeiro-tint: var(--financeiro-tint);
   --color-financeiro-ink: var(--financeiro-ink);
+
+  --color-ranking: var(--ranking);
+  --color-ranking-tint: var(--ranking-tint);
+  --color-ranking-ink: var(--ranking-ink);
+
+  --color-alerta: var(--alerta);
+  --color-alerta-tint: var(--alerta-tint);
+  --color-alerta-ink: var(--alerta-ink);
+
+  --color-agente: var(--agente);
+  --color-agente-tint: var(--agente-tint);
+  --color-agente-ink: var(--agente-ink);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -90,6 +114,18 @@
     --financeiro: #e1786b;
     --financeiro-tint: rgba(225, 104, 90, 0.17);
     --financeiro-ink: #f0a89e;
+
+    --ranking: #5fb3ac;
+    --ranking-tint: rgba(63, 140, 130, 0.17);
+    --ranking-ink: #8fd6cd;
+
+    --alerta: #e0983f;
+    --alerta-tint: rgba(224, 152, 63, 0.17);
+    --alerta-ink: #f0bc7d;
+
+    --agente: #7ea3d1;
+    --agente-tint: rgba(93, 140, 199, 0.17);
+    --agente-ink: #a9c4e6;
   }
 }
 

@@ -47,7 +47,7 @@ export default async function GestorLayout({
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col">{children}</main>
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col pb-16 sm:pb-0">{children}</main>
 
       <GestorBottomNav />
     </div>

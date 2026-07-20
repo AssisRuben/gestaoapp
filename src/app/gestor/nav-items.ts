@@ -1,6 +1,11 @@
 import type { NavItem } from "../(app)/nav-items";
+import { HomeIcon, TrophyIcon, AlertIcon, ChatIcon } from "../(app)/nav-icons";
 
-// Fase 1: só o dashboard agregado, sem nav própria ainda (o botão "Início" era redundante — já é
-// a única tela que existe). Quando as abas por módulo (Leite, Vacas, Reprodução, Bezerros,
-// Financeiro) forem construídas na fase 2, os itens entram aqui.
-export const GESTOR_NAV_ITEMS: NavItem[] = [];
+// Fase 2: abas do painel do gestor. "Ranking", "Alertas" e "Agente" ainda usam dados fictícios
+// estáticos (ver comentário no topo de cada page.tsx) — a ligação com o Supabase vem depois.
+export const GESTOR_NAV_ITEMS: NavItem[] = [
+  { href: "/gestor", label: "Visão Geral", icon: HomeIcon, accent: "inicio" },
+  { href: "/gestor/ranking", label: "Ranking", icon: TrophyIcon, accent: "ranking" },
+  { href: "/gestor/alertas", label: "Alertas", icon: AlertIcon, accent: "alerta" },
+  { href: "/gestor/agente", label: "Agente", icon: ChatIcon, accent: "agente" },
+];

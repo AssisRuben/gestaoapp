@@ -25,4 +25,7 @@ export const ACCENT_ACTIVE_CLASSES: Record<string, string> = {
   vacas: "bg-vacas-tint text-vacas-ink",
   bezerros: "bg-bezerros-tint text-bezerros-ink",
   financeiro: "bg-financeiro-tint text-financeiro-ink",
+  ranking: "bg-ranking-tint text-ranking-ink",
+  alerta: "bg-alerta-tint text-alerta-ink",
+  agente: "bg-agente-tint text-agente-ink",
 };
