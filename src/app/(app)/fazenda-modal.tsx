@@ -128,7 +128,40 @@ function DadosGeraisForm({
             className={CAMPO_CLASSES}
           />
         </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="latitude" className={LABEL_CLASSES}>
+            Latitude (opcional)
+          </label>
+          <input
+            id="latitude"
+            name="latitude"
+            type="number"
+            step="any"
+            placeholder="ex.: -5.1234"
+            defaultValue={propriedade.latitude ?? undefined}
+            className={CAMPO_CLASSES}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="longitude" className={LABEL_CLASSES}>
+            Longitude (opcional)
+          </label>
+          <input
+            id="longitude"
+            name="longitude"
+            type="number"
+            step="any"
+            placeholder="ex.: -39.1234"
+            defaultValue={propriedade.longitude ?? undefined}
+            className={CAMPO_CLASSES}
+          />
+        </div>
       </div>
+
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        Latitude/longitude posicionam a fazenda no mapa do gestor. Pra pegar as coordenadas, abra o
+        local no Google Maps e copie os dois números que aparecem ao clicar com o botão direito.
+      </p>
 
       {state?.error && <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
 

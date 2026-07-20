@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
-import { getPropriedadesDoUsuario, getPropriedadeAtual } from "@/lib/propriedade";
+import { getPropriedadesDoUsuario, getPropriedadeAtual, isGestor } from "@/lib/propriedade";
 import { BottomNav } from "./bottom-nav";
 import { TopNav } from "./top-nav";
 import { FazendaTrigger } from "./fazenda-trigger";
@@ -13,6 +13,10 @@ export default async function AppLayout({
 
   if (!user) {
     redirect("/login");
+  }
+
+  if (await isGestor()) {
+    redirect("/gestor");
   }
 
   const vinculos = await getPropriedadesDoUsuario();

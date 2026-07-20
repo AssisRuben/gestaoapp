@@ -101,3 +101,72 @@ export const getPartosCache = unstable_cache(
   ["partos-cache"],
   { revalidate: REVALIDATE_SEGUNDOS, tags: ["partos"] },
 );
+
+// Fetchers "todas as propriedades" — usados só pelo dashboard do gestor (ver
+// supabase/migrations/0017_gestor.sql). Mesmo padrão dos fetchers de uma fazenda só, sem o
+// .eq("propriedade_id", ...): quem chama já validou isGestor() antes (mesmo papel que
+// getPropriedadeAtual() cumpre pras fetchers de uma fazenda só).
+export const getPropriedadesTodasCache = unstable_cache(
+  async () => {
+    const supabase = createServiceClient();
+    const { data } = await supabase
+      .from("propriedades")
+      .select("id, nome_propriedade, latitude, longitude")
+      .order("nome_propriedade");
+    return data ?? [];
+  },
+  ["propriedades-todas-cache"],
+  { revalidate: REVALIDATE_SEGUNDOS, tags: ["propriedades"] },
+);
+
+export const getVacasTodasCache = unstable_cache(
+  async () => {
+    const supabase = createServiceClient();
+    const { data } = await supabase.from("vacas").select("*");
+    return data ?? [];
+  },
+  ["vacas-todas-cache"],
+  { revalidate: REVALIDATE_SEGUNDOS, tags: ["vacas"] },
+);
+
+export const getBezerrosTodasCache = unstable_cache(
+  async () => {
+    const supabase = createServiceClient();
+    const { data } = await supabase.from("bezerros").select("*");
+    return data ?? [];
+  },
+  ["bezerros-todas-cache"],
+  { revalidate: REVALIDATE_SEGUNDOS, tags: ["bezerros"] },
+);
+
+export const getControleLeiteTodasCache = unstable_cache(
+  async () => {
+    const supabase = createServiceClient();
+    const { data } = await supabase
+      .from("controle_leite")
+      .select("*, vaca:vaca_id(id, numero_identificacao, propriedade_id)");
+    return data ?? [];
+  },
+  ["controle-leite-todas-cache"],
+  { revalidate: REVALIDATE_SEGUNDOS, tags: ["leite"] },
+);
+
+export const getFinanceiroTodasCache = unstable_cache(
+  async () => {
+    const supabase = createServiceClient();
+    const { data } = await supabase.from("financeiro").select("*");
+    return data ?? [];
+  },
+  ["financeiro-todas-cache"],
+  { revalidate: REVALIDATE_SEGUNDOS, tags: ["financeiro"] },
+);
+
+export const getPartosTodasCache = unstable_cache(
+  async () => {
+    const supabase = createServiceClient();
+    const { data } = await supabase.from("partos").select("vaca_id, iep, ativa");
+    return data ?? [];
+  },
+  ["partos-todas-cache"],
+  { revalidate: REVALIDATE_SEGUNDOS, tags: ["partos"] },
+);

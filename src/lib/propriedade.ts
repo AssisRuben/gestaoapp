@@ -11,6 +11,8 @@ export type Propriedade = {
   municipio: string | null;
   estado: string | null;
   tecnico_responsavel: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export type VinculoPropriedade = {
@@ -26,11 +28,28 @@ export const getPropriedadesDoUsuario = cache(async (): Promise<VinculoProprieda
   const { data } = await supabase
     .from("usuarios_propriedades")
     .select(
-      "papel, propriedade:propriedades(id, nome_propriedade, nome_produtor, municipio, estado, tecnico_responsavel)",
+      "papel, propriedade:propriedades(id, nome_propriedade, nome_produtor, municipio, estado, tecnico_responsavel, latitude, longitude)",
     )
     .eq("usuario_id", user.id);
 
   return (data ?? []) as unknown as VinculoPropriedade[];
+});
+
+// Gestor: acesso de leitura a todas as propriedades, sem vínculo por fazenda (ver
+// supabase/migrations/0017_gestor.sql — tabela separada de usuarios_propriedades de propósito,
+// pra nenhuma RPC de escrita existente enxergar o gestor como tendo acesso).
+export const isGestor = cache(async (): Promise<boolean> => {
+  const user = await getUser();
+  if (!user) return false;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("gestores")
+    .select("usuario_id")
+    .eq("usuario_id", user.id)
+    .maybeSingle();
+
+  return !!data;
 });
 
 export async function getPropriedadeAtual(): Promise<Propriedade | null> {

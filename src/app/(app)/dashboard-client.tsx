@@ -7,6 +7,7 @@ import { DespesasPizzaChart } from "./despesas-pizza-chart";
 import { confirmarSecagem, confirmarDiagnostico } from "./dashboard-actions";
 import { TagIcon, MilkIcon, MoneyIcon } from "./nav-icons";
 import { useSuccessToast, SuccessToast } from "./toast";
+import { Meter } from "./meter";
 import type { Propriedade } from "@/lib/propriedade";
 
 const CAMPO_CLASSES =
@@ -148,39 +149,6 @@ function ConfirmarDiagnosticoModal({
           </button>
         </div>
       </form>
-    </div>
-  );
-}
-
-function Meter({
-  label,
-  valor,
-  total,
-  corClass,
-  fundoClass,
-}: {
-  label: string;
-  valor: number;
-  total: number;
-  corClass: string;
-  fundoClass: string;
-}) {
-  const pct = total > 0 ? Math.round((valor / total) * 100) : 0;
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between gap-2 text-base">
-        <span className="font-medium text-black dark:text-zinc-50">{label}</span>
-        <span className="shrink-0 font-mono tabular-nums text-zinc-600 dark:text-zinc-400">
-          {valor} de {total}{" "}
-          <span className="font-semibold text-black dark:text-zinc-50">({pct}%)</span>
-        </span>
-      </div>
-      <div className={`h-3 w-full overflow-hidden rounded-full ${fundoClass}`}>
-        <div
-          className={`h-full rounded-full ${corClass}`}
-          style={{ width: `${Math.min(pct, 100)}%` }}
-        />
-      </div>
     </div>
   );
 }
@@ -336,15 +304,15 @@ export function DashboardClient({
         </p>
         <Meter
           label="Vacas em lactação"
-          valor={vacasEmLactacao}
-          total={vacasTotal}
+          pct={vacasTotal > 0 ? (vacasEmLactacao / vacasTotal) * 100 : 0}
+          detalhe={`${vacasEmLactacao} de ${vacasTotal}`}
           corClass="bg-vacas"
           fundoClass="bg-vacas-tint"
         />
         <Meter
           label="Vacas no total de animais"
-          valor={vacasTotal}
-          total={totalAnimais}
+          pct={totalAnimais > 0 ? (vacasTotal / totalAnimais) * 100 : 0}
+          detalhe={`${vacasTotal} de ${totalAnimais}`}
           corClass="bg-bezerros"
           fundoClass="bg-bezerros-tint"
         />

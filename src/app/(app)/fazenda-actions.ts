@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPropriedadeAtual } from "@/lib/propriedade";
 import type { UsuarioWhatsapp, PatrimonioItem } from "./fazenda-types";
@@ -52,6 +52,8 @@ export async function atualizarPropriedade(
       municipio: (formData.get("municipio") as string) || null,
       estado: (formData.get("estado") as string) || null,
       tecnico_responsavel: (formData.get("tecnico_responsavel") as string) || null,
+      latitude: formData.get("latitude") ? Number(formData.get("latitude")) : null,
+      longitude: formData.get("longitude") ? Number(formData.get("longitude")) : null,
     })
     .eq("id", propriedadeAtual.id);
 
@@ -75,6 +77,7 @@ export async function atualizarPropriedade(
   }
 
   revalidatePath("/");
+  updateTag("propriedades");
   return { success: true };
 }
 
