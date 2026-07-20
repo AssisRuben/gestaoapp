@@ -1,10 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function formatarDataCurta(data: string) {
   const [, mes, dia] = data.split("-");
   return `${dia}/${mes}`;
+}
+
+function formatarDataLonga(data: string) {
+  const [ano, mes, dia] = data.split("-");
+  return `${dia}/${mes}/${ano}`;
 }
 
 function niceCeil(valor: number) {
@@ -27,6 +32,8 @@ export function ProducaoLeiteChart({
 }: {
   registros: { data_controle: string; litros: number }[];
 }) {
+  const [pontoSelecionado, setPontoSelecionado] = useState<number | null>(null);
+
   const pontos = useMemo(() => {
     const somaPorDia = new Map<string, number>();
     for (const r of registros) {
@@ -36,6 +43,10 @@ export function ProducaoLeiteChart({
       .filter(([, litros]) => litros > 0)
       .sort((a, b) => a[0].localeCompare(b[0]));
   }, [registros]);
+
+  useEffect(() => {
+    setPontoSelecionado(null);
+  }, [pontos]);
 
   // Espaçamento igual entre pontos (por índice), não por distância real em
   // dias — assim dias sem produção não geram espaço em branco no gráfico.
@@ -67,81 +78,130 @@ export function ProducaoLeiteChart({
           Nenhum registro nesse período.
         </p>
       ) : (
-        <svg viewBox={`0 0 ${LARGURA_TOTAL} 190`} className="h-auto w-full">
-          {gridValues.map((v) => (
-            <g key={v}>
-              <line
-                x1={PLOT_LEFT}
-                x2={LARGURA_TOTAL - PLOT_RIGHT}
-                y1={y(v)}
-                y2={y(v)}
-                className="stroke-black/[.08] dark:stroke-white/[.145]"
-                strokeWidth={1}
+        <div className="relative">
+          <svg
+            viewBox={`0 0 ${LARGURA_TOTAL} 190`}
+            className="h-auto w-full"
+            onClick={() => setPontoSelecionado(null)}
+          >
+            {gridValues.map((v) => (
+              <g key={v}>
+                <line
+                  x1={PLOT_LEFT}
+                  x2={LARGURA_TOTAL - PLOT_RIGHT}
+                  y1={y(v)}
+                  y2={y(v)}
+                  className="stroke-black/[.08] dark:stroke-white/[.145]"
+                  strokeWidth={1}
+                />
+                <text
+                  x={PLOT_LEFT - 8}
+                  y={y(v)}
+                  textAnchor="end"
+                  dominantBaseline="middle"
+                  className="fill-zinc-600 font-mono tabular-nums dark:fill-zinc-400"
+                  fontSize={22}
+                >
+                  {Math.round(v)}
+                </text>
+              </g>
+            ))}
+
+            <path d={areaD} className="fill-leite-tint" />
+
+            <path
+              d={pathD}
+              fill="none"
+              className="stroke-leite"
+              strokeWidth={3.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {pontos.map(([data, litros], i) => (
+              <circle key={data} cx={x(i)} cy={y(litros)} r={5} className="fill-leite" />
+            ))}
+
+            {pontoSelecionado !== null && pontos[pontoSelecionado] && (
+              <circle
+                cx={x(pontoSelecionado)}
+                cy={y(pontos[pontoSelecionado][1])}
+                r={9}
+                fill="none"
+                className="stroke-leite"
+                strokeWidth={2.5}
               />
-              <text
-                x={PLOT_LEFT - 8}
-                y={y(v)}
-                textAnchor="end"
-                dominantBaseline="middle"
-                className="fill-zinc-600 font-mono tabular-nums dark:fill-zinc-400"
-                fontSize={22}
-              >
-                {Math.round(v)}
-              </text>
-            </g>
-          ))}
+            )}
 
-          <path d={areaD} className="fill-leite-tint" />
+            {ultimoPonto && (
+              <>
+                <circle cx={x(ultimoIndex)} cy={y(ultimoPonto[1])} r={9} className="fill-background" />
+                <circle cx={x(ultimoIndex)} cy={y(ultimoPonto[1])} r={6} className="fill-leite" />
+                <text
+                  x={x(ultimoIndex) - 12}
+                  y={y(ultimoPonto[1]) - 14}
+                  textAnchor="end"
+                  className="fill-black font-mono tabular-nums dark:fill-zinc-50"
+                  fontSize={28}
+                  fontWeight={700}
+                >
+                  {Math.round(ultimoPonto[1])} L
+                </text>
+              </>
+            )}
 
-          <path
-            d={pathD}
-            fill="none"
-            className="stroke-leite"
-            strokeWidth={3.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+            <text
+              x={PLOT_LEFT}
+              y={181}
+              textAnchor="start"
+              className="fill-zinc-600 font-mono tabular-nums dark:fill-zinc-400"
+              fontSize={22}
+            >
+              {formatarDataCurta(pontos[0][0])}
+            </text>
+            <text
+              x={LARGURA_TOTAL - PLOT_RIGHT}
+              y={181}
+              textAnchor="end"
+              className="fill-zinc-600 font-mono tabular-nums dark:fill-zinc-400"
+              fontSize={22}
+            >
+              {formatarDataCurta(ultimoPonto[0])}
+            </text>
 
-          {pontos.map(([data, litros], i) => (
-            <circle key={data} cx={x(i)} cy={y(litros)} r={5} className="fill-leite" />
-          ))}
+            {pontos.map(([data, litros], i) => (
+              <circle
+                key={`alvo-${data}`}
+                cx={x(i)}
+                cy={y(litros)}
+                r={14}
+                fill="transparent"
+                className="cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPontoSelecionado((atual) => (atual === i ? null : i));
+                }}
+              />
+            ))}
+          </svg>
 
-          {ultimoPonto && (
-            <>
-              <circle cx={x(ultimoIndex)} cy={y(ultimoPonto[1])} r={9} className="fill-background" />
-              <circle cx={x(ultimoIndex)} cy={y(ultimoPonto[1])} r={6} className="fill-leite" />
-              <text
-                x={x(ultimoIndex) - 12}
-                y={y(ultimoPonto[1]) - 14}
-                textAnchor="end"
-                className="fill-black font-mono tabular-nums dark:fill-zinc-50"
-                fontSize={28}
-                fontWeight={700}
-              >
-                {Math.round(ultimoPonto[1])} L
-              </text>
-            </>
+          {pontoSelecionado !== null && pontos[pontoSelecionado] && (
+            <div
+              className="pointer-events-none absolute -translate-x-1/2 -translate-y-[calc(100%+10px)] whitespace-nowrap rounded-lg border border-black/[.08] bg-surface px-3 py-2 text-center shadow-lg dark:border-white/[.145]"
+              style={{
+                left: `${(x(pontoSelecionado) / LARGURA_TOTAL) * 100}%`,
+                top: `${(y(pontos[pontoSelecionado][1]) / 190) * 100}%`,
+              }}
+            >
+              <p className="font-mono text-base font-bold tabular-nums text-black dark:text-zinc-50">
+                {Math.round(pontos[pontoSelecionado][1])} L
+              </p>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                {formatarDataLonga(pontos[pontoSelecionado][0])}
+              </p>
+            </div>
           )}
-
-          <text
-            x={PLOT_LEFT}
-            y={181}
-            textAnchor="start"
-            className="fill-zinc-600 font-mono tabular-nums dark:fill-zinc-400"
-            fontSize={22}
-          >
-            {formatarDataCurta(pontos[0][0])}
-          </text>
-          <text
-            x={LARGURA_TOTAL - PLOT_RIGHT}
-            y={181}
-            textAnchor="end"
-            className="fill-zinc-600 font-mono tabular-nums dark:fill-zinc-400"
-            fontSize={22}
-          >
-            {formatarDataCurta(ultimoPonto[0])}
-          </text>
-        </svg>
+        </div>
       )}
     </div>
   );

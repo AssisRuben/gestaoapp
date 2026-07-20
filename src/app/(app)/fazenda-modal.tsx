@@ -10,6 +10,7 @@ import {
   deletarPatrimonio,
 } from "./fazenda-actions";
 import { logout } from "./actions";
+import { useSuccessToast, SuccessToast } from "./toast";
 
 const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
@@ -33,11 +34,18 @@ function SecaoHeader({ titulo, onNovo, rotuloNovo }: { titulo: string; onNovo: (
 function DadosGeraisForm({
   propriedade,
   usuarioWhatsapp,
+  onSuccess,
 }: {
   propriedade: Propriedade;
   usuarioWhatsapp: UsuarioWhatsapp | null;
+  onSuccess: (mensagem: string) => void;
 }) {
   const [state, action, pending] = useActionState(atualizarPropriedade, undefined);
+
+  useEffect(() => {
+    if (state?.success) onSuccess("Dados da propriedade salvos!");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -123,7 +131,6 @@ function DadosGeraisForm({
       </div>
 
       {state?.error && <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
-      {state?.success && <p className="text-sm text-brand-green">Salvo.</p>}
 
       <button
         type="submit"
@@ -141,7 +148,13 @@ function formatarMoeda(valor: number | null) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor);
 }
 
-function PatrimonioSecao({ itens }: { itens: PatrimonioItem[] }) {
+function PatrimonioSecao({
+  itens,
+  onSuccess,
+}: {
+  itens: PatrimonioItem[];
+  onSuccess: (mensagem: string) => void;
+}) {
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<PatrimonioItem | null>(null);
   const [paraExcluir, setParaExcluir] = useState<PatrimonioItem | null>(null);
@@ -151,13 +164,25 @@ function PatrimonioSecao({ itens }: { itens: PatrimonioItem[] }) {
   const [excluirState, excluirAction] = useActionState(deletarPatrimonio, undefined);
 
   useEffect(() => {
-    if (criarState?.success) setDrawerAberto(false);
+    if (criarState?.success) {
+      setDrawerAberto(false);
+      onSuccess("Item de patrimônio cadastrado!");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [criarState]);
   useEffect(() => {
-    if (editarState?.success) setEmEdicao(null);
+    if (editarState?.success) {
+      setEmEdicao(null);
+      onSuccess("Item de patrimônio atualizado!");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editarState]);
   useEffect(() => {
-    if (excluirState?.success) setParaExcluir(null);
+    if (excluirState?.success) {
+      setParaExcluir(null);
+      onSuccess("Item de patrimônio excluído!");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [excluirState]);
 
   return (
@@ -399,8 +424,12 @@ export function FazendaModal({
   patrimonios: PatrimonioItem[];
   onClose: () => void;
 }) {
+  const { mensagemToast, mostrarToast } = useSuccessToast();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <SuccessToast mensagem={mensagemToast} />
+
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col gap-6 overflow-y-auto rounded-2xl bg-white p-6 dark:bg-zinc-950">
         <div className="flex items-center justify-between">
@@ -414,8 +443,8 @@ export function FazendaModal({
           </button>
         </div>
 
-        <DadosGeraisForm propriedade={propriedade} usuarioWhatsapp={usuarioWhatsapp} />
-        <PatrimonioSecao itens={patrimonios} />
+        <DadosGeraisForm propriedade={propriedade} usuarioWhatsapp={usuarioWhatsapp} onSuccess={mostrarToast} />
+        <PatrimonioSecao itens={patrimonios} onSuccess={mostrarToast} />
 
         <form action={logout} className="border-t border-black/[.08] pt-4 dark:border-white/[.145]">
           <button

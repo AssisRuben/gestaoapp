@@ -26,9 +26,13 @@ const CATEGORIA_LABEL: Record<string, string> = {
 };
 
 const formatarMoeda = (valor: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor);
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(
+    valor,
+  );
 
-const R = 60;
+// R + metade do STROKE precisa caber dentro do viewBox de 140x140 (raio 70);
+// com R=60 a borda externa do anel batia em 72 e ficava cortada.
+const R = 56;
 const STROKE = 24;
 const CIRC = 2 * Math.PI * R;
 

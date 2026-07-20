@@ -86,11 +86,12 @@ controle_leite
                                           -- um parto com ativa=true
   litros numeric NOT NULL
   data_controle date NOT NULL
-  periodo text                          -- coluna ainda EXISTE, mas o INSERT do bot nunca a
-                                          -- preenche (sempre grava NULL). Só é referenciada de
-                                          -- volta em atualizar_registro, o que causa o BUG #3
-                                          -- abaixo. Não é "removida" de fato, está pela metade.
   created_at timestamptz
+  -- `periodo` NÃO existe mais nesta instância (confirmado via information_schema em
+  -- 2026-07-19) — apesar do que este documento dizia antes. registrar_leite/atualizar_leite
+  -- (site) e registrar_parto (arquivamento) ainda tentavam gravar/ler essa coluna e quebravam
+  -- de verdade; corrigido em supabase/migrations/0016_remove_periodo_controle_leite.sql. Se o
+  -- bot do WhatsApp ainda referencia `periodo` em algum fluxo, esse fluxo também está quebrado.
 
 financeiro
   id uuid PK
@@ -174,9 +175,9 @@ o ideal é portar isso pra funções RPC no Postgres — assim bot e site chamam
       existe pra cobrir bezerros antigos, cadastrados antes dessa mudança, que ficaram sem
       número.
 
-   **Nota de implementação**: a função `cadastrar_vaca` já implementada no site
-   (`supabase/migrations/0002_cadastrar_vaca.sql`) hoje só faz a etapa 2 (fallback) — precisa ser
-   atualizada pra tentar a etapa 1 primeiro.
+   **Nota de implementação**: a função `cadastrar_vaca` já implementa as duas etapas corretamente
+   (`supabase/migrations/0003_cadastrar_vaca_busca_bezerro_por_numero.sql` substituiu a versão
+   original em `0002_cadastrar_vaca.sql`, que só fazia a etapa 2).
 
 5. **Cálculos que NÃO devem ser lidos direto do banco** — `partos.dias_em_aberto`,
    `partos.persistencia`, `partos.projecao_305` ficam desatualizados assim que o tempo passa ou

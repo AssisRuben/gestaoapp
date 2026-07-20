@@ -4,6 +4,8 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { registrarLeite, atualizarLeite, deletarLeite } from "./actions";
 import { MobileCardList, MobileCard, CardHeader, CardRow } from "../mobile-list";
+import { useSuccessToast, SuccessToast } from "../toast";
+import { ProducaoLeiteChart } from "../producao-leite-chart";
 import type { RegistroLeite, VacaOpcao } from "./types";
 
 const CAMPO_CLASSES =
@@ -24,6 +26,10 @@ function formatarLitros(litros: number) {
   return `${litros.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} L`;
 }
 
+function formatarLitrosInteiro(litros: number) {
+  return `${litros.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} L`;
+}
+
 export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; vacas: VacaOpcao[] }) {
   const [inicio, setInicio] = useState(primeiroDiaMesAtualStr());
   const [fim, setFim] = useState(hojeStr());
@@ -37,24 +43,29 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
   const [editarState, editarAction, editarPending] = useActionState(atualizarLeite, undefined);
   const [excluirState, excluirAction, excluirPending] = useActionState(deletarLeite, undefined);
 
+  const { mensagemToast, mostrarToast } = useSuccessToast();
+
   useEffect(() => {
     if (criarState?.success) {
       criarFormRef.current?.reset();
       setDrawerAberto(false);
+      mostrarToast("Registro de leite salvo!");
     }
-  }, [criarState]);
+  }, [criarState, mostrarToast]);
 
   useEffect(() => {
     if (editarState?.success) {
       setRegistroEmEdicao(null);
+      mostrarToast("Registro de leite atualizado!");
     }
-  }, [editarState]);
+  }, [editarState, mostrarToast]);
 
   useEffect(() => {
     if (excluirState?.success) {
       setRegistroParaExcluir(null);
+      mostrarToast("Registro de leite excluído!");
     }
-  }, [excluirState]);
+  }, [excluirState, mostrarToast]);
 
   const registrosFiltrados = useMemo(
     () => registros.filter((r) => r.data_controle >= inicio && r.data_controle <= fim),
@@ -66,8 +77,15 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
     [registrosFiltrados],
   );
 
+  const historicoVacaEmEdicao = useMemo(() => {
+    if (!registroEmEdicao) return [];
+    return registros.filter((r) => r.vaca_id === registroEmEdicao.vaca_id);
+  }, [registros, registroEmEdicao]);
+
   return (
     <div className="flex flex-1 flex-col gap-4 pb-20 sm:pb-0">
+      <SuccessToast mensagem={mensagemToast} />
+
       <div className="flex flex-col gap-3">
         <div className="flex flex-row items-end gap-3">
           <div className="flex flex-1 flex-col gap-1">
@@ -124,7 +142,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
         <div>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">Total no período</p>
           <p className="font-mono text-2xl font-bold tabular-nums text-black dark:text-zinc-50">
-            {formatarLitros(totalLitros)}
+            {formatarLitrosInteiro(totalLitros)}
           </p>
         </div>
       </div>
@@ -290,13 +308,17 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
           <form
             key={registroEmEdicao.id}
             action={editarAction}
-            className="relative flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-6 dark:bg-zinc-950"
+            className="relative flex max-h-[90vh] w-full max-w-lg flex-col gap-4 overflow-y-auto rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="registro_id" value={registroEmEdicao.id} />
 
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">
               Editar registro — vaca {registroEmEdicao.vaca.numero_identificacao}
             </h2>
+
+            {historicoVacaEmEdicao.length > 1 && (
+              <ProducaoLeiteChart registros={historicoVacaEmEdicao} />
+            )}
 
             <div className="flex flex-col gap-1">
               <label htmlFor="edit_litros" className={LABEL_CLASSES}>

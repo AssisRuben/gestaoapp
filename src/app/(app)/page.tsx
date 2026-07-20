@@ -4,6 +4,7 @@ import {
   getControleLeiteCache,
   getFinanceiroCache,
   getCoberturasCache,
+  getBezerrosCache,
 } from "@/lib/cached-data";
 import { DashboardClient } from "./dashboard-client";
 
@@ -33,14 +34,19 @@ export default async function DashboardPage() {
 
   const hoje = hojeStr();
 
-  const [vacasData, leiteData, financeiroData, coberturasData] = await Promise.all([
+  const [vacasData, leiteData, financeiroData, coberturasData, bezerrosData] = await Promise.all([
     getVacasCache(propriedadeAtual.id),
     getControleLeiteCache(propriedadeAtual.id),
     getFinanceiroCache(propriedadeAtual.id),
     getCoberturasCache(propriedadeAtual.id),
+    getBezerrosCache(propriedadeAtual.id),
   ]);
 
   const vacas = vacasData as unknown as { id: string; status_produtivo: string }[];
+  const bezerros = bezerrosData as unknown as {
+    sexo: string;
+    vaca_id_gerada: string | null;
+  }[];
   const registrosLeite = leiteData as unknown as { litros: number; data_controle: string }[];
   const lancamentos = financeiroData as unknown as {
     tipo: string;
@@ -58,6 +64,14 @@ export default async function DashboardPage() {
 
   const vacasEmLactacao = vacas.filter((v) => v.status_produtivo === "lactacao").length;
   const statusPorVacaId = new Map(vacas.map((v) => [v.id, v.status_produtivo]));
+
+  const vacasTotal = vacas.length;
+  // Bezerros que já viraram vaca (vaca_id_gerada preenchido) não contam de novo aqui —
+  // já estão em `vacas`. Natimortos não entram porque não são animais vivos no plantel.
+  const bezerrosVivos = bezerros.filter(
+    (b) => b.sexo !== "natimorto" && b.vaca_id_gerada === null,
+  ).length;
+  const totalAnimais = vacasTotal + bezerrosVivos;
 
   // Vacas pra secar: cobertura confirmada mais recente por vaca (regra 7 do CLAUDE.md)
   const ultimaPositivaPorVaca = new Map<string, { data_cobertura: string; numero: number }>();
@@ -97,6 +111,8 @@ export default async function DashboardPage() {
     <DashboardClient
       propriedadeAtual={propriedadeAtual}
       vacasEmLactacao={vacasEmLactacao}
+      vacasTotal={vacasTotal}
+      totalAnimais={totalAnimais}
       registrosLeite={registrosLeite}
       lancamentos={lancamentos}
       vacasPraSecar={vacasPraSecar}

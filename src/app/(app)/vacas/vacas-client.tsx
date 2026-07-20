@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { cadastrarVaca, atualizarVaca, deletarVaca } from "./actions";
 import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../mobile-list";
+import { useSuccessToast, SuccessToast } from "../toast";
 import type { Vaca } from "./types";
 
 const STATUS_PRODUTIVO_LABEL: Record<string, string> = {
@@ -124,24 +125,29 @@ export function VacasClient({ vacas }: { vacas: Vaca[] }) {
   const [editarState, editarAction, editarPending] = useActionState(atualizarVaca, undefined);
   const [excluirState, excluirAction, excluirPending] = useActionState(deletarVaca, undefined);
 
+  const { mensagemToast, mostrarToast } = useSuccessToast();
+
   useEffect(() => {
     if (criarState?.success) {
       criarFormRef.current?.reset();
       setDrawerAberto(false);
+      mostrarToast("Vaca cadastrada!");
     }
-  }, [criarState]);
+  }, [criarState, mostrarToast]);
 
   useEffect(() => {
     if (editarState?.success) {
       setVacaEmEdicao(null);
+      mostrarToast("Vaca atualizada!");
     }
-  }, [editarState]);
+  }, [editarState, mostrarToast]);
 
   useEffect(() => {
     if (excluirState?.success) {
       setVacaParaExcluir(null);
+      mostrarToast("Vaca excluída!");
     }
-  }, [excluirState]);
+  }, [excluirState, mostrarToast]);
 
   const vacasFiltradas = useMemo(() => {
     if (!busca.trim()) return vacas;
@@ -150,6 +156,8 @@ export function VacasClient({ vacas }: { vacas: Vaca[] }) {
 
   return (
     <div className="flex flex-1 flex-col gap-4 pb-20 sm:pb-0">
+      <SuccessToast mensagem={mensagemToast} />
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <input
           type="text"

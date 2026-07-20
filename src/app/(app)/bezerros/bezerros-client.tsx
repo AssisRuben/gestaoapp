@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { cadastrarBezerro, atualizarBezerro, deletarBezerro } from "./actions";
 import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../mobile-list";
+import { useSuccessToast, SuccessToast } from "../toast";
 import type { Bezerro, VacaOpcao } from "./types";
 
 const SEXO_LABEL: Record<string, string> = {
@@ -101,24 +102,29 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
   const [editarState, editarAction, editarPending] = useActionState(atualizarBezerro, undefined);
   const [excluirState, excluirAction, excluirPending] = useActionState(deletarBezerro, undefined);
 
+  const { mensagemToast, mostrarToast } = useSuccessToast();
+
   useEffect(() => {
     if (criarState?.success) {
       criarFormRef.current?.reset();
       setDrawerAberto(false);
+      mostrarToast("Bezerro cadastrado!");
     }
-  }, [criarState]);
+  }, [criarState, mostrarToast]);
 
   useEffect(() => {
     if (editarState?.success) {
       setBezerroEmEdicao(null);
+      mostrarToast("Bezerro atualizado!");
     }
-  }, [editarState]);
+  }, [editarState, mostrarToast]);
 
   useEffect(() => {
     if (excluirState?.success) {
       setBezerroParaExcluir(null);
+      mostrarToast("Bezerro excluído!");
     }
-  }, [excluirState]);
+  }, [excluirState, mostrarToast]);
 
   const bezerrosFiltrados = useMemo(() => {
     if (!busca.trim()) return bezerros;
@@ -127,6 +133,8 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
 
   return (
     <div className="flex flex-1 flex-col gap-4 pb-20 sm:pb-0">
+      <SuccessToast mensagem={mensagemToast} />
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <input
           type="text"

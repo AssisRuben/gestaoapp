@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { registrarLancamento, atualizarLancamento, deletarLancamento } from "./actions";
 import { MobileCardList, MobileCard, CardHeader, CardRow } from "../mobile-list";
+import { useSuccessToast, SuccessToast } from "../toast";
 import type { Lancamento } from "./types";
 
 const TIPO_LABEL: Record<string, string> = {
@@ -166,24 +167,29 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
   const [editarState, editarAction, editarPending] = useActionState(atualizarLancamento, undefined);
   const [excluirState, excluirAction, excluirPending] = useActionState(deletarLancamento, undefined);
 
+  const { mensagemToast, mostrarToast } = useSuccessToast();
+
   useEffect(() => {
     if (criarState?.success) {
       criarFormRef.current?.reset();
       setDrawerAberto(false);
+      mostrarToast("Lançamento salvo!");
     }
-  }, [criarState]);
+  }, [criarState, mostrarToast]);
 
   useEffect(() => {
     if (editarState?.success) {
       setLancamentoEmEdicao(null);
+      mostrarToast("Lançamento atualizado!");
     }
-  }, [editarState]);
+  }, [editarState, mostrarToast]);
 
   useEffect(() => {
     if (excluirState?.success) {
       setLancamentoParaExcluir(null);
+      mostrarToast("Lançamento excluído!");
     }
-  }, [excluirState]);
+  }, [excluirState, mostrarToast]);
 
   const lancamentosFiltrados = useMemo(
     () => lancamentos.filter((l) => l.data >= inicio && l.data <= fim),
@@ -204,6 +210,8 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
 
   return (
     <div className="flex flex-1 flex-col gap-4 pb-20 sm:pb-0">
+      <SuccessToast mensagem={mensagemToast} />
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
         <div className="flex flex-row items-end gap-3">
           <div className="flex flex-1 flex-col gap-1">

@@ -10,6 +10,7 @@ import {
   deletarParto,
 } from "./actions";
 import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../mobile-list";
+import { useSuccessToast, SuccessToast } from "../toast";
 import type { Cobertura, Parto, VacaOpcao } from "./types";
 
 const SEXO_BEZERRO_LABEL: Record<string, string> = {
@@ -79,43 +80,51 @@ export function ReproducaoClient({
     undefined,
   );
 
+  const { mensagemToast, mostrarToast } = useSuccessToast();
+
   useEffect(() => {
     if (criarState?.success) {
       criarFormRef.current?.reset();
       setDrawerAberto(false);
+      mostrarToast("Cobertura registrada!");
     }
-  }, [criarState]);
+  }, [criarState, mostrarToast]);
 
   useEffect(() => {
     if (editarState?.success) {
       setCoberturaEmEdicao(null);
+      mostrarToast("Cobertura atualizada!");
     }
-  }, [editarState]);
+  }, [editarState, mostrarToast]);
 
   useEffect(() => {
     if (excluirState?.success) {
       setCoberturaParaExcluir(null);
+      mostrarToast("Cobertura excluída!");
     }
-  }, [excluirState]);
+  }, [excluirState, mostrarToast]);
 
   useEffect(() => {
     if (partoState?.success) {
       partoFormRef.current?.reset();
       setDrawerPartoAberto(false);
+      mostrarToast("Parto registrado!");
     }
-  }, [partoState]);
+  }, [partoState, mostrarToast]);
 
   useEffect(() => {
     if (editarPartoState?.success) {
       setPartoEmEdicao(null);
+      mostrarToast("Parto atualizado!");
     }
-  }, [editarPartoState]);
+  }, [editarPartoState, mostrarToast]);
 
   useEffect(() => {
     if (excluirPartoState?.success) {
       setPartoParaExcluir(null);
+      mostrarToast("Parto excluído!");
     }
-  }, [excluirPartoState]);
+  }, [excluirPartoState, mostrarToast]);
 
   const coberturasFiltradas = useMemo(() => {
     if (!busca.trim()) return coberturas;
@@ -129,6 +138,8 @@ export function ReproducaoClient({
 
   return (
     <div className="flex flex-1 flex-col gap-4 pb-20 sm:pb-0">
+      <SuccessToast mensagem={mensagemToast} />
+
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Coberturas</h2>
         <button
