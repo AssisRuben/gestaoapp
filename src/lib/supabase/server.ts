@@ -44,8 +44,14 @@ export const getUser = cache(async (): Promise<{ id: string } | null> => {
   if (id) return { id };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user ? { id: user.id } : null;
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return user ? { id: user.id } : null;
+  } catch {
+    // Cookie de sessão inválido/expirado (refresh token que não existe mais) — trata como
+    // "sem usuário" em vez de deixar o erro subir sem tratamento.
+    return null;
+  }
 });

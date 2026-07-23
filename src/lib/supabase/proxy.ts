@@ -26,9 +26,20 @@ export async function updateSession(request: NextRequest) {
   // Importante: chamar getUser() aqui é o que de fato revalida o token e
   // atualiza os cookies de sessão a cada request. Sem essa chamada, sessões
   // expiram silenciosamente no meio do uso.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  //
+  // Precisa de try/catch: um cookie de sessão velho/inválido (refresh token que não existe
+  // mais no Supabase) faz getUser() lançar um AuthApiError. Sem isso, o erro sobe sem
+  // tratamento a cada requisição com esse cookie — tratamos como "sem usuário logado" (o
+  // layout já redireciona pro /login normalmente) em vez de deixar a requisição/processo cair.
+  let user = null;
+  try {
+    const {
+      data: { user: usuarioValidado },
+    } = await supabase.auth.getUser();
+    user = usuarioValidado;
+  } catch {
+    user = null;
+  }
 
   // Repassa o user.id já validado aqui pros Server Components via header, pra
   // eles não precisarem chamar getUser() de novo (outro round-trip à API de
