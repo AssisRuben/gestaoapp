@@ -198,22 +198,28 @@ function PatrimonioSecao({
 
   useEffect(() => {
     if (criarState?.success) {
-      setDrawerAberto(false);
-      onSuccess("Item de patrimônio cadastrado!");
+      queueMicrotask(() => {
+        setDrawerAberto(false);
+        onSuccess("Item de patrimônio cadastrado!");
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [criarState]);
   useEffect(() => {
     if (editarState?.success) {
-      setEmEdicao(null);
-      onSuccess("Item de patrimônio atualizado!");
+      queueMicrotask(() => {
+        setEmEdicao(null);
+        onSuccess("Item de patrimônio atualizado!");
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editarState]);
   useEffect(() => {
     if (excluirState?.success) {
-      setParaExcluir(null);
-      onSuccess("Item de patrimônio excluído!");
+      queueMicrotask(() => {
+        setParaExcluir(null);
+        onSuccess("Item de patrimônio excluído!");
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [excluirState]);

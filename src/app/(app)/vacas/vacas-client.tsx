@@ -129,23 +129,29 @@ export function VacasClient({ vacas }: { vacas: Vaca[] }) {
 
   useEffect(() => {
     if (criarState?.success) {
-      criarFormRef.current?.reset();
-      setDrawerAberto(false);
-      mostrarToast("Vaca cadastrada!");
+      queueMicrotask(() => {
+        criarFormRef.current?.reset();
+        setDrawerAberto(false);
+        mostrarToast("Vaca cadastrada!");
+      });
     }
   }, [criarState, mostrarToast]);
 
   useEffect(() => {
     if (editarState?.success) {
-      setVacaEmEdicao(null);
-      mostrarToast("Vaca atualizada!");
+      queueMicrotask(() => {
+        setVacaEmEdicao(null);
+        mostrarToast("Vaca atualizada!");
+      });
     }
   }, [editarState, mostrarToast]);
 
   useEffect(() => {
     if (excluirState?.success) {
-      setVacaParaExcluir(null);
-      mostrarToast("Vaca excluída!");
+      queueMicrotask(() => {
+        setVacaParaExcluir(null);
+        mostrarToast("Vaca excluída!");
+      });
     }
   }, [excluirState, mostrarToast]);
 

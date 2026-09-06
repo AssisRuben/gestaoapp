@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 function formatarDataCurta(data: string) {
   const [, mes, dia] = data.split("-");
@@ -32,8 +32,6 @@ export function ProducaoLeiteChart({
 }: {
   registros: { data_controle: string; litros: number }[];
 }) {
-  const [pontoSelecionado, setPontoSelecionado] = useState<number | null>(null);
-
   const pontos = useMemo(() => {
     const somaPorDia = new Map<string, number>();
     for (const r of registros) {
@@ -44,9 +42,16 @@ export function ProducaoLeiteChart({
       .sort((a, b) => a[0].localeCompare(b[0]));
   }, [registros]);
 
-  useEffect(() => {
+  const [pontoSelecionado, setPontoSelecionado] = useState<number | null>(null);
+
+  // Zera a seleção quando os dados mudam (novo período/filtro), sem useEffect: ajustar
+  // estado durante o render evita o re-render extra que o effect causaria (ver
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes).
+  const [pontosAnteriores, setPontosAnteriores] = useState(pontos);
+  if (pontos !== pontosAnteriores) {
+    setPontosAnteriores(pontos);
     setPontoSelecionado(null);
-  }, [pontos]);
+  }
 
   // Espaçamento igual entre pontos (por índice), não por distância real em
   // dias — assim dias sem produção não geram espaço em branco no gráfico.

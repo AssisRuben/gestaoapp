@@ -47,23 +47,29 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
 
   useEffect(() => {
     if (criarState?.success) {
-      criarFormRef.current?.reset();
-      setDrawerAberto(false);
-      mostrarToast("Registro de leite salvo!");
+      queueMicrotask(() => {
+        criarFormRef.current?.reset();
+        setDrawerAberto(false);
+        mostrarToast("Registro de leite salvo!");
+      });
     }
   }, [criarState, mostrarToast]);
 
   useEffect(() => {
     if (editarState?.success) {
-      setRegistroEmEdicao(null);
-      mostrarToast("Registro de leite atualizado!");
+      queueMicrotask(() => {
+        setRegistroEmEdicao(null);
+        mostrarToast("Registro de leite atualizado!");
+      });
     }
   }, [editarState, mostrarToast]);
 
   useEffect(() => {
     if (excluirState?.success) {
-      setRegistroParaExcluir(null);
-      mostrarToast("Registro de leite excluído!");
+      queueMicrotask(() => {
+        setRegistroParaExcluir(null);
+        mostrarToast("Registro de leite excluído!");
+      });
     }
   }, [excluirState, mostrarToast]);
 

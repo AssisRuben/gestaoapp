@@ -84,45 +84,57 @@ export function ReproducaoClient({
 
   useEffect(() => {
     if (criarState?.success) {
-      criarFormRef.current?.reset();
-      setDrawerAberto(false);
-      mostrarToast("Cobertura registrada!");
+      queueMicrotask(() => {
+        criarFormRef.current?.reset();
+        setDrawerAberto(false);
+        mostrarToast("Cobertura registrada!");
+      });
     }
   }, [criarState, mostrarToast]);
 
   useEffect(() => {
     if (editarState?.success) {
-      setCoberturaEmEdicao(null);
-      mostrarToast("Cobertura atualizada!");
+      queueMicrotask(() => {
+        setCoberturaEmEdicao(null);
+        mostrarToast("Cobertura atualizada!");
+      });
     }
   }, [editarState, mostrarToast]);
 
   useEffect(() => {
     if (excluirState?.success) {
-      setCoberturaParaExcluir(null);
-      mostrarToast("Cobertura excluída!");
+      queueMicrotask(() => {
+        setCoberturaParaExcluir(null);
+        mostrarToast("Cobertura excluída!");
+      });
     }
   }, [excluirState, mostrarToast]);
 
   useEffect(() => {
     if (partoState?.success) {
-      partoFormRef.current?.reset();
-      setDrawerPartoAberto(false);
-      mostrarToast("Parto registrado!");
+      queueMicrotask(() => {
+        partoFormRef.current?.reset();
+        setDrawerPartoAberto(false);
+        mostrarToast("Parto registrado!");
+      });
     }
   }, [partoState, mostrarToast]);
 
   useEffect(() => {
     if (editarPartoState?.success) {
-      setPartoEmEdicao(null);
-      mostrarToast("Parto atualizado!");
+      queueMicrotask(() => {
+        setPartoEmEdicao(null);
+        mostrarToast("Parto atualizado!");
+      });
     }
   }, [editarPartoState, mostrarToast]);
 
   useEffect(() => {
     if (excluirPartoState?.success) {
-      setPartoParaExcluir(null);
-      mostrarToast("Parto excluído!");
+      queueMicrotask(() => {
+        setPartoParaExcluir(null);
+        mostrarToast("Parto excluído!");
+      });
     }
   }, [excluirPartoState, mostrarToast]);
 

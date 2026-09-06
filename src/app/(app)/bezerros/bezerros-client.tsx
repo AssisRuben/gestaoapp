@@ -106,23 +106,29 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
 
   useEffect(() => {
     if (criarState?.success) {
-      criarFormRef.current?.reset();
-      setDrawerAberto(false);
-      mostrarToast("Bezerro cadastrado!");
+      queueMicrotask(() => {
+        criarFormRef.current?.reset();
+        setDrawerAberto(false);
+        mostrarToast("Bezerro cadastrado!");
+      });
     }
   }, [criarState, mostrarToast]);
 
   useEffect(() => {
     if (editarState?.success) {
-      setBezerroEmEdicao(null);
-      mostrarToast("Bezerro atualizado!");
+      queueMicrotask(() => {
+        setBezerroEmEdicao(null);
+        mostrarToast("Bezerro atualizado!");
+      });
     }
   }, [editarState, mostrarToast]);
 
   useEffect(() => {
     if (excluirState?.success) {
-      setBezerroParaExcluir(null);
-      mostrarToast("Bezerro excluído!");
+      queueMicrotask(() => {
+        setBezerroParaExcluir(null);
+        mostrarToast("Bezerro excluído!");
+      });
     }
   }, [excluirState, mostrarToast]);
 
