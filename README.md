@@ -20,6 +20,21 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Testes
+
+As regras de negócio mais complexas (numeração de vacas/bezerros, arquivamento de lactação
+encerrada em `registrar_parto`, etc.) ficam nas funções RPC do Postgres, não no código do
+Next.js — por isso são testadas direto no banco em `supabase/tests/rpc_tests.sql`.
+
+Para rodar contra o projeto Supabase configurado:
+
+```bash
+PGHOST=... PGPORT=5432 PGUSER=postgres PGPASSWORD=... PGDATABASE=postgres npm run test:db
+```
+
+O próprio `.sql` roda tudo dentro de uma transação com `ROLLBACK` no final, então não deixa
+dado de teste no banco. Precisa existir pelo menos um usuário em `auth.users` no projeto.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
