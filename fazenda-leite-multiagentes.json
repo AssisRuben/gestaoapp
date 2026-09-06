@@ -1,5 +1,5 @@
 {
-  "name": "My workflow",
+  "name": "AgenteGestãoPec",
   "nodes": [
     {
       "parameters": {
@@ -10,10 +10,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -56272,
-        42128
+        -8240,
+        14032
       ],
-      "id": "ee506115-0a3f-4947-847b-25d31a475e61",
+      "id": "f78aad40-1a81-4e96-adac-39248844c6b3",
       "name": "Webhook",
       "webhookId": "077d99eb-33e5-4014-907a-7e73b2291870"
     },
@@ -34,12 +34,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -56016,
-        42128
+        -7936,
+        14032
       ],
-      "id": "16d80e95-5335-4e7f-976d-916cee5fa865",
+      "id": "fd33b042-7b7e-4175-a964-7663424d38b9",
       "name": "Identificar Usuario",
-      "alwaysOutputData": false,
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -49,15 +49,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const usuario = $('Identificar Usuario').first().json;\nconst webhook = $('Webhook').first().json;\nconst aiItem = $input.first().json;\n\nlet parsed;\n\ntry {\n    // 1. Pega a string que está dentro da chave 'output'\n    let rawText = aiItem.output || '';\n    \n    // Se por acaso vier de outra forma, tenta o objeto completo\n    if (!rawText && typeof aiItem === 'string') {\n        rawText = aiItem;\n    }\n\n    // 2. Limpa qualquer resquício de Markdown ou quebra de linha que a OpenAI possa colocar\n    let cleanText = String(rawText)\n        .replace(/```json/gi, '')\n        .replace(/```/g, '')\n        .trim();\n\n    // 3. Captura o que está entre as chaves { ... }\n    const match = cleanText.match(/\\{[\\s\\S]*\\}/);\n    let jsonString = match ? match[0] : cleanText;\n\n    // 4. Transforma a string em um objeto JavaScript real\n    parsed = JSON.parse(jsonString);\n\n} catch (e) {\n    // Fallback de segurança caso o JSON venha corrompido\n    parsed = { \n        intencao: 'outro', \n        entidades: {}, \n        resposta_sugerida: 'Não foi possível processar o formato da resposta da IA.' \n    };\n}\n\n// Mapeamento seguro da mensagem vinda do webhook do WhatsApp\nlet mensagemOriginal = '';\nif (webhook.body?.data?.message) {\n    const m = webhook.body.data.message;\n    mensagemOriginal = m.conversation || m.extendedTextMessage?.text || m.text || '';\n}\n\n// Normaliza a intencao contra o enum valido, corrigindo erros comuns da IA\nconst INTENCOES_VALIDAS = ['registrar_parto','registrar_leite','registrar_cobertura',\n    'consultar_vaca','consultar_relatorio','cadastrar_vaca','atualizar_registro','atualizar_vaca','deletar_registro','diagnosticar_prenhez',\n    'registrar_financeiro','consultar_financeiro','atualizar_financeiro','deletar_financeiro'];\nconst ALIASES_INTENCAO = {\n    'consult_vaca': 'consultar_vaca',\n    'consultar_relatório': 'consultar_relatorio',\n    'registrar_cobertura ': 'registrar_cobertura'\n};\nfunction normalizarIntencao(raw) {\n    if (!raw) return 'outro';\n    let v = String(raw).trim().toLowerCase();\n    if (INTENCOES_VALIDAS.includes(v)) return v;\n    if (ALIASES_INTENCAO[v]) return ALIASES_INTENCAO[v];\n    // tenta achar a intencao valida mais proxima por prefixo/substring (nunca cai em registrar_* ou deletar_* por seguranca)\n    const candidata = INTENCOES_VALIDAS.find(i => i.startsWith(v) || v.startsWith(i));\n    if (candidata && !candidata.startsWith('deletar')) return candidata;\n    return 'outro';\n}\n\n// 5. Retorno limpo e estruturado para o seu banco/Supabase\nreturn [{\n    json: {\n        intencao: normalizarIntencao(parsed.intencao),\n        entidades: {\n            numero_vaca: parsed.entidades?.numero_vaca ?? null,\n            data: parsed.entidades?.data ?? null,\n            litros: parsed.entidades?.litros ?? null,\n            periodo: parsed.entidades?.periodo ?? null,\n            sexo_bezerro: parsed.entidades?.sexo_bezerro ?? null,\n            touro_semen: parsed.entidades?.touro_semen ?? null,\n            observacao: parsed.entidades?.observacao ?? null,\n            tipo_relatorio: parsed.entidades?.tipo_relatorio ?? null,\n            periodo_dias: parsed.entidades?.periodo_dias ?? null,\n            resultado_diagnostico: parsed.entidades?.resultado_diagnostico ?? null,\n            numero_mae: parsed.entidades?.numero_mae ?? null,\n            status_produtivo: parsed.entidades?.status_produtivo ?? null,\n            status_reprodutivo: parsed.entidades?.status_reprodutivo ?? null,\n            tipo_financeiro: parsed.entidades?.tipo_financeiro ?? null,\n            categoria: parsed.entidades?.categoria ?? null,\n            valor: parsed.entidades?.valor ?? null\n        },\n        resposta_sugerida: parsed.resposta_sugerida || '',\n        propriedade_id: usuario?.propriedade_id || null,\n        telefone: usuario?.telefone || null,\n        mensagem_original: mensagemOriginal || 'vaca 10 produziu 12 litros'\n    }\n}];"
+        "jsCode": "const usuario = $('Identificar Usuario').first().json;\nconst aiItem = $input.first().json;\n\nlet parsed;\n\ntry {\n    // 1. Pega a string que está dentro da chave 'output'\n    let rawText = aiItem.output || '';\n    \n    // Se por acaso vier de outra forma, tenta o objeto completo\n    if (!rawText && typeof aiItem === 'string') {\n        rawText = aiItem;\n    }\n\n    // 2. Limpa qualquer resquício de Markdown ou quebra de linha que a OpenAI possa colocar\n    let cleanText = String(rawText)\n        .replace(/```json/gi, '')\n        .replace(/```/g, '')\n        .trim();\n\n    // 3. Captura o que está entre as chaves { ... }\n    const match = cleanText.match(/\\{[\\s\\S]*\\}/);\n    let jsonString = match ? match[0] : cleanText;\n\n    // 4. Transforma a string em um objeto JavaScript real\n    parsed = JSON.parse(jsonString);\n\n} catch (e) {\n    // Fallback de segurança caso o JSON venha corrompido\n    parsed = { \n        intencao: 'outro', \n        entidades: {}, \n        resposta_sugerida: 'Não foi possível processar o formato da resposta da IA.' \n    };\n}\n\n// Mensagem original: usa o texto ja compilado do buffer (funciona tanto pra mensagem de\n// texto quanto pra audio transcrito, ja que o buffer guarda o texto transcrito, nao o\n// payload bruto do webhook). Antes disso tentava reler webhook.body.data.message.conversation\n// direto, o que so cobria texto puro e caia num fallback hardcoded ('vaca 10 produziu 12\n// litros') sempre que a mensagem era audio, corrompendo silenciosamente a deteccao de\n// periodo (\"hoje\", \"mes\") mais adiante no fluxo.\nlet mensagemOriginal = '';\ntry {\n    mensagemOriginal = $('Buffer - Ler Final').first().json.data || '';\n} catch (e) {\n    mensagemOriginal = '';\n}\n\n// Normaliza a intencao contra o enum valido, corrigindo erros comuns da IA\nconst INTENCOES_VALIDAS = ['registrar_parto','registrar_leite','registrar_cobertura',\n    'consultar_vaca','consultar_relatorio','cadastrar_vaca','atualizar_registro','atualizar_vaca','deletar_registro','diagnosticar_prenhez',\n    'registrar_financeiro','consultar_financeiro','atualizar_financeiro','deletar_financeiro'];\nconst ALIASES_INTENCAO = {\n    'consult_vaca': 'consultar_vaca',\n    'consultar_relatório': 'consultar_relatorio',\n    'registrar_cobertura ': 'registrar_cobertura'\n};\nfunction normalizarIntencao(raw) {\n    if (!raw) return 'outro';\n    let v = String(raw).trim().toLowerCase();\n    if (INTENCOES_VALIDAS.includes(v)) return v;\n    if (ALIASES_INTENCAO[v]) return ALIASES_INTENCAO[v];\n    // tenta achar a intencao valida mais proxima por prefixo/substring (nunca cai em registrar_* ou deletar_* por seguranca)\n    const candidata = INTENCOES_VALIDAS.find(i => i.startsWith(v) || v.startsWith(i));\n    if (candidata && !candidata.startsWith('deletar')) return candidata;\n    return 'outro';\n}\n\n// 5. Retorno limpo e estruturado para o seu banco/Supabase\nreturn [{\n    json: {\n        intencao: normalizarIntencao(parsed.intencao),\n        entidades: {\n            numero_vaca: parsed.entidades?.numero_vaca ?? null,\n            data: parsed.entidades?.data ?? null,\n            litros: parsed.entidades?.litros ?? null,\n            periodo: parsed.entidades?.periodo ?? null,\n            sexo_bezerro: parsed.entidades?.sexo_bezerro ?? null,\n            numero_bezerro: parsed.entidades?.numero_bezerro ?? null,\n            touro_semen: parsed.entidades?.touro_semen ?? null,\n            observacao: parsed.entidades?.observacao ?? null,\n            tipo_relatorio: parsed.entidades?.tipo_relatorio ?? null,\n            periodo_dias: parsed.entidades?.periodo_dias ?? null,\n            resultado_diagnostico: parsed.entidades?.resultado_diagnostico ?? null,\n            numero_mae: parsed.entidades?.numero_mae ?? null,\n            origem_animal: parsed.entidades?.origem_animal ?? null,\n            status_produtivo: parsed.entidades?.status_produtivo ?? null,\n            status_reprodutivo: parsed.entidades?.status_reprodutivo ?? null,\n            tipo_financeiro: parsed.entidades?.tipo_financeiro ?? null,\n            categoria: parsed.entidades?.categoria ?? null,\n            valor: parsed.entidades?.valor ?? null\n        },\n        resposta_sugerida: parsed.resposta_sugerida || '',\n        propriedade_id: usuario?.propriedade_id || null,\n        telefone: usuario?.telefone || null,\n        mensagem_original: mensagemOriginal\n    }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -52528,
-        42016
+        -1344,
+        13456
       ],
-      "id": "6f0ebf33-9226-4f6f-8db3-138cfe657d1f",
+      "id": "b82fbb51-c71f-4fca-965c-3b8223f90752",
       "name": "Parsear Resposta IA"
     },
     {
@@ -422,10 +422,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
       "position": [
-        -52272,
-        41888
+        -432,
+        13376
       ],
-      "id": "3f5d4c02-ec4f-4a59-b588-1b4acb524c24",
+      "id": "4cf5cf72-c8f9-493d-a91b-7910b41df2b3",
       "name": "Rotear Intencao"
     },
     {
@@ -448,11 +448,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51568,
-        41904
+        5824,
+        11696
       ],
-      "id": "eadd7899-2cce-422b-956d-d95bbcc928d3",
+      "id": "1cc52b9f-7274-4964-bb4e-03bca4b79db4",
       "name": "Buscar Vaca (Leite)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -487,10 +488,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51136,
-        41904
+        7488,
+        11424
       ],
-      "id": "302e37f3-6dae-429b-b203-89dfa591b354",
+      "id": "781cbdf7-82ad-4e12-9b71-282649d89435",
       "name": "Inserir Controle Leite",
       "credentials": {
         "supabaseApi": {
@@ -502,23 +503,23 @@
     {
       "parameters": {
         "resource": "messages-api",
-        "instanceName": "Assis Rubens",
-        "remoteJid": "558588503418",
+        "instanceName": "Gabriel Bandeira",
+        "remoteJid": "558598149317@s.whatsapp.net",
         "messageText": "={{ $json.resposta_sugerida }}",
         "options_message": {}
       },
       "type": "n8n-nodes-evolution-api.evolutionApi",
       "typeVersion": 1,
       "position": [
-        -46576,
-        41984
+        16688,
+        14256
       ],
-      "id": "39f1158f-31ab-4706-91a1-d0233cd80b28",
+      "id": "7293773e-d7f0-4347-8a89-4c3de803630c",
       "name": "Enviar texto",
       "credentials": {
         "evolutionApi": {
-          "id": "4KHj6VZl0o9j7a3Y",
-          "name": "Evolution Assis"
+          "id": "gtlPdveg89MKtmGW",
+          "name": "Evolution Gabriel"
         }
       }
     },
@@ -527,16 +528,16 @@
         "promptType": "define",
         "text": "={{ $('Buffer - Ler Final').item.json.data }}",
         "options": {
-          "systemMessage": "=Você é o assistente de um agente de WhatsApp para gestão zootécnica de gado leiteiro (metodologia PAEZ/Balde Cheio). Sua tarefa é interpretar a mensagem do produtor rural e retornar APENAS um JSON válido, sem texto adicional, sem markdown, seguindo este formato:{\"intencao\": \"registrar_parto | registrar_leite | registrar_cobertura | consultar_vaca | consultar_relatorio | cadastrar_vaca | atualizar_registro | atualizar_vaca | deletar_registro | diagnosticar_prenhez | registrar_financeiro | consultar_financeiro | atualizar_financeiro | deletar_financeiro | outro\", \"entidades\": {\"numero_vaca\": string|null, \"data\": \"YYYY-MM-DD\"|null, \"litros\": number|null, \"periodo\": \"manha|tarde|dia_inteiro\"|null, \"sexo_bezerro\": \"macho|femea|natimorto\"|null, \"touro_semen\": string|null, \"observacao\": string|null, \"tipo_relatorio\": \"leite | reprodutivo | cadastro | geral\"|null, \"periodo_dias\": number|null, \"resultado_diagnostico\": \"positivo | negativo | pendente\"|null, \"numero_mae\": string|null, \"status_produtivo\": \"novilha | lactacao | seca\"|null, \"status_reprodutivo\": \"vazia | prenhe | vazia_em_servico\"|null, \"tipo_financeiro\": \"despesa | receita\"|null, \"categoria\": string|null, \"valor\": number|null}, \"resposta_sugerida\": string}Regras: use a data de hoje quando o produtor disser \"hoje\"; converta datas relativas para YYYY-MM-DD; se a mensagem não se encaixar em nenhuma intenção, use \"outro\" e explique em resposta_sugerida; nunca invente números de vaca ou valores que não estejam na mensagem.Exemplos:Mensagem: \"vaca 12 pariu hoje, bezerra\" -> {\"intencao\":\"registrar_parto\",\"entidades\":{\"numero_vaca\":\"12\",\"data\":\"<hoje>\",\"sexo_bezerro\":\"femea\"},\"resposta_sugerida\":\"Parto da vaca 12 registrado (bezerra).\"}Mensagem: \"leite vaca 45: 14 litros manhã\" -> {\"intencao\":\"registrar_leite\",\"entidades\":{\"numero_vaca\":\"45\",\"litros\":14,\"periodo\":\"manha\"},\"resposta_sugerida\":\"Registrado 14L da vaca 45 (manhã).\"}Mensagem: \"quais vacas estão secando esse mês?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{},\"resposta_sugerida\":\"Buscando vacas com previsão de secagem neste mês.\"} Regras adicionais para atualizar_registro e deletar_registro: use \"atualizar_registro\" quando o produtor quiser corrigir um registro de leite já lançado (ex: \"corrige o leite da vaca 10 de ontem para 15 litros\"), preenchendo numero_vaca, data, periodo e litros com o valor NOVO. use \"deletar_registro\" quando o produtor quiser apagar um registro de leite já lançado (ex: \"apaga o leite da vaca 10 de ontem\" ou \"lancei errado, remove esse registro\"), preenchendo numero_vaca, data e periodo. Nunca execute a exclusão ou atualização você mesmo: apenas identifique a intenção e as entidades; a confirmação e execução são feitas por outra etapa do sistema. Exemplos adicionais: Mensagem: \"corrige a vaca 22 de hoje pra 18 litros de manha\" -> {\"intencao\":\"atualizar_registro\",\"entidades\":{\"numero_vaca\":\"22\",\"data\":\"<hoje>\",\"litros\":18,\"periodo\":\"manha\"},\"resposta_sugerida\":\"Atualizando registro da vaca 22.\"} Mensagem: \"apaga o leite da vaca 8 de ontem a tarde\" -> {\"intencao\":\"deletar_registro\",\"entidades\":{\"numero_vaca\":\"8\",\"data\":\"<ontem>\",\"periodo\":\"tarde\"},\"resposta_sugerida\":\"Localizando o registro da vaca 8 para exclusão.\"} Regra para tipo_relatorio: quando a intencao for consultar_vaca ou consultar_relatorio, defina tipo_relatorio=\"reprodutivo\" se a pergunta for sobre cobertura, prenhez, parto, secagem ou IEP; defina tipo_relatorio=\"leite\" se for sobre produção/litros; caso a pergunta seja genérica (ex: status geral da vaca), use \"geral\". Exemplo cobertura: Mensagem: \"cobri a vaca 15 hoje com sêmen do touro Tarzan\" -> {\"intencao\":\"registrar_cobertura\",\"entidades\":{\"numero_vaca\":\"15\",\"data\":\"<hoje>\",\"touro_semen\":\"Tarzan\"},\"resposta_sugerida\":\"Cobertura da vaca 15 registrada.\"} Exemplo relatório reprodutivo: Mensagem: \"quais vacas estão secando esse mês?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando vacas com previsão de secagem neste mês.\"} Exemplo relatório reprodutivo individual: Mensagem: \"quando a vaca 10 deve parir?\" -> {\"intencao\":\"consultar_vaca\",\"entidades\":{\"numero_vaca\":\"10\",\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando previsão de parto da vaca 10.\"} Regra adicional: use tipo_relatorio=\"cadastro\" quando a pergunta for sobre quantidade/contagem de vacas cadastradas no rebanho (ex: \"quantas vacas eu tenho?\", \"quantas vacas cadastradas?\"). Exemplo: Mensagem: \"quantas vacas cadastradas?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"cadastro\"},\"resposta_sugerida\":\"Buscando o total de vacas cadastradas.\"} IMPORTANTE: o campo intencao deve ser copiado EXATAMENTE e por extenso como aparece na lista de opcoes acima (ex: \"consultar_vaca\", nunca \"consult_vaca\" ou qualquer forma abreviada). Nao invente, abrevie ou modifique os nomes das intencoes. Regra para periodo_dias: em relatorios gerais de leite (sem numero de vaca), se o produtor pedir historico/ultimos dias, defina periodo_dias com a quantidade de dias (ex: \"ultima semana\"=7, \"esse mes\"=30, \"ultimos 3 dias\"=3). Se ele so perguntar \"producao de hoje\" ou nao especificar periodo, deixe periodo_dias=null (mostra so hoje). Exemplo: Mensagem: \"quero ver o historico de producao\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"leite\",\"periodo_dias\":7},\"resposta_sugerida\":\"Buscando o historico de producao dos ultimos 7 dias.\"} Regra critica: se um numero de vaca aparecer na mensagem (ex: \"vaca 1\", \"vaca numero 5\"), SEMPRE preencha numero_vaca com esse numero, mesmo que a palavra \"relatorio\" tambem apareca na frase. A ausencia de numero_vaca deve ser reservada apenas para perguntas genuinamente sobre o rebanho inteiro, sem nenhuma vaca especifica mencionada. Exemplo: Mensagem: \"relatorio reprodutivo da vaca 1\" -> {\"intencao\":\"consultar_vaca\",\"entidades\":{\"numero_vaca\":\"1\",\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando relatorio reprodutivo da vaca 1.\"} Regra para diagnosticar_prenhez: use essa intencao quando o produtor quiser informar o RESULTADO de um diagnostico de prenhez de uma cobertura ja registrada (toque, ultrassom, etc), preenchendo numero_vaca e resultado_diagnostico (\"positivo\" para prenha/positiva/confirmada, \"negativo\" para vazia/negativa/nao prenha). NAO confunda com registrar_cobertura (que cria uma cobertura nova). Exemplos: Mensagem: \"registrar prenhez vaca 4 hoje\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"4\",\"resultado_diagnostico\":\"positivo\"},\"resposta_sugerida\":\"Registrando diagnostico positivo da vaca 4.\"} Mensagem: \"vaca 7 negativa no toque\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"7\",\"resultado_diagnostico\":\"negativo\"},\"resposta_sugerida\":\"Registrando diagnostico negativo da vaca 7.\"} Regra de correcao: se o produtor pedir para corrigir/voltar um diagnostico ja registrado (ex: \"corrige o diagnostico da vaca 4 pra pendente\", \"volta a vaca 4 pra pendente\"), use diagnosticar_prenhez com resultado_diagnostico=\"pendente\". Exemplo: Mensagem: \"corrige o diagnostico da vaca 4 pra pendente\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"4\",\"resultado_diagnostico\":\"pendente\"},\"resposta_sugerida\":\"Corrigindo diagnostico da vaca 4 para pendente.\"} Regra para cadastrar_vaca: use numero_vaca para o numero da vaca NOVA sendo cadastrada. Se o produtor mencionar a mae (ex: \"filha da vaca 5\", \"cria da vaca 12\"), preencha numero_mae com o numero da mae; caso contrario deixe numero_mae null (cadastro de vaca sem mae rastreada, ex: comprada). Exemplos: Mensagem: \"cadastra a vaca 30, filha da vaca 5\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":\"30\",\"numero_mae\":\"5\"},\"resposta_sugerida\":\"Cadastrando a vaca 30.\"} Mensagem: \"cadastra a vaca 31\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":\"31\",\"numero_mae\":null},\"resposta_sugerida\":\"Cadastrando a vaca 31.\"} Regra para numero_vaca vazio no cadastro: se o produtor pedir para cadastrar uma vaca SEM informar numero (ex: \"cadastre uma vaca nova\"), deixe numero_vaca null - o sistema gera o proximo numero disponivel automaticamente. Regra para atualizar_vaca: use essa intencao quando o produtor quiser corrigir o status produtivo/reprodutivo de uma vaca JA cadastrada (nao um lancamento de leite - isso e atualizar_registro), preenchendo numero_vaca e status_produtivo e/ou status_reprodutivo com os valores exatos do enum. Exemplo: Mensagem: \"cadastre uma vaca nova\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":null},\"resposta_sugerida\":\"Cadastrando nova vaca com numero automatico.\"} Exemplo: Mensagem: \"corrige o status da vaca 7 pra seca\" -> {\"intencao\":\"atualizar_vaca\",\"entidades\":{\"numero_vaca\":\"7\",\"status_produtivo\":\"seca\"},\"resposta_sugerida\":\"Atualizando status da vaca 7 para seca.\"} Regras do modulo financeiro: use registrar_financeiro quando o produtor lancar um gasto ou uma venda/recebimento (preencha tipo_financeiro='despesa' ou 'receita', valor, categoria e data). Se o produtor nao informar a categoria, INFIRA uma categoria curta e padronizada em minusculas e sem acentuacao inconsistente a partir do contexto da mensagem (ex: racao, medicacao, veterinario, combustivel, energia eletrica, mao de obra, manutencao, produtos da ordenha, inseminacao artificial, custo com pastagem, venda de leite, venda de animal, outros). Sempre normalize a categoria pra minusculo e no mesmo padrao mesmo quando o produtor informar. Regra para distinguir veterinario de medicacao: use \"veterinario\" apenas quando o gasto for a visita/consulta do profissional; use \"medicacao\" para remedio, vacina ou vermifugo comprado, mesmo que sem visita do veterinario. Use consultar_financeiro para pedidos de relatorio/balanco financeiro (preencha tipo_financeiro apenas se o produtor pedir so despesas ou so receitas, senao deixe null; preencha periodo_dias quando pedir historico especifico, igual as regras de relatorio de leite). Use atualizar_financeiro para corrigir um lancamento ja feito (preencha categoria e/ou data para localizar o lancamento, e valor com o valor NOVO). Use deletar_financeiro para apagar um lancamento ja feito (preencha categoria e/ou data para localizar; a exclusao So acontece apos confirmacao, nao execute voce mesmo). Exemplos: Mensagem: \"gastei 200 reais com racao hoje\" -> {\"intencao\":\"registrar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\",\"valor\":200,\"categoria\":\"racao\",\"data\":\"<hoje>\"},\"resposta_sugerida\":\"Lancando despesa de racao.\"} Mensagem: \"vendi 500 reais de leite pro laticinio\" -> {\"intencao\":\"registrar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"receita\",\"valor\":500,\"categoria\":\"venda de leite\"},\"resposta_sugerida\":\"Lancando receita de venda de leite.\"} Mensagem: \"quanto gastei esse mes\" -> {\"intencao\":\"consultar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\"},\"resposta_sugerida\":\"Buscando as despesas do periodo.\"} Mensagem: \"relatorio financeiro\" -> {\"intencao\":\"consultar_financeiro\",\"entidades\":{},\"resposta_sugerida\":\"Buscando o relatorio financeiro.\"} Mensagem: \"corrige a despesa de racao de hoje pra 250\" -> {\"intencao\":\"atualizar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\",\"categoria\":\"racao\",\"data\":\"<hoje>\",\"valor\":250},\"resposta_sugerida\":\"Corrigindo o lancamento de racao.\"} Mensagem: \"apaga o lancamento de racao de hoje\" -> {\"intencao\":\"deletar_financeiro\",\"entidades\":{\"categoria\":\"racao\",\"data\":\"<hoje>\"},\"resposta_sugerida\":\"Localizando o lancamento de racao para exclusao.\"}"
+          "systemMessage": "=Você é o assistente de um agente de WhatsApp para gestão zootécnica de gado leiteiro (metodologia PAEZ/Balde Cheio). \n\nA mensagem do produtor virá sempre precedida de uma linha \"Data de referência (hoje): YYYY-MM-DD\".\nUse SEMPRE essa data como \"hoje\" para resolver \"hoje\", \"ontem\", \"esse mês\" etc — nunca use seu\npróprio conhecimento de data atual, que pode estar incorreto ou em fuso diferente.\n\n\nSua tarefa é interpretar a mensagem do produtor rural e retornar APENAS um JSON válido, sem texto adicional, sem markdown, seguindo este formato:{\"intencao\": \"registrar_parto | registrar_leite | registrar_cobertura | consultar_vaca | consultar_relatorio | cadastrar_vaca | atualizar_registro | atualizar_vaca | deletar_registro | diagnosticar_prenhez | registrar_financeiro | consultar_financeiro | atualizar_financeiro | deletar_financeiro | outro\", \"entidades\": {\"numero_vaca\": string|null, \"data\": \"YYYY-MM-DD\"|null, \"litros\": number|null, \"periodo\": \"manha|tarde|dia_inteiro\"|null, \"sexo_bezerro\": \"macho|femea|natimorto\"|null, \"numero_bezerro\": string|null, \"touro_semen\": string|null, \"observacao\": string|null, \"tipo_relatorio\": \"leite | reprodutivo | cadastro | geral\"|null, \"periodo_dias\": number|null, \"resultado_diagnostico\": \"positivo | negativo | pendente\"|null, \"numero_mae\": string|null, \"origem_animal\": \"nascida | comprada\"|null, \"status_produtivo\": \"novilha | lactacao | seca\"|null, \"status_reprodutivo\": \"vazia | prenhe | vazia_em_servico\"|null, \"tipo_financeiro\": \"despesa | receita\"|null, \"categoria\": string|null, \"valor\": number|null}, \"resposta_sugerida\": string}Regras: use a data de hoje quando o produtor disser \"hoje\"; converta datas relativas para YYYY-MM-DD; se a mensagem não se encaixar em nenhuma intenção, use \"outro\" e explique em resposta_sugerida; nunca invente números de vaca ou valores que não estejam na mensagem.Exemplos:Mensagem: \"vaca 12 pariu hoje, bezerra\" -> {\"intencao\":\"registrar_parto\",\"entidades\":{\"numero_vaca\":\"12\",\"data\":\"<hoje>\",\"sexo_bezerro\":\"femea\"},\"resposta_sugerida\":\"Parto da vaca 12 registrado (bezerra).\"}Mensagem: \"leite vaca 45: 14 litros manhã\" -> {\"intencao\":\"registrar_leite\",\"entidades\":{\"numero_vaca\":\"45\",\"litros\":14,\"periodo\":\"manha\"},\"resposta_sugerida\":\"Registrado 14L da vaca 45 (manhã).\"}Mensagem: \"quais vacas estão secando esse mês?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{},\"resposta_sugerida\":\"Buscando vacas com previsão de secagem neste mês.\"} Regras adicionais para atualizar_registro e deletar_registro: use \"atualizar_registro\" quando o produtor quiser corrigir um registro de leite já lançado (ex: \"corrige o leite da vaca 10 de ontem para 15 litros\"), preenchendo numero_vaca, data, periodo e litros com o valor NOVO. use \"deletar_registro\" quando o produtor quiser apagar um registro de leite já lançado (ex: \"apaga o leite da vaca 10 de ontem\" ou \"lancei errado, remove esse registro\"), preenchendo numero_vaca, data e periodo. Nunca execute a exclusão ou atualização você mesmo: apenas identifique a intenção e as entidades; a confirmação e execução são feitas por outra etapa do sistema. Exemplos adicionais: Mensagem: \"corrige a vaca 22 de hoje pra 18 litros de manha\" -> {\"intencao\":\"atualizar_registro\",\"entidades\":{\"numero_vaca\":\"22\",\"data\":\"<hoje>\",\"litros\":18,\"periodo\":\"manha\"},\"resposta_sugerida\":\"Atualizando registro da vaca 22.\"} Mensagem: \"apaga o leite da vaca 8 de ontem a tarde\" -> {\"intencao\":\"deletar_registro\",\"entidades\":{\"numero_vaca\":\"8\",\"data\":\"<ontem>\",\"periodo\":\"tarde\"},\"resposta_sugerida\":\"Localizando o registro da vaca 8 para exclusão.\"} Regra para tipo_relatorio: quando a intencao for consultar_vaca ou consultar_relatorio, defina tipo_relatorio=\"reprodutivo\" se a pergunta for sobre cobertura, prenhez, parto, secagem ou IEP; defina tipo_relatorio=\"leite\" se for sobre produção/litros; caso a pergunta seja genérica (ex: status geral da vaca), use \"geral\". Exemplo cobertura: Mensagem: \"cobri a vaca 15 hoje com sêmen do touro Tarzan\" -> {\"intencao\":\"registrar_cobertura\",\"entidades\":{\"numero_vaca\":\"15\",\"data\":\"<hoje>\",\"touro_semen\":\"Tarzan\"},\"resposta_sugerida\":\"Cobertura da vaca 15 registrada.\"} Exemplo relatório reprodutivo: Mensagem: \"quais vacas estão secando esse mês?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando vacas com previsão de secagem neste mês.\"} Exemplo relatório reprodutivo individual: Mensagem: \"quando a vaca 10 deve parir?\" -> {\"intencao\":\"consultar_vaca\",\"entidades\":{\"numero_vaca\":\"10\",\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando previsão de parto da vaca 10.\"} Regra adicional: use tipo_relatorio=\"cadastro\" quando a pergunta for sobre quantidade/contagem de vacas cadastradas no rebanho (ex: \"quantas vacas eu tenho?\", \"quantas vacas cadastradas?\"). Exemplo: Mensagem: \"quantas vacas cadastradas?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"cadastro\"},\"resposta_sugerida\":\"Buscando o total de vacas cadastradas.\"} IMPORTANTE: o campo intencao deve ser copiado EXATAMENTE e por extenso como aparece na lista de opcoes acima (ex: \"consultar_vaca\", nunca \"consult_vaca\" ou qualquer forma abreviada). Nao invente, abrevie ou modifique os nomes das intencoes. Regra para periodo_dias: em relatorios gerais de leite (sem numero de vaca), se o produtor pedir historico/ultimos dias, defina periodo_dias com a quantidade de dias (ex: \"ultima semana\"=7, \"esse mes\"=30, \"ultimos 3 dias\"=3). Se ele so perguntar \"producao de hoje\" ou nao especificar periodo, deixe periodo_dias=null (mostra so hoje). Exemplo: Mensagem: \"quero ver o historico de producao\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"leite\",\"periodo_dias\":7},\"resposta_sugerida\":\"Buscando o historico de producao dos ultimos 7 dias.\"} Regra critica: se um numero de vaca aparecer na mensagem (ex: \"vaca 1\", \"vaca numero 5\"), SEMPRE preencha numero_vaca com esse numero, mesmo que a palavra \"relatorio\" tambem apareca na frase. A ausencia de numero_vaca deve ser reservada apenas para perguntas genuinamente sobre o rebanho inteiro, sem nenhuma vaca especifica mencionada. Exemplo: Mensagem: \"relatorio reprodutivo da vaca 1\" -> {\"intencao\":\"consultar_vaca\",\"entidades\":{\"numero_vaca\":\"1\",\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando relatorio reprodutivo da vaca 1.\"} Regra para diagnosticar_prenhez: use essa intencao quando o produtor quiser informar o RESULTADO de um diagnostico de prenhez de uma cobertura ja registrada (toque, ultrassom, etc), preenchendo numero_vaca e resultado_diagnostico (\"positivo\" para prenha/positiva/confirmada, \"negativo\" para vazia/negativa/nao prenha). NAO confunda com registrar_cobertura (que cria uma cobertura nova). Exemplos: Mensagem: \"registrar prenhez vaca 4 hoje\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"4\",\"resultado_diagnostico\":\"positivo\"},\"resposta_sugerida\":\"Registrando diagnostico positivo da vaca 4.\"} Mensagem: \"vaca 7 negativa no toque\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"7\",\"resultado_diagnostico\":\"negativo\"},\"resposta_sugerida\":\"Registrando diagnostico negativo da vaca 7.\"} Regra de correcao: se o produtor pedir para corrigir/voltar um diagnostico ja registrado (ex: \"corrige o diagnostico da vaca 4 pra pendente\", \"volta a vaca 4 pra pendente\"), use diagnosticar_prenhez com resultado_diagnostico=\"pendente\". Exemplo: Mensagem: \"corrige o diagnostico da vaca 4 pra pendente\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"4\",\"resultado_diagnostico\":\"pendente\"},\"resposta_sugerida\":\"Corrigindo diagnostico da vaca 4 para pendente.\"} Regra para cadastrar_vaca: use numero_vaca para o numero da vaca NOVA sendo cadastrada. Se o produtor mencionar a mae (ex: \"filha da vaca 5\", \"cria da vaca 12\"), preencha numero_mae com o numero da mae; caso contrario deixe numero_mae null (cadastro de vaca sem mae rastreada, ex: comprada). Exemplos: Mensagem: \"cadastra a vaca 30, filha da vaca 5\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":\"30\",\"numero_mae\":\"5\"},\"resposta_sugerida\":\"Cadastrando a vaca 30.\"} Mensagem: \"cadastra a vaca 31\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":\"31\",\"numero_mae\":null},\"resposta_sugerida\":\"Cadastrando a vaca 31.\"} Regra para numero_vaca vazio no cadastro: se o produtor pedir para cadastrar uma vaca SEM informar numero (ex: \"cadastre uma vaca nova\"), deixe numero_vaca null - o sistema gera o proximo numero disponivel automaticamente. Regra para atualizar_vaca: use essa intencao quando o produtor quiser corrigir o status produtivo/reprodutivo de uma vaca JA cadastrada (nao um lancamento de leite - isso e atualizar_registro), preenchendo numero_vaca e status_produtivo e/ou status_reprodutivo com os valores exatos do enum. Exemplo: Mensagem: \"cadastre uma vaca nova\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":null},\"resposta_sugerida\":\"Cadastrando nova vaca com numero automatico.\"} Exemplo: Mensagem: \"corrige o status da vaca 7 pra seca\" -> {\"intencao\":\"atualizar_vaca\",\"entidades\":{\"numero_vaca\":\"7\",\"status_produtivo\":\"seca\"},\"resposta_sugerida\":\"Atualizando status da vaca 7 para seca.\"} Regras do modulo financeiro: use registrar_financeiro quando o produtor lancar um gasto ou uma venda/recebimento (preencha tipo_financeiro='despesa' ou 'receita', valor, categoria e data). Se o produtor nao informar a categoria, INFIRA uma categoria curta e padronizada em minusculas e sem acentuacao inconsistente a partir do contexto da mensagem (ex: racao, medicacao, veterinario, combustivel, energia eletrica, mao de obra, manutencao, produtos da ordenha, inseminacao artificial, custo com pastagem, venda de leite, venda de animal, outros). Sempre normalize a categoria pra minusculo e no mesmo padrao mesmo quando o produtor informar. Regra para distinguir veterinario de medicacao: use \"veterinario\" apenas quando o gasto for a visita/consulta do profissional; use \"medicacao\" para remedio, vacina ou vermifugo comprado, mesmo que sem visita do veterinario. Use consultar_financeiro para pedidos de relatorio/balanco financeiro (preencha tipo_financeiro apenas se o produtor pedir so despesas ou so receitas, senao deixe null; preencha periodo_dias quando pedir historico especifico, igual as regras de relatorio de leite). Use atualizar_financeiro para corrigir um lancamento ja feito (preencha categoria e/ou data para localizar o lancamento, e valor com o valor NOVO). Use deletar_financeiro para apagar um lancamento ja feito (preencha categoria e/ou data para localizar; a exclusao So acontece apos confirmacao, nao execute voce mesmo). Exemplos: Mensagem: \"gastei 200 reais com racao hoje\" -> {\"intencao\":\"registrar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\",\"valor\":200,\"categoria\":\"racao\",\"data\":\"<hoje>\"},\"resposta_sugerida\":\"Lancando despesa de racao.\"} Mensagem: \"vendi 500 reais de leite pro laticinio\" -> {\"intencao\":\"registrar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"receita\",\"valor\":500,\"categoria\":\"venda de leite\"},\"resposta_sugerida\":\"Lancando receita de venda de leite.\"} Mensagem: \"quanto gastei esse mes\" -> {\"intencao\":\"consultar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\"},\"resposta_sugerida\":\"Buscando as despesas do periodo.\"} Mensagem: \"relatorio financeiro\" -> {\"intencao\":\"consultar_financeiro\",\"entidades\":{},\"resposta_sugerida\":\"Buscando o relatorio financeiro.\"} Mensagem: \"corrige a despesa de racao de hoje pra 250\" -> {\"intencao\":\"atualizar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\",\"categoria\":\"racao\",\"data\":\"<hoje>\",\"valor\":250},\"resposta_sugerida\":\"Corrigindo o lancamento de racao.\"} Mensagem: \"apaga o lancamento de racao de hoje\" -> {\"intencao\":\"deletar_financeiro\",\"entidades\":{\"categoria\":\"racao\",\"data\":\"<hoje>\"},\"resposta_sugerida\":\"Localizando o lancamento de racao para exclusao.\"} Regra para origem_animal no cadastro: use \"comprada\" quando o produtor disser que adquiriu/comprou o animal (nesse caso NUNCA tente vincular numero_mae ao rebanho, mesmo que ele mencione uma mae - a mae de um animal comprado nao esta cadastrada nessa propriedade). Use \"nascida\" quando for uma cria da propria fazenda (ex: \"filha da vaca 5\"). Se nao for possivel saber com certeza, deixe origem_animal null (mais seguro nao vincular mae por engano). Exemplo: Mensagem: \"comprei uma novilha, numero 40\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":\"40\",\"origem_animal\":\"comprada\",\"numero_mae\":null},\"resposta_sugerida\":\"Cadastrando a vaca 40 (comprada).\"} Regra de padronizacao para sexo_bezerro: sempre normalize para exatamente \"macho\", \"femea\" ou \"natimorto\" (minusculo, sem acento). As palavras \"bezerra\" ou \"novilha\" ja indicam sexo_bezerro=\"femea\" mesmo sem a palavra \"femea\" aparecer na frase; a palavra \"bezerro\" (quando usada para indicar o sexo do recem-nascido, nao como termo generico) indica sexo_bezerro=\"macho\". Regra para numero_bezerro: se o produtor informar um numero para o bezerro/bezerra recem-nascido, preencha numero_bezerro com esse numero. Exemplo: Mensagem: \"a vaca 6 pariu 10/07/26 o numero da bezerra e 100\" -> {\"intencao\":\"registrar_parto\",\"entidades\":{\"numero_vaca\":\"6\",\"data\":\"2026-07-10\",\"sexo_bezerro\":\"femea\",\"numero_bezerro\":\"100\"},\"resposta_sugerida\":\"Registrando o parto da vaca 6 e a bezerra 100.\"}\n\n"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        -52928,
-        42016
+        -1744,
+        13456
       ],
-      "id": "0ad13f20-00d2-4911-bb46-738a21da7fdb",
+      "id": "322daba8-168b-45fa-97d9-06e89661c477",
       "name": "AI Agent"
     },
     {
@@ -552,10 +553,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        -52992,
-        42304
+        -1808,
+        13744
       ],
-      "id": "f04f4091-c139-4eed-ac7e-28a3a70a836b",
+      "id": "cad521d4-0c4d-4539-a4af-c0cbb18d7cfa",
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
@@ -567,16 +568,17 @@
     {
       "parameters": {
         "sessionIdType": "customKey",
-        "sessionKey": "={{ $('Identificar Usuario').item.json.telefone }}",
+        "sessionKey": "={{ $('Webhook').item.json.body.data.key.remoteJid }}",
+        "sessionTTL": 5,
         "contextWindowLength": 15
       },
       "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
       "typeVersion": 1.6,
       "position": [
-        -52736,
-        42304
+        -1552,
+        13744
       ],
-      "id": "a3f1a0dc-9343-47bb-b6a4-aa02b66ef631",
+      "id": "a957ffcc-7fef-4ada-af86-3676629b6755",
       "name": "Redis Chat Memory",
       "credentials": {
         "redis": {
@@ -606,6 +608,12 @@
               "name": "timestamp",
               "value": "={{  Date.now() }}",
               "type": "string"
+            },
+            {
+              "id": "68342d3e-5508-4260-8b62-f48c80a5479d",
+              "name": "origem_audio",
+              "type": "boolean",
+              "value": "={{ $json.origem_audio || false }}"
             }
           ]
         },
@@ -614,10 +622,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -55776,
-        42512
+        -5472,
+        13728
       ],
-      "id": "2c8a20f8-66bd-4f41-806e-081bd5531966",
+      "id": "671782fe-2597-479d-906c-49528fa1ce18",
       "name": "Preparar Dados Buffer"
     },
     {
@@ -630,10 +638,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -55568,
-        42512
+        -5264,
+        13728
       ],
-      "id": "94f47726-4c6b-49f2-9bcc-10e455ed0b75",
+      "id": "b8a93ec3-8217-462a-b4e0-2b816b5be426",
       "name": "Buffer - Ler Existente",
       "credentials": {
         "redis": {
@@ -650,10 +658,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -55360,
-        42512
+        -5056,
+        13728
       ],
-      "id": "e7f216a8-284d-42fb-bc86-d0039141e070",
+      "id": "b175cd63-022f-4dfd-92cb-8568ff50484e",
       "name": "Concatenar Mensagem"
     },
     {
@@ -667,10 +675,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -55152,
-        42512
+        -4848,
+        13728
       ],
-      "id": "e822d07b-395b-4140-8cd0-a1a87de1459d",
+      "id": "78dda4d8-6ed0-4818-85c9-5184f64b1a04",
       "name": "Buffer - Salvar",
       "credentials": {
         "redis": {
@@ -690,10 +698,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -54944,
-        42512
+        -4640,
+        13728
       ],
-      "id": "cb3738fd-5989-4c5a-93b1-a37f82629e17",
+      "id": "a40bcebf-fe44-455d-ba30-144f9d738a6a",
       "name": "Timestamp - Salvar",
       "credentials": {
         "redis": {
@@ -703,14 +711,16 @@
       }
     },
     {
-      "parameters": {},
+      "parameters": {
+        "amount": 1
+      },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        -54736,
-        42512
+        -4432,
+        13728
       ],
-      "id": "01a28d3d-80cc-4931-8963-728c07566076",
+      "id": "88c149d6-d526-4508-91c8-e2e0733f6246",
       "name": "Aguardar Mensagens",
       "webhookId": "4ec44f8b-138d-4807-86bd-bcabbd21106e"
     },
@@ -724,10 +734,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -54528,
-        42512
+        -4224,
+        13728
       ],
-      "id": "58694172-d925-41a7-ab4e-d05f179f479b",
+      "id": "36633e1b-8f5c-4ef3-ba54-1fd97c5536d9",
       "name": "Timestamp - Ler",
       "credentials": {
         "redis": {
@@ -764,10 +774,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -54320,
-        42512
+        -4016,
+        13728
       ],
-      "id": "8cdd8d1d-fe51-4141-8bbc-6481a3ded257",
+      "id": "04626fc6-5306-4b0c-a532-432f8ebf785b",
       "name": "É a Última Mensagem?"
     },
     {
@@ -780,10 +790,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -54144,
-        42144
+        -3488,
+        13584
       ],
-      "id": "94871f50-3b9e-4d96-ae5d-106f3218787b",
+      "id": "356280b7-77c7-4567-ba72-b0639b3df2fa",
       "name": "Buffer - Ler Final",
       "credentials": {
         "redis": {
@@ -803,10 +813,16 @@
               "type": "string"
             },
             {
-              "id": "a90daff0-6158-4c9e-b6ad-310bdf3e5ae7",
+              "id": "5b4c6526-8f2c-4496-8f6c-5a90e21fb756",
               "name": "mensagem_compilada",
-              "value": "={{  $json.data }}",
+              "value": "=Data de referência (hoje): {{ $now.setZone('America/Sao_Paulo').format('yyyy-MM-dd') }}\nMensagem do produtor: \"{{ $json.data }}\"",
               "type": "string"
+            },
+            {
+              "id": "12b86297-b8a2-474b-a37e-efc3417256d9",
+              "name": "origem_audio",
+              "type": "boolean",
+              "value": "={{ $json.origem_audio_raw === 'true' }}"
             }
           ]
         },
@@ -815,10 +831,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -53872,
-        42144
+        -2720,
+        13744
       ],
-      "id": "a2dd87d4-85a1-44fa-aae8-c171c4bbe3be",
+      "id": "e8df7a9b-29a5-4a48-b571-be53664e4fc5",
       "name": "Preparar Entrada Agente"
     },
     {
@@ -826,10 +842,10 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        -54112,
-        42608
+        -3776,
+        14000
       ],
-      "id": "0d15281a-e121-4122-83a5-fd251d75e341",
+      "id": "2600f969-b2d9-4412-b5f7-241ab38b7448",
       "name": "Não é a última - Parar"
     },
     {
@@ -840,10 +856,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -53616,
-        42304
+        -2352,
+        13872
       ],
-      "id": "058fd0aa-f7c9-4e3c-b68b-4a0ab5dfa8d3",
+      "id": "7e8bb303-ed77-4e78-8a33-b3c33aea556c",
       "name": "Buffer - Limpar",
       "credentials": {
         "redis": {
@@ -872,10 +888,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -49200,
-        44016
+        7456,
+        12896
       ],
-      "id": "39d883da-6177-413b-ab23-89c5f9552a55",
+      "id": "dd2cf2b0-da73-436d-951f-c67e6a4093e3",
       "name": "Buscar Vaca (Relatório)",
       "alwaysOutputData": true,
       "retryOnFail": false,
@@ -905,10 +921,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -48288,
-        43664
+        8016,
+        12896
       ],
-      "id": "30ac514a-5b77-497e-baa0-bffa6ad874ca",
+      "id": "80b828e2-d116-4ae4-a9b1-8278e77c6324",
       "name": "Buscar Histórico Leite",
       "alwaysOutputData": true,
       "credentials": {
@@ -920,15 +936,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst vaca = $('Buscar Vaca (Relatório)').first().json;\nlet registros = dedupeById($input.all().map(i => i.json));\nregistros.sort((a, b) => new Date(b.data_controle) - new Date(a.data_controle));\nregistros = registros.slice(0, 10);\nlet texto = `Relatório da vaca ${vaca.numero_identificacao}:\\n`;\nif (registros.length === 0) {\n  texto += 'Nenhum registro de leite encontrado.';\n} else {\n  const total = registros.reduce((s, r) => s + (Number(r.litros) || 0), 0);\n  texto += registros.map(r => `- ${r.data_controle}: ${r.litros}L`).join('\\n');\n  texto += `\\nTotal no período consultado: ${total}L`;\n}\nreturn [{ json: { resposta_sugerida: texto } }];"
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst vaca = $('Buscar Vaca (Relatório)').first().json;\nlet registros = dedupeById($input.all().map(i => i.json));\nregistros.sort((a, b) => new Date(b.data_controle) - new Date(a.data_controle));\nregistros = registros.slice(0, 10);\n\nconst origemAudio = $('Preparar Entrada Agente').item.json.origem_audio;\nconst meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];\nconst porExtenso = (d) => { const [y, m, dd] = d.split('-'); return `${Number(dd)} de ${meses[Number(m) - 1]}`; };\nconst paraBR = (d) => d ? d.split('-').reverse().join('-') : d;\n\nlet texto;\nif (registros.length === 0) {\n  texto = 'Nenhum registro de leite encontrado.';\n} else {\n  const total = registros.reduce((s, r) => s + (Number(r.litros) || 0), 0);\n  if (origemAudio) {\n    texto = `A vaca ${vaca.numero_identificacao} totalizou ${total} litros no período, último registro em ${porExtenso(registros[0].data_controle)}.`;\n  } else {\n    texto = `Relatório da vaca ${vaca.numero_identificacao}:\\n`;\n    texto += registros.map(r => `- ${paraBR(r.data_controle)}: ${r.litros}L`).join('\\n');\n    texto += `\\nTotal no período consultado: ${total}L`;\n  }\n}\nreturn [{ json: { resposta_sugerida: texto } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -47696,
-        43584
+        8496,
+        12896
       ],
-      "id": "af996360-64a8-4072-8a15-38c1ba004193",
+      "id": "1395f773-d004-489f-b6f8-b15b1f9c62ab",
       "name": "Montar Relatório Individual"
     },
     {
@@ -940,8 +956,8 @@
           "conditions": [
             {
               "keyName": "data_controle",
-              "condition": "gt",
-              "keyValue": "={{ $json.dataInicio }}"
+              "condition": "gte",
+              "keyValue": "={{ $('Calcular Período Geral').item.json.dataInicio }}"
             }
           ]
         }
@@ -949,12 +965,13 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -47632,
-        44064
+        8016,
+        13072
       ],
-      "id": "213330d0-b768-4314-9af6-e74032be76f2",
+      "id": "7f12be30-fd1e-4964-9b40-2502c76b2aa1",
       "name": "Buscar Produção Geral (Hoje)",
       "alwaysOutputData": true,
+      "executeOnce": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -964,15 +981,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst { periodoDias, label, dataInicio } = $('Calcular Período Geral').item.json;\n\nconst hoje = new Date();\nconst hojeStr = hoje.toISOString().slice(0, 10);\n\nlet registros = dedupeById($input.all().map(i => i.json));\nregistros = registros.filter(r => r.data_controle >= dataInicio && r.data_controle <= hojeStr);\n\nlet texto;\nif (registros.length === 0) {\n  texto = `Nenhum registro de leite encontrado (${label}).`;\n} else {\n  const total = registros.reduce((s, r) => s + (Number(r.litros) || 0), 0);\n  if (periodoDias > 0) {\n    const porDia = {};\n    for (const r of registros) {\n      porDia[r.data_controle] = (porDia[r.data_controle] || 0) + (Number(r.litros) || 0);\n    }\n    const dias = Object.keys(porDia).sort();\n    texto = `Produção (${label}): ${total}L em ${registros.length} lançamento(s).\\n\\n`;\n    texto += dias.map(d => `- ${d}: ${porDia[d]}L`).join('\\n');\n  } else {\n    texto = `Produção de hoje: ${total}L em ${registros.length} lançamento(s).`;\n  }\n}\nreturn [{ json: { resposta_sugerida: texto } }];"
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\n\nconst { periodoDias, label, dataInicio } = $('Calcular Período Geral').item.json;\nconst origemAudio = $('Preparar Entrada Agente').item.json.origem_audio;\n\nconst vacasPropriedade = dedupeById($('Buscar Vacas Propriedade (Geral)').all().map(i => i.json));\nconst vacaIds = new Set(vacasPropriedade.map(v => v.id));\n\nconst hoje = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }) + 'T12:00:00Z');\nconst hojeStr = hoje.toISOString().slice(0, 10);\nconst round1 = (n) => Math.round(n * 10) / 10;\n\nlet registros = dedupeById($input.all().map(i => i.json))\n  .filter(r => vacaIds.has(r.vaca_id))\n  .filter(r => r.data_controle >= dataInicio && r.data_controle <= hojeStr);\n\nlet texto;\nif (registros.length === 0) {\n  texto = `Nenhum registro de leite encontrado (${label}).`;\n} else {\n  const total = round1(registros.reduce((s, r) => s + (Number(r.litros) || 0), 0));\n\n  if (periodoDias > 0) {\n    const porDia = {};\n    for (const r of registros) {\n      porDia[r.data_controle] = (porDia[r.data_controle] || 0) + (Number(r.litros) || 0);\n    }\n    const dias = Object.keys(porDia).sort();\n\n    const inicioMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10);\n    const diasMesAtual = dias.filter(d => d >= inicioMesAtual);\n    const diasMesAnterior = dias.filter(d => d < inicioMesAtual);\n\n    const somaDias = (lista) => round1(lista.reduce((s, d) => s + porDia[d], 0));\n    const mediaDias = (lista) => lista.length ? round1(somaDias(lista) / lista.length) : 0;\n\n    if (origemAudio) {\n      let partes = [`Produção ${label}: total de ${total} litros.`];\n      if (diasMesAnterior.length && diasMesAtual.length) {\n        partes.push(`Mês atual: ${somaDias(diasMesAtual)} litros, média de ${mediaDias(diasMesAtual)} por dia.`);\n        partes.push(`Mês anterior: ${somaDias(diasMesAnterior)} litros.`);\n      } else {\n        partes.push(`Média de ${mediaDias(dias)} litros por dia.`);\n      }\n      texto = partes.join(' ');\n    } else {\n      const paraBR = (d) => d.split('-').reverse().join('-');\n      let linhas = [];\n      linhas.push(`*Produção — ${label}*`);\n      linhas.push(`Total: ${total}L em ${registros.length} lançamento(s)`);\n\n      if (diasMesAnterior.length && diasMesAtual.length) {\n        linhas.push('');\n        linhas.push(`Mês atual: ${somaDias(diasMesAtual)}L (média ${mediaDias(diasMesAtual)}L/dia)`);\n        linhas.push(`Mês anterior: ${somaDias(diasMesAnterior)}L (média ${mediaDias(diasMesAnterior)}L/dia)`);\n      } else {\n        linhas.push(`Média: ${mediaDias(dias)}L/dia`);\n      }\n\n      const ultimosDias = dias.slice(-7);\n      linhas.push('');\n      linhas.push(`Últimos ${ultimosDias.length} dias com registro:`);\n      linhas.push(...ultimosDias.map(d => `- ${paraBR(d)}: ${round1(porDia[d])}L`));\n\n      texto = linhas.join('\\n');\n    }\n  } else {\n    texto = `Produção de hoje: ${total}L em ${registros.length} lançamento(s).`;\n  }\n}\nreturn [{ json: { resposta_sugerida: texto } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -47344,
-        44064
+        8496,
+        13072
       ],
-      "id": "ff49d906-d076-4166-93ff-31ce39f6d63e",
+      "id": "1406d43e-05ac-4e68-b8eb-51429e0f39f1",
       "name": "Montar Relatório Geral"
     },
     {
@@ -995,11 +1012,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51616,
-        42320
+        5904,
+        14112
       ],
-      "id": "5e2214a7-110a-46eb-8aa8-026df2b8bcb3",
+      "id": "0d693111-007f-4527-913c-63264b21b41d",
       "name": "Buscar Vaca (Atualizar)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -1020,10 +1038,6 @@
             {
               "keyName": "data_controle",
               "keyValue": "={{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
-            },
-            {
-              "keyName": "periodo",
-              "keyValue": "={{ $('Parsear Resposta IA').item.json.entidades.periodo || 'dia_inteiro' }}"
             }
           ]
         }
@@ -1031,11 +1045,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51328,
-        42320
+        6240,
+        14096
       ],
-      "id": "cb5e674d-00d5-4406-9e28-849e9027b51e",
+      "id": "9a0457a7-9b85-43c7-91f7-d013b31db281",
       "name": "Buscar Registro Leite (Atualizar)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -1061,10 +1076,6 @@
             {
               "fieldId": "litros",
               "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.litros }}"
-            },
-            {
-              "fieldId": "periodo",
-              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.periodo || $json.periodo }}"
             }
           ]
         }
@@ -1072,10 +1083,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51040,
-        42320
+        7168,
+        13792
       ],
-      "id": "7f3af0dc-164f-4e69-97a3-344b1f452bd0",
+      "id": "c793ef34-9f3f-477e-93c1-5ce5ccc86aa5",
       "name": "Atualizar Registro Leite",
       "credentials": {
         "supabaseApi": {
@@ -1092,7 +1103,7 @@
               "id": "0f3e1ade-4184-4d86-8701-c0ca9249531c",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Registro atualizado: vaca {{ $('Buscar Vaca (Atualizar)').item.json.numero_identificacao }} agora com {{ $('Parsear Resposta IA').item.json.entidades.litros }}L em {{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}."
+              "value": "=Registro atualizado: vaca {{ $('Buscar Vaca (Atualizar)').item.json.numero_identificacao }} agora com {{ $('Parsear Resposta IA').item.json.entidades.litros }}L em {{ ($('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd')).split('-').reverse().join('-') }}."
             }
           ]
         },
@@ -1101,10 +1112,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -50752,
-        42320
+        7456,
+        13792
       ],
-      "id": "060d9974-c1fc-400a-8a24-f75d1a1b82f6",
+      "id": "80b4f85a-80f5-4778-82ab-6a60fa906a33",
       "name": "Confirmar Atualização"
     },
     {
@@ -1127,11 +1138,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51616,
-        42624
+        5936,
+        14448
       ],
-      "id": "b26dbd03-957a-4936-87f5-c9e51f7b3e0e",
+      "id": "99898f9b-aef7-44fd-960b-2162c427bfd2",
       "name": "Buscar Vaca (Deletar)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -1141,15 +1153,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const registro = $input.first().json;\nconst vaca = $('Buscar Vaca (Deletar)').first().json;\nconst telefone = $('Parsear Resposta IA').first().json.telefone;\nconst pendencia = {\n  tipo: 'leite',\n  registro_id: registro.id,\n  numero_vaca: vaca.numero_identificacao,\n  data_controle: registro.data_controle,\n  periodo: registro.periodo,\n  litros: registro.litros\n};\nconst texto = `Confirma excluir o registro da vaca ${vaca.numero_identificacao} (${registro.data_controle}, ${registro.periodo}, ${registro.litros}L)? Responda SIM para confirmar ou NAO para cancelar.`;\nreturn [{ json: { telefone, pendencia: JSON.stringify(pendencia), resposta_sugerida: texto } }];"
+        "jsCode": "const registro = $input.first().json;\nconst vaca = $('Buscar Vaca (Deletar)').first().json;\nconst telefone = $('Parsear Resposta IA').first().json.telefone;\nconst pendencia = {\n  tipo: 'leite',\n  registro_id: registro.id,\n  numero_vaca: vaca.numero_identificacao,\n  data_controle: registro.data_controle,\n  periodo: registro.periodo,\n  litros: registro.litros\n};\nconst periodoTexto = registro.periodo ? `, ${registro.periodo}` : '';\nconst dataBR = registro.data_controle.split('-').reverse().join('-');\nconst texto = `Confirma excluir o registro da vaca ${vaca.numero_identificacao} (${dataBR}${periodoTexto}, ${registro.litros}L)? Responda SIM para confirmar ou NAO para cancelar.`;\nreturn [{ json: { telefone, pendencia: JSON.stringify(pendencia), resposta_sugerida: texto } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -50832,
-        42624
+        7056,
+        14448
       ],
-      "id": "3cb29f12-369d-4cc4-90aa-b2c09b6213a0",
+      "id": "ee9e348f-eb4c-4904-931f-25068e90afd7",
       "name": "Preparar Pendência Delete"
     },
     {
@@ -1162,10 +1174,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -53632,
-        41792
+        -2352,
+        13456
       ],
-      "id": "bf30089b-d3a8-4d21-b38e-5f6601597a38",
+      "id": "31b9a331-2438-494a-86ed-feeea46c558a",
       "name": "Checar Pendência Delete",
       "credentials": {
         "redis": {
@@ -1181,7 +1193,7 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict",
+            "typeValidation": "loose",
             "version": 3
           },
           "conditions": [
@@ -1194,19 +1206,30 @@
                 "name": "filter.operator.isNotEmpty"
               },
               "rightValue": ""
+            },
+            {
+              "id": "92e578af-6ce3-4d11-8dd8-bba7eb4da548",
+              "leftValue": "={{ $json.data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
             }
           ],
-          "combinator": "and"
+          "combinator": "or"
         },
+        "looseTypeValidation": true,
         "options": {}
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -53408,
-        41792
+        -2128,
+        13456
       ],
-      "id": "b5f5365a-285c-4c41-9007-f8bb967f2c2d",
+      "id": "c1a79689-4ec2-4dd5-aea6-68848bb2006e",
       "name": "Tem Pendência Delete?"
     },
     {
@@ -1216,10 +1239,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -52560,
-        41728
+        -1376,
+        13168
       ],
-      "id": "55601bf2-4cc3-4b35-8318-6059abc98880",
+      "id": "1f8bb8e0-4760-4c28-aaaf-33ed39e6702f",
       "name": "Processar Confirmação Delete"
     },
     {
@@ -1228,14 +1251,14 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict",
+            "typeValidation": "loose",
             "version": 3
           },
           "conditions": [
             {
               "id": "edecd0bb-949f-4699-b2e5-e3186c441e24",
               "leftValue": "={{ $json.confirmado }}",
-              "rightValue": "true",
+              "rightValue": true,
               "operator": {
                 "type": "boolean",
                 "operation": "equals",
@@ -1245,15 +1268,16 @@
           ],
           "combinator": "and"
         },
+        "looseTypeValidation": true,
         "options": {}
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -51584,
-        41584
+        5680,
+        11072
       ],
-      "id": "104978a7-00d2-4851-be62-eea9d99ff4c6",
+      "id": "7449f64a-5ac7-41c7-9352-92e162d17037",
       "name": "Confirmado?"
     },
     {
@@ -1273,11 +1297,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51296,
-        41504
+        6672,
+        11088
       ],
-      "id": "b8728ca9-f8ac-46d5-bea2-86ba99800677",
+      "id": "d66ac813-d489-4ccc-9a01-774cdb4096a7",
       "name": "Deletar Registro Leite",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -1293,10 +1318,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -50704,
-        41456
+        7040,
+        10864
       ],
-      "id": "93515855-d164-4bc3-a87e-496420e3e2f1",
+      "id": "65281cee-2f55-4e33-bfb2-d4f0193605c1",
       "name": "Limpar Pendência (Excluído)",
       "credentials": {
         "redis": {
@@ -1313,7 +1338,7 @@
               "id": "642ae0d4-2129-481e-b5be-ddb07b73fc6c",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Registro da vaca {{ $('Processar Confirmação Delete').item.json.pendencia.numero_vaca }} ({{ $('Processar Confirmação Delete').item.json.pendencia.data_controle }}, {{ $('Processar Confirmação Delete').item.json.pendencia.periodo }}) excluído com sucesso."
+              "value": "=Registro da vaca {{ $('Processar Confirmação Delete').item.json.pendencia.numero_vaca }} ({{ $('Processar Confirmação Delete').item.json.pendencia.data_controle.split('-').reverse().join('-') }}, {{ $('Processar Confirmação Delete').item.json.pendencia.periodo }}) excluído com sucesso."
             }
           ]
         },
@@ -1322,10 +1347,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -50240,
-        41520
+        7840,
+        11040
       ],
-      "id": "58c11dae-20f7-4c59-8a14-7bbf2b137b9d",
+      "id": "587f6134-b4dc-4382-ab4a-3049465d0fc2",
       "name": "Confirmar Delete"
     },
     {
@@ -1336,10 +1361,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -51296,
-        41664
+        6512,
+        11376
       ],
-      "id": "c6b0caa7-4b25-4171-9f40-64d5b670d815",
+      "id": "1fd5a8a7-547f-4f9c-ae9f-1aa3e3ff79e6",
       "name": "Limpar Pendência (Cancelado)",
       "credentials": {
         "redis": {
@@ -1365,10 +1390,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -51008,
-        41664
+        7392,
+        11248
       ],
-      "id": "7d63060f-cf73-465b-95c8-54e298560cba",
+      "id": "953f6820-b570-45ef-bee7-96b0bd0693d3",
       "name": "Cancelar Delete"
     },
     {
@@ -1391,11 +1416,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51392,
-        41904
+        6656,
+        11664
       ],
-      "id": "ca0ec791-a105-4029-8def-2504542e32e6",
+      "id": "e2ff5e89-103c-4112-840e-a251c351f706",
       "name": "Buscar Parto Ativo (Leite)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -1423,23 +1449,26 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51728,
-        42864
+        5568,
+        11936
       ],
-      "id": "11a09f8b-db4e-4b38-a7a0-9bdce1f983f2",
+      "id": "66d58f9a-0da7-41c3-96a0-9adadf1d4b9d",
       "name": "Buscar Vaca (Parto)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
           "name": "Supabase account 2"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "operation": "getAll",
         "tableId": "coberturas",
         "returnAll": true,
+        "matchType": "allFilters",
         "filters": {
           "conditions": [
             {
@@ -1458,71 +1487,31 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51328,
-        42864
+        6800,
+        11920
       ],
-      "id": "64952f8e-8ed9-4869-9dc3-e1045f467acd",
+      "id": "db21bac3-d4f2-439f-94fa-4e6505759f53",
       "name": "Buscar Cobertura Recente (Parto)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
           "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "tableId": "partos",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "vaca_id",
-              "condition": "eq",
-              "keyValue": "={{ $('Buscar Vaca (Parto)').item.json.id }}"
-            },
-            {
-              "keyName": "ativa",
-              "condition": "eq",
-              "keyValue": "true"
-            }
-          ]
-        },
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "ativa",
-              "fieldValue": "false"
-            }
-          ]
         }
       },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        -51040,
-        42864
-      ],
-      "id": "05a79f5b-b60a-4d42-9f3a-e8505e68e9b5",
-      "name": "Fechar Lactação Anterior",
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst coberturas = dedupeById($('Buscar Cobertura Recente (Parto)').all().map(i => i.json));\nlet coberturaId = null;\nif (coberturas.length > 0) {\n  coberturas.sort((a, b) => new Date(b.data_cobertura) - new Date(a.data_cobertura));\n  coberturaId = coberturas[0].id;\n}\n\nlet iep = null;\nlet partoAnterior = null;\ntry { partoAnterior = $('Buscar Parto Anterior (Ativo)').first().json; } catch (e) {}\nif (partoAnterior && partoAnterior.data_parto) {\n  const dataPartoNovo = $('Parsear Resposta IA').item.json.entidades.data || new Date().toISOString().slice(0, 10);\n  const dNovo = new Date(dataPartoNovo);\n  const dAnterior = new Date(partoAnterior.data_parto);\n  iep = Math.round((dNovo - dAnterior) / 86400000);\n}\n\nreturn [{ json: { cobertura_id: coberturaId, iep } }];"
+        "jsCode": "let iep = null;\nlet partoAnterior = null;\n\ntry {\n  // Busca todos os itens retornados pelo nó anterior\n  const dadosPartoNode = $('Buscar Parto Anterior (Ativo)').all();\n  \n  // Valida se o retorno é uma lista válida e possui elementos\n  if (Array.isArray(dadosPartoNode) && dadosPartoNode.length > 0) {\n    \n    // Se o nó veio com erro por causa do 'On Error' ou vazio, o primeiro item não terá .json válido\n    if (dadosPartoNode[0].error || !dadosPartoNode[0].json || Object.keys(dadosPartoNode[0].json).length === 0) {\n      partoAnterior = null;\n    } \n    // Se houver mais de 1 parto na lista, o índice 1 é o parto anterior real (já que o novo acabou de entrar)\n    else if (dadosPartoNode.length >= 2) {\n      partoAnterior = dadosPartoNode[1].json;\n    } \n    // Se só houver 1 parto válido, é o primeiro parto da vida da vaca\n    else {\n      partoAnterior = null;\n    }\n  }\n} catch (e) {\n  // Se qualquer busca falhar ou o nó não foi executado, assume ausência de informação com segurança\n  partoAnterior = null;\n}\n\n// Se encontrou um histórico de parto válido, calcula o IEP (Intervalo Entre Partos)\nif (partoAnterior && partoAnterior.data_parto) {\n  // Pega a data do parto atual (pode puxar do nó de intenção ou usar a data de hoje como fallback)\n  let dataAtualStr = $('Rotear Intencao').first().json.data_atual || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });\n  \n  const dataAtual = new Date(dataAtualStr);\n  const dataAntiga = new Date(partoAnterior.data_parto);\n  \n  // Calcula a diferença exata em dias\n  const diferencaTempo = Math.abs(dataAtual - dataAntiga);\n  iep = Math.ceil(diferencaTempo / (1000 * 60 * 60 * 24));\n} else {\n  // Força nulo se for primípara/ausência de dados\n  iep = null;\n}\n\n// Garante o retorno no formato padrão exigido pelo n8n [item: { json: { ... } }]\nreturn [\n  {\n    json: {\n      vaca_id: $('Buscar Vaca (Parto)').first().json.id || null,\n      iep: iep,\n      tem_historico: partoAnterior ? true : false,\n      data_parto_anterior: partoAnterior ? partoAnterior.data_parto : null\n    }\n  }\n];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -50752,
-        42864
+        7456,
+        11920
       ],
-      "id": "57040e0b-2785-470c-9678-54c7f70b3ab3",
+      "id": "4ca57909-78a7-47c8-80cc-91669387b1f3",
       "name": "Preparar Dados Parto"
     },
     {
@@ -1556,10 +1545,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -50464,
-        42864
+        7712,
+        11920
       ],
-      "id": "5a6f3a38-f3b1-464a-ac64-79b5aee118f0",
+      "id": "1ea45e48-5691-492a-af74-5681976fba1f",
       "name": "Inserir Parto",
       "credentials": {
         "supabaseApi": {
@@ -1601,10 +1590,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -50176,
-        42864
+        7968,
+        11936
       ],
-      "id": "0e9cbefc-696a-4898-92f8-a301dbd47f15",
+      "id": "7f822607-352b-410d-89d5-c116ed361b06",
       "name": "Atualizar Vaca (Pós-Parto)",
       "credentials": {
         "supabaseApi": {
@@ -1629,6 +1618,18 @@
             {
               "fieldId": "mae_id",
               "fieldValue": "={{ $('Buscar Vaca (Parto)').item.json.id }}"
+            },
+            {
+              "fieldId": "numero_identificacao",
+              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.numero_bezerro }}"
+            },
+            {
+              "fieldId": "sexo",
+              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.sexo_bezerro }}"
+            },
+            {
+              "fieldId": "data_nascimento",
+              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
             }
           ]
         }
@@ -1636,10 +1637,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -49888,
-        42864
+        8272,
+        11952
       ],
-      "id": "ea46e530-a9ce-4947-b84e-3cfd6570db45",
+      "id": "31ff60ab-484c-4639-9b52-b33ac500f6e9",
       "name": "Criar Bezerro",
       "credentials": {
         "supabaseApi": {
@@ -1656,7 +1657,7 @@
               "id": "6a5fb22e-eea7-4fce-8d0b-dcb8f7b0a3e4",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Parto da vaca {{ $('Buscar Vaca (Parto)').item.json.numero_identificacao }} registrado em {{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}{{ $('Parsear Resposta IA').item.json.entidades.sexo_bezerro ? ' (bezerro(a): ' + $('Parsear Resposta IA').item.json.entidades.sexo_bezerro + ')' : '' }}. Lactação anterior encerrada."
+              "value": "=Parto da vaca {{ $('Buscar Vaca (Parto)').item.json.numero_identificacao }} registrado em {{ ($('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd')).split('-').reverse().join('-') }}.{{ $('Parsear Resposta IA').item.json.entidades.sexo_bezerro ? ' Bezerro(a): ' + $('Parsear Resposta IA').item.json.entidades.sexo_bezerro + '.' : '' }}{{ $('Parsear Resposta IA').item.json.entidades.numero_bezerro ? ' Numero do bezerro: ' + $('Parsear Resposta IA').item.json.entidades.numero_bezerro + '.' : '' }}. {{ $('Buscar Parto Anterior (Ativo)').all().length > 0 ? ' Lactacao anterior encerrada.' : '' }}"
             }
           ]
         },
@@ -1665,10 +1666,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -49600,
-        42864
+        8608,
+        11968
       ],
-      "id": "ef517730-9cf6-4d20-a3c7-aa5a16694d4f",
+      "id": "37261fb2-4953-491d-9047-a9b5f9fb57fd",
       "name": "Confirmar Parto"
     },
     {
@@ -1691,11 +1692,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51456,
-        43072
+        4368,
+        12400
       ],
-      "id": "0ba9d948-fa7a-4892-bb41-8c2399c1fbb2",
+      "id": "31d47b08-8b31-4a9b-afbb-28ec508d0e5c",
       "name": "Buscar Vaca (Cobertura)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -1719,6 +1721,10 @@
             {
               "fieldId": "diagnostico_prenhez",
               "fieldValue": "pendente"
+            },
+            {
+              "fieldId": "touro",
+              "fieldValue": "={{ $('Rotear Intencao').item.json.entidades.touro_semen }}"
             }
           ]
         }
@@ -1726,10 +1732,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51184,
-        43072
+        6656,
+        12288
       ],
-      "id": "0c037d42-e20f-4a32-8a1a-46206ad9fa9a",
+      "id": "496f19dc-fa01-4925-b39c-d575a02eb8fb",
       "name": "Inserir Cobertura",
       "credentials": {
         "supabaseApi": {
@@ -1746,7 +1752,7 @@
               "id": "796d93a7-de2d-4d24-9196-d43a5f70c99a",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Cobertura da vaca {{ $('Buscar Vaca (Cobertura)').item.json.numero_identificacao }} registrada em {{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}{{ $('Parsear Resposta IA').item.json.entidades.touro_semen ? ' (sêmen/touro: ' + $('Parsear Resposta IA').item.json.entidades.touro_semen + ')' : '' }}. Diagnóstico de prenhez: pendente."
+              "value": "=Cobertura da vaca {{ $('Buscar Vaca (Cobertura)').item.json.numero_identificacao }} registrada em {{ ($('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd')).split('-').reverse().join('-') }}{{ $('Parsear Resposta IA').item.json.entidades.touro_semen ? ' (sêmen/touro: ' + $('Parsear Resposta IA').item.json.entidades.touro_semen + ')' : '' }}. Diagnóstico de prenhez: pendente."
             }
           ]
         },
@@ -1755,10 +1761,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -50928,
-        43072
+        6944,
+        12288
       ],
-      "id": "9f52454d-4374-4236-89a2-a1ad07d3b18f",
+      "id": "67ebbc32-48d2-4e18-9014-6eec5a85fd60",
       "name": "Confirmar Cobertura"
     },
     {
@@ -1789,10 +1795,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -51728,
-        43392
+        5856,
+        12752
       ],
-      "id": "98fd60c0-d271-4180-8d56-1c868d8fd687",
+      "id": "f08c326f-4a44-4986-ae7b-e906fedb467a",
       "name": "Tipo Relatório Reprodutivo?"
     },
     {
@@ -1834,10 +1840,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -51424,
-        43344
+        6192,
+        12544
       ],
-      "id": "f632b276-3060-49b3-ab74-ce84a963ca65",
+      "id": "fe3adc8c-c25e-40a4-990a-c8f9911acbd2",
       "name": "Tem Numero (Reprodutivo)?"
     },
     {
@@ -1860,11 +1866,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51104,
-        43296
+        6672,
+        12432
       ],
-      "id": "25f0d3b0-9921-4594-a6e8-530c8e74c10b",
+      "id": "81f24385-f4a4-4006-8c0e-994f05564cb5",
       "name": "Buscar Vaca (Reprodutivo Individual)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -1881,6 +1888,10 @@
             {
               "keyName": "vaca_id",
               "keyValue": "={{ $('Buscar Vaca (Reprodutivo Individual)').item.json.id }}"
+            },
+            {
+              "keyName": "ativa",
+              "keyValue": "true"
             }
           ]
         }
@@ -1888,10 +1899,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -50432,
-        43200
+        7232,
+        12432
       ],
-      "id": "68afd316-a8a5-4128-ab48-2501bc21ff9b",
+      "id": "011a4284-e888-4e96-8411-21001b71c8fb",
       "name": "Buscar Parto Ativo (Reprodutivo)",
       "alwaysOutputData": true,
       "credentials": {
@@ -1919,11 +1930,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -50848,
-        43280
+        6944,
+        12432
       ],
-      "id": "bf7d20a9-1b3b-4e74-85ef-e79c96c1a303",
+      "id": "8b0e125f-51af-4fd5-aeda-e5ca9c9122b5",
       "name": "Buscar Coberturas (Reprodutivo Individual)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -1933,15 +1945,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst vaca = $('Buscar Vaca (Reprodutivo Individual)').first().json;\nlet parto = null;\ntry { parto = $('Buscar Parto Ativo (Reprodutivo)').first().json; } catch (e) {}\nconst coberturas = dedupeById($('Buscar Coberturas (Reprodutivo Individual)').all().map(i => i.json));\ncoberturas.sort((a, b) => new Date(b.data_cobertura) - new Date(a.data_cobertura));\nconst ultima = coberturas[0] || null;\n\nconst hoje = new Date();\nconst diffDias = (a, b) => Math.round((new Date(a) - new Date(b)) / 86400000);\n\nlet texto = `Status reprodutivo da vaca ${vaca.numero_identificacao}:\\n`;\ntexto += `Status reprodutivo cadastrado: ${vaca.status_reprodutivo || 'não informado'}\\n`;\n\nif (parto && parto.id) {\n  texto += `Lactação ativa desde ${parto.data_parto}.\\n`;\n  if (parto.iep != null) texto += `IEP: ${parto.iep} dias. `;\n\n  const coberturasPosParto = coberturas\n    .filter(c => new Date(c.data_cobertura) >= new Date(parto.data_parto))\n    .sort((a, b) => new Date(a.data_cobertura) - new Date(b.data_cobertura));\n  const coberturaConfirmada = coberturasPosParto.find(c => c.diagnostico_prenhez === 'positivo');\n  const diasEmAberto = coberturaConfirmada\n    ? diffDias(coberturaConfirmada.data_cobertura, parto.data_parto)\n    : diffDias(hoje, parto.data_parto);\n  texto += `Dias em aberto: ${diasEmAberto}. `;\n\n  const registrosLeite = dedupeById($('Buscar Controle Leite Ativo (Reprodutivo)').all().map(i => i.json));\n  const diasEmLactacao = Math.max(1, diffDias(hoje, parto.data_parto));\n  if (registrosLeite.length > 0) {\n    const totalLitros = registrosLeite.reduce((s, r) => s + (Number(r.litros) || 0), 0);\n    const projecao305 = Math.round((totalLitros / diasEmLactacao) * 305);\n    texto += `Projeção 305d: ${projecao305}L. `;\n\n    if (diasEmLactacao >= 60) {\n      const dataLimite1 = new Date(hoje); dataLimite1.setDate(dataLimite1.getDate() - 30);\n      const dataLimite2 = new Date(hoje); dataLimite2.setDate(dataLimite2.getDate() - 60);\n      const str1 = dataLimite1.toISOString().slice(0, 10);\n      const str2 = dataLimite2.toISOString().slice(0, 10);\n      const hojeStr = hoje.toISOString().slice(0, 10);\n      const janela1 = registrosLeite.filter(r => r.data_controle > str1 && r.data_controle <= hojeStr);\n      const janela2 = registrosLeite.filter(r => r.data_controle > str2 && r.data_controle <= str1);\n      const media1 = janela1.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n      const media2 = janela2.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n      if (media2 > 0) {\n        const persistencia = Math.round((media1 / media2) * 1000) / 10;\n        texto += `Persistência: ${persistencia}%. `;\n      }\n    }\n  }\n  texto += `\\n`;\n} else {\n  texto += `Sem lactação ativa registrada.\\n`;\n}\n\nif (ultima) {\n  texto += `Última cobertura: ${ultima.data_cobertura} (diagnóstico: ${ultima.diagnostico_prenhez}).\\n`;\n  if (ultima.diagnostico_prenhez === 'positivo') {\n    const dCob = new Date(ultima.data_cobertura);\n    const dParto = new Date(dCob.getTime() + 283 * 86400000);\n    const dSeca = new Date(dParto.getTime() - 60 * 86400000);\n    texto += `Previsão de parto: ${dParto.toISOString().slice(0,10)}. `;\n    texto += `Previsão de secagem: ${dSeca.toISOString().slice(0,10)}.\\n`;\n  }\n} else {\n  texto += `Nenhuma cobertura registrada.\\n`;\n}\n\nreturn [{ json: { resposta_sugerida: texto } }];"
+        "jsCode": "const dedupeById = (arr) => {\n  const seen = new Set();\n  return arr.filter(x => {\n    if (!x || !x.id || seen.has(x.id)) return false;\n    seen.add(x.id);\n    return true;\n  });\n};\n\nconst vaca = $('Buscar Vaca (Reprodutivo Individual)').item.json;\nconst origemAudio = $('Preparar Entrada Agente').item.json.origem_audio;\n\nconst partoItem = $('Buscar Parto Ativo (Reprodutivo)').item?.json || {};\nconst parto = partoItem.id ? partoItem : null;\n\nconst coberturas = dedupeById(\n  $('Buscar Coberturas (Reprodutivo Individual)').all().map(i => i.json)\n).sort((a, b) => new Date(b.data_cobertura) - new Date(a.data_cobertura));\nconst ultima = coberturas[0] || null;\n\nconst hoje = new Date();\nconst diffDias = (a, b) => Math.round((new Date(a) - new Date(b)) / 86400000);\nconst fmtData = (d) => d ? new Date(d).toISOString().slice(0, 10).split('-').reverse().join('-') : '—';\nconst meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];\nconst porExtenso = (d) => { if (!d) return '—'; const iso = new Date(d).toISOString().slice(0, 10); const [y, m, dd] = iso.split('-'); return `${Number(dd)} de ${meses[Number(m) - 1]}`; };\n\nlet diasEmAberto = null;\nlet projecao305 = null;\nlet persistencia = null;\n\nif (parto) {\n  const coberturasPosParto = coberturas\n    .filter(c => new Date(c.data_cobertura) >= new Date(parto.data_parto))\n    .sort((a, b) => new Date(a.data_cobertura) - new Date(b.data_cobertura));\n  const coberturaConfirmada = coberturasPosParto.find(c => c.diagnostico_prenhez === 'positivo');\n  diasEmAberto = coberturaConfirmada\n    ? diffDias(coberturaConfirmada.data_cobertura, parto.data_parto)\n    : diffDias(hoje, parto.data_parto);\n\n  const registrosLeite = dedupeById($('Buscar Controle Leite Ativo (Reprodutivo)').all().map(i => i.json));\n  const diasEmLactacao = Math.max(1, diffDias(hoje, parto.data_parto));\n\n  if (registrosLeite.length > 0) {\n    const totalLitros = registrosLeite.reduce((s, r) => s + (Number(r.litros) || 0), 0);\n    projecao305 = Math.round((totalLitros / diasEmLactacao) * 305);\n\n    if (diasEmLactacao >= 60) {\n      const hojeStr = hoje.toISOString().slice(0, 10);\n      const dLimite1 = new Date(hoje); dLimite1.setDate(dLimite1.getDate() - 30);\n      const dLimite2 = new Date(hoje); dLimite2.setDate(dLimite2.getDate() - 60);\n      const str1 = dLimite1.toISOString().slice(0, 10);\n      const str2 = dLimite2.toISOString().slice(0, 10);\n\n      const janela1 = registrosLeite.filter(r => r.data_controle > str1 && r.data_controle <= hojeStr);\n      const janela2 = registrosLeite.filter(r => r.data_controle > str2 && r.data_controle <= str1);\n      const media1 = janela1.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n      const media2 = janela2.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n\n      if (media2 > 0) persistencia = Math.round((media1 / media2) * 1000) / 10;\n    }\n  }\n}\n\nlet dParto = null, dSeca = null;\nif (ultima && ultima.diagnostico_prenhez === 'positivo') {\n  const dCob = new Date(ultima.data_cobertura);\n  dParto = new Date(dCob.getTime() + 283 * 86400000);\n  dSeca = new Date(dParto.getTime() - 60 * 86400000);\n}\n\nlet texto;\nif (origemAudio) {\n  let partes = [`Vaca ${vaca.numero_identificacao}, status reprodutivo ${vaca.status_reprodutivo || 'não informado'}.`];\n  if (parto) {\n    partes.push(`Em lactação desde ${porExtenso(parto.data_parto)}, ${diasEmAberto} dias em aberto.`);\n  } else {\n    partes.push('Sem lactação ativa registrada.');\n  }\n  if (ultima) {\n    partes.push(`Última cobertura em ${porExtenso(ultima.data_cobertura)}, diagnóstico ${ultima.diagnostico_prenhez}.`);\n    if (dParto) partes.push(`Previsão de parto em ${porExtenso(dParto)}.`);\n  } else {\n    partes.push('Nenhuma cobertura registrada.');\n  }\n  texto = partes.join(' ');\n} else {\n  let linhas = [];\n  linhas.push(`*Vaca ${vaca.numero_identificacao}* — status reprodutivo`);\n  linhas.push(`Status cadastrado: ${vaca.status_reprodutivo || 'não informado'}`);\n\n  if (parto) {\n    linhas.push('');\n    linhas.push(`🐄 Lactação ativa desde ${fmtData(parto.data_parto)}`);\n    if (parto.iep != null) linhas.push(`IEP: ${parto.iep} dias`);\n    linhas.push(`Dias em aberto: ${diasEmAberto}`);\n    if (projecao305 != null) linhas.push(`Projeção 305d: ${projecao305}L`);\n    if (persistencia != null) linhas.push(`Persistência: ${persistencia}%`);\n  } else {\n    linhas.push('');\n    linhas.push('⚠️ Sem lactação ativa registrada.');\n  }\n\n  linhas.push('');\n  if (ultima) {\n    linhas.push(`Última cobertura: ${fmtData(ultima.data_cobertura)} (diagnóstico: ${ultima.diagnostico_prenhez})`);\n    if (dParto) {\n      linhas.push(`Previsão de parto: ${fmtData(dParto)}`);\n      linhas.push(`Previsão de secagem: ${fmtData(dSeca)}`);\n    }\n  } else {\n    linhas.push('Nenhuma cobertura registrada.');\n  }\n  texto = linhas.join('\\n');\n}\n\nreturn [{ json: { resposta_sugerida: texto } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -49552,
-        43184
+        8032,
+        12352
       ],
-      "id": "0950a488-870e-4d00-a5da-03f9994210e4",
+      "id": "df94871c-a63d-41f3-947a-09b1aab15f51",
       "name": "Montar Relatório Reprodutivo Individual"
     },
     {
@@ -1962,11 +1974,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51088,
-        43440
+        6672,
+        12624
       ],
-      "id": "b40012e8-4906-48e9-8aaa-d61d656f1d56",
+      "id": "7e1a2ce2-4ff6-424e-9950-9dabd593cc71",
       "name": "Buscar Vacas Propriedade (Reprodutivo)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -1978,19 +1991,18 @@
       "parameters": {
         "operation": "getAll",
         "tableId": "coberturas",
-        "returnAll": true,
-        "filters": {
-          "conditions": []
-        }
+        "returnAll": true
       },
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -50832,
-        43456
+        6944,
+        12624
       ],
-      "id": "2f246cb5-fde2-4b55-b7dd-ca9f1808f870",
+      "id": "b8b427f3-9b48-403e-98c9-87ea13190f46",
       "name": "Buscar Coberturas (Reprodutivo Geral)",
+      "alwaysOutputData": true,
+      "executeOnce": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -2010,11 +2022,13 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -50560,
-        43472
+        7216,
+        12624
       ],
-      "id": "60a67929-14a9-4224-85c7-4a3cf99abb26",
+      "id": "f59ad6ca-c9ba-4dad-8ece-bfce5c99edb4",
       "name": "Buscar Partos (Reprodutivo Geral)",
+      "alwaysOutputData": true,
+      "executeOnce": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -2024,15 +2038,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst vacas = dedupeById($('Buscar Vacas Propriedade (Reprodutivo)').all().map(i => i.json));\nconst vacaIds = new Set(vacas.map(v => v.id));\nconst numeroPorId = Object.fromEntries(vacas.map(v => [v.id, v.numero_identificacao]));\n\nconst todasCoberturas = dedupeById($('Buscar Coberturas (Reprodutivo Geral)').all().map(i => i.json))\n  .filter(c => vacaIds.has(c.vaca_id));\nconst todosPartos = dedupeById($('Buscar Partos (Reprodutivo Geral)').all().map(i => i.json))\n  .filter(p => vacaIds.has(p.vaca_id));\nconst todoControleLeite = dedupeById($('Buscar Controle Leite (Reprodutivo Geral)').all().map(i => i.json));\n\nconst coberturaIdsComParto = new Set(todosPartos.filter(p => p.cobertura_id).map(p => p.cobertura_id));\n\nconst pendentes = todasCoberturas.filter(c => c.diagnostico_prenhez === 'pendente');\nconst positivasSemParto = todasCoberturas.filter(c => c.diagnostico_prenhez === 'positivo' && !coberturaIdsComParto.has(c.id));\n\nconst previsoes = positivasSemParto.map(c => {\n  const dCob = new Date(c.data_cobertura);\n  const dParto = new Date(dCob.getTime() + 283 * 86400000);\n  const dSeca = new Date(dParto.getTime() - 60 * 86400000);\n  return {\n    numero: numeroPorId[c.vaca_id] || '?',\n    dataParto: dParto.toISOString().slice(0,10),\n    dataSeca: dSeca.toISOString().slice(0,10)\n  };\n}).sort((a, b) => new Date(a.dataParto) - new Date(b.dataParto));\n\nconst partosAtivos = todosPartos.filter(p => p.ativa);\n\nconst hoje = new Date();\nconst diffDias = (a, b) => Math.round((new Date(a) - new Date(b)) / 86400000);\n\nconst leitePorParto = {};\nfor (const r of todoControleLeite) {\n  if (!leitePorParto[r.parto_id]) leitePorParto[r.parto_id] = [];\n  leitePorParto[r.parto_id].push(r);\n}\n\nconst indicadores = partosAtivos.map(p => {\n  const registros = leitePorParto[p.id] || [];\n  const diasEmLactacao = Math.max(1, diffDias(hoje, p.data_parto));\n\n  const coberturasVaca = todasCoberturas.filter(c => c.vaca_id === p.vaca_id);\n  const coberturasPosParto = coberturasVaca\n    .filter(c => new Date(c.data_cobertura) >= new Date(p.data_parto))\n    .sort((a, b) => new Date(a.data_cobertura) - new Date(b.data_cobertura));\n  const coberturaConfirmada = coberturasPosParto.find(c => c.diagnostico_prenhez === 'positivo');\n  const diasEmAberto = coberturaConfirmada\n    ? diffDias(coberturaConfirmada.data_cobertura, p.data_parto)\n    : diffDias(hoje, p.data_parto);\n\n  let projecao305 = null;\n  let persistencia = null;\n  if (registros.length > 0) {\n    const totalLitros = registros.reduce((s, r) => s + (Number(r.litros) || 0), 0);\n    projecao305 = Math.round((totalLitros / diasEmLactacao) * 305);\n\n    if (diasEmLactacao >= 60) {\n      const dataLimite1 = new Date(hoje); dataLimite1.setDate(dataLimite1.getDate() - 30);\n      const dataLimite2 = new Date(hoje); dataLimite2.setDate(dataLimite2.getDate() - 60);\n      const str1 = dataLimite1.toISOString().slice(0, 10);\n      const str2 = dataLimite2.toISOString().slice(0, 10);\n      const hojeStr = hoje.toISOString().slice(0, 10);\n      const janela1 = registros.filter(r => r.data_controle > str1 && r.data_controle <= hojeStr);\n      const janela2 = registros.filter(r => r.data_controle > str2 && r.data_controle <= str1);\n      const media1 = janela1.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n      const media2 = janela2.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n      if (media2 > 0) persistencia = Math.round((media1 / media2) * 1000) / 10;\n    }\n  }\n\n  return {\n    numero: numeroPorId[p.vaca_id] || '?',\n    iep: p.iep,\n    diasEmAberto,\n    persistencia,\n    projecao305\n  };\n});\n\nlet texto = 'Relatório reprodutivo do rebanho:\\n\\n';\n\ntexto += `Previsão de parto (${previsoes.length}):\\n`;\ntexto += previsoes.length\n  ? previsoes.map(p => `- Vaca ${p.numero}: parto em ${p.dataParto}`).join('\\n')\n  : 'Nenhuma prevista.';\ntexto += '\\n\\n';\n\ntexto += 'Vacas para secar (próximos 30 dias):\\n';\nconst secarProximas = previsoes.filter(p => {\n  const d = new Date(p.dataSeca);\n  const diff = (d - hoje) / 86400000;\n  return diff >= -5 && diff <= 30;\n});\ntexto += secarProximas.length\n  ? secarProximas.map(p => `- Vaca ${p.numero}: secar até ${p.dataSeca}`).join('\\n')\n  : 'Nenhuma vaca para secar no período.';\ntexto += '\\n\\n';\n\ntexto += `Coberturas com diagnóstico pendente (${pendentes.length}):\\n`;\ntexto += pendentes.length\n  ? pendentes.map(c => `- Vaca ${numeroPorId[c.vaca_id] || '?'}: cobertura em ${c.data_cobertura}`).join('\\n')\n  : 'Nenhuma pendência.';\ntexto += '\\n\\n';\n\ntexto += `Indicadores das lactações ativas (${indicadores.length}):\\n`;\ntexto += indicadores.length\n  ? indicadores.map(p => {\n      const partes = [`Vaca ${p.numero}`];\n      if (p.iep != null) partes.push(`IEP ${p.iep}d`);\n      partes.push(`dias em aberto ${p.diasEmAberto}`);\n      if (p.persistencia != null) partes.push(`persistência ${p.persistencia}%`);\n      if (p.projecao305 != null) partes.push(`proj. 305d ${p.projecao305}L`);\n      return '- ' + partes.join(', ');\n    }).join('\\n')\n  : 'Nenhuma lactação ativa.';\n\nreturn [{ json: { resposta_sugerida: texto } }];"
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst origemAudio = $('Preparar Entrada Agente').item.json.origem_audio;\n\nconst vacas = dedupeById($('Buscar Vacas Propriedade (Reprodutivo)').all().map(i => i.json));\nconst vacaIds = new Set(vacas.map(v => v.id));\nconst numeroPorId = Object.fromEntries(vacas.map(v => [v.id, v.numero_identificacao]));\n\nconst todasCoberturas = dedupeById($('Buscar Coberturas (Reprodutivo Geral)').all().map(i => i.json))\n  .filter(c => vacaIds.has(c.vaca_id));\nconst todosPartos = dedupeById($('Buscar Partos (Reprodutivo Geral)').all().map(i => i.json))\n  .filter(p => vacaIds.has(p.vaca_id));\nconst todoControleLeite = dedupeById($('Buscar Controle Leite (Reprodutivo Geral)').all().map(i => i.json));\n\nconst coberturaIdsComParto = new Set(todosPartos.filter(p => p.cobertura_id).map(p => p.cobertura_id));\n\nconst pendentes = todasCoberturas.filter(c => c.diagnostico_prenhez === 'pendente');\nconst positivasSemParto = todasCoberturas.filter(c => c.diagnostico_prenhez === 'positivo' && !coberturaIdsComParto.has(c.id));\n\nconst paraBR = (isoStr) => isoStr.split('-').reverse().join('-');\n\n// Mantém os objetos Date reais pra ordenar/filtrar, e só formata pra BR na hora de exibir\nconst previsoes = positivasSemParto.map(c => {\n  const dCob = new Date(c.data_cobertura);\n  const dParto = new Date(dCob.getTime() + 283 * 86400000);\n  const dSeca = new Date(dParto.getTime() - 60 * 86400000);\n  return {\n    numero: numeroPorId[c.vaca_id] || '?',\n    dPartoDate: dParto,\n    dSecaDate: dSeca,\n    dataParto: paraBR(dParto.toISOString().slice(0, 10)),\n    dataSeca: paraBR(dSeca.toISOString().slice(0, 10))\n  };\n}).sort((a, b) => a.dPartoDate - b.dPartoDate);\n\nconst partosAtivos = todosPartos.filter(p => p.ativa);\n\nconst hoje = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }) + 'T12:00:00Z');\nconst diffDias = (a, b) => Math.round((new Date(a) - new Date(b)) / 86400000);\n\nconst leitePorParto = {};\nfor (const r of todoControleLeite) {\n  if (!leitePorParto[r.parto_id]) leitePorParto[r.parto_id] = [];\n  leitePorParto[r.parto_id].push(r);\n}\n\nconst indicadores = partosAtivos.map(p => {\n  const registros = leitePorParto[p.id] || [];\n  const diasEmLactacao = Math.max(1, diffDias(hoje, p.data_parto));\n\n  const coberturasVaca = todasCoberturas.filter(c => c.vaca_id === p.vaca_id);\n  const coberturasPosParto = coberturasVaca\n    .filter(c => new Date(c.data_cobertura) >= new Date(p.data_parto))\n    .sort((a, b) => new Date(a.data_cobertura) - new Date(b.data_cobertura));\n  const coberturaConfirmada = coberturasPosParto.find(c => c.diagnostico_prenhez === 'positivo');\n  const diasEmAberto = coberturaConfirmada\n    ? diffDias(coberturaConfirmada.data_cobertura, p.data_parto)\n    : diffDias(hoje, p.data_parto);\n\n  let projecao305 = null;\n  let persistencia = null;\n  if (registros.length > 0) {\n    const totalLitros = registros.reduce((s, r) => s + (Number(r.litros) || 0), 0);\n    projecao305 = Math.round((totalLitros / diasEmLactacao) * 305);\n\n    if (diasEmLactacao >= 60) {\n      const dataLimite1 = new Date(hoje); dataLimite1.setDate(dataLimite1.getDate() - 30);\n      const dataLimite2 = new Date(hoje); dataLimite2.setDate(dataLimite2.getDate() - 60);\n      const str1 = dataLimite1.toISOString().slice(0, 10);\n      const str2 = dataLimite2.toISOString().slice(0, 10);\n      const hojeStr = hoje.toISOString().slice(0, 10);\n      const janela1 = registros.filter(r => r.data_controle > str1 && r.data_controle <= hojeStr);\n      const janela2 = registros.filter(r => r.data_controle > str2 && r.data_controle <= str1);\n      const media1 = janela1.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n      const media2 = janela2.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n      if (media2 > 0) persistencia = Math.round((media1 / media2) * 1000) / 10;\n    }\n  }\n\n  return {\n    numero: numeroPorId[p.vaca_id] || '?',\n    iep: p.iep,\n    diasEmAberto,\n    persistencia,\n    projecao305\n  };\n});\n\nconst secarProximas = previsoes.filter(p => {\n  const diff = (p.dSecaDate - hoje) / 86400000;\n  return diff >= -5 && diff <= 30;\n});\n\nlet texto;\nif (origemAudio) {\n  texto = `Você tem ${previsoes.length} vaca${previsoes.length === 1 ? '' : 's'} prevista${previsoes.length === 1 ? '' : 's'} pra parir, ${secarProximas.length} pra secar nos próximos 30 dias, e ${pendentes.length} cobertura${pendentes.length === 1 ? '' : 's'} aguardando diagnóstico. Se quiser os detalhes de alguma dessas, é só pedir.`;\n} else {\n  texto = 'Relatório reprodutivo do rebanho:\\n\\n';\n\n  texto += `Previsão de parto (${previsoes.length}):\\n`;\n  texto += previsoes.length\n    ? previsoes.map(p => `- Vaca ${p.numero}: parto em ${p.dataParto}`).join('\\n')\n    : 'Nenhuma prevista.';\n  texto += '\\n\\n';\n\n  texto += 'Vacas para secar (próximos 30 dias):\\n';\n  texto += secarProximas.length\n    ? secarProximas.map(p => `- Vaca ${p.numero}: secar até ${p.dataSeca}`).join('\\n')\n    : 'Nenhuma vaca para secar no período.';\n  texto += '\\n\\n';\n\n  texto += `Coberturas com diagnóstico pendente (${pendentes.length}):\\n`;\n  texto += pendentes.length\n    ? pendentes.map(c => `- Vaca ${numeroPorId[c.vaca_id] || '?'}: cobertura em ${paraBR(c.data_cobertura)}`).join('\\n')\n    : 'Nenhuma pendência.';\n  texto += '\\n\\n';\n\n  texto += `Indicadores das lactações ativas (${indicadores.length}):\\n`;\n  texto += indicadores.length\n    ? indicadores.map(p => {\n        const partes = [`Vaca ${p.numero}`];\n        if (p.iep != null) partes.push(`IEP ${p.iep}d`);\n        partes.push(`dias em aberto ${p.diasEmAberto}`);\n        if (p.persistencia != null) partes.push(`persistência ${p.persistencia}%`);\n        if (p.projecao305 != null) partes.push(`proj. 305d ${p.projecao305}L`);\n        return '- ' + partes.join(', ');\n      }).join('\\n')\n    : 'Nenhuma lactação ativa.';\n}\n\nreturn [{ json: { resposta_sugerida: texto } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -49712,
-        43376
+        8016,
+        12544
       ],
-      "id": "cf235a6c-bdd1-4f44-9dc5-e34b7388a1a3",
+      "id": "961b6a7b-2087-42a4-b300-ae76f8117cba",
       "name": "Compilar Relatório Reprodutivo Geral"
     },
     {
@@ -2063,10 +2077,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -51360,
-        43696
+        6176,
+        12848
       ],
-      "id": "4bf5e456-fa7a-4040-a24f-259949e7fa54",
+      "id": "de8f94f5-d086-4cb1-8b8d-204e47d21f85",
       "name": "Tipo Relatório Cadastro?"
     },
     {
@@ -2087,11 +2101,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51056,
-        43616
+        6672,
+        12832
       ],
-      "id": "5a9fdbfc-1d18-4d18-8ef9-9134ca65f57c",
+      "id": "e41682ba-702e-4b98-af68-9e4d95496f18",
       "name": "Buscar Vacas (Contagem)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -2106,10 +2121,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -50736,
-        43648
+        8016,
+        12720
       ],
-      "id": "2d5358ee-c348-46d1-90a9-353853d1f740",
+      "id": "fe364e4b-bb9f-4af3-b72f-4d3932ac7da7",
       "name": "Montar Relatório Cadastro"
     },
     {
@@ -2140,10 +2155,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -54752,
-        44336
+        -6512,
+        13712
       ],
-      "id": "1bd3c2a6-5efa-4a8b-926f-2ae13b79fd9f",
+      "id": "b6fe4fa2-6848-4904-862f-42638494d08c",
       "name": "É Áudio?"
     },
     {
@@ -2153,10 +2168,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -54464,
-        44240
+        -6272,
+        13472
       ],
-      "id": "b0d3219f-58ba-4552-a2a9-379063db6b18",
+      "id": "c1cd5c9d-83f5-4760-accd-8c71b28d07d2",
       "name": "Extrair Áudio Base64"
     },
     {
@@ -2189,10 +2204,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -54176,
-        44240
+        -5984,
+        13472
       ],
-      "id": "f691d605-525b-4eb9-962a-53e85351b0a3",
+      "id": "dc952495-9d21-483b-b8d2-4b9d26ac356a",
       "name": "Transcrever Áudio (Whisper)",
       "credentials": {
         "openAiApi": {
@@ -2210,6 +2225,12 @@
               "name": "textoTranscrito",
               "type": "string",
               "value": "={{ $json.text }}"
+            },
+            {
+              "id": "cd9309c3-b359-4e54-b69f-4d9b10ced60a",
+              "name": "origem_audio",
+              "type": "boolean",
+              "value": true
             }
           ]
         },
@@ -2218,10 +2239,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -53888,
-        44240
+        -5696,
+        13472
       ],
-      "id": "c9ed92b7-3c51-4cee-91b7-04d042e7d672",
+      "id": "173c45db-aff2-4ea3-b22b-baf096fb5854",
       "name": "Definir Texto Transcrito"
     },
     {
@@ -2262,10 +2283,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -49728,
-        44240
+        6672,
+        13040
       ],
-      "id": "66e4eaac-302d-4b61-ad0f-0eec2fca4a5c",
+      "id": "c5fd6101-c472-43cd-994a-0a84652285b6",
       "name": "Numero Foi Informado?",
       "alwaysOutputData": false,
       "executeOnce": false
@@ -2277,10 +2298,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -49216,
-        44368
+        7472,
+        13072
       ],
-      "id": "489aef7e-4421-485f-9904-9e35b13c4d27",
+      "id": "d366a2ad-8081-4172-abda-e533d6051378",
       "name": "Calcular Período Geral"
     },
     {
@@ -2303,11 +2324,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -52128,
-        44864
+        5968,
+        14768
       ],
-      "id": "96cbd4d0-b89f-498d-84e9-bc26e358513e",
+      "id": "2af7a13d-f259-445a-95a4-9f9c18de19e4",
       "name": "Buscar Vaca (Diagnóstico)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -2333,17 +2355,19 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51840,
-        44864
+        6400,
+        14816
       ],
-      "id": "73c0ce77-025c-4bc7-8e04-43e64da5e5fe",
+      "id": "c97ac68d-16d9-48c3-9327-a20afd02f713",
       "name": "Buscar Cobertura Pendente (Diagnóstico)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
           "name": "Supabase account 2"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -2351,7 +2375,7 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict",
+            "typeValidation": "loose",
             "version": 3
           },
           "conditions": [
@@ -2366,26 +2390,28 @@
               "rightValue": ""
             },
             {
-              "id": "987276eb-32ab-4485-8e91-0d97ad4b11ba",
-              "leftValue": "={{ $json.diagnostico_prenhez }}",
-              "rightValue": "={{ $json.diagnostico_prenhez }}",
+              "id": "bf53927d-d59e-4e93-897c-257bc9c88efc",
+              "leftValue": "={{ !!$json.coberturaId }}",
+              "rightValue": "",
               "operator": {
-                "type": "string",
-                "operation": "equals"
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
               }
             }
           ],
           "combinator": "or"
         },
+        "looseTypeValidation": true,
         "options": {}
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -51392,
-        44864
+        7232,
+        14880
       ],
-      "id": "5f97632a-5007-4d7a-85bf-e8dd39183b2c",
+      "id": "6ab9d366-32ff-4415-bfe5-01df1aa8c5a7",
       "name": "Tem Cobertura Pendente?"
     },
     {
@@ -2395,9 +2421,9 @@
         "filters": {
           "conditions": [
             {
-              "keyName": "vaca_id",
+              "keyName": "id",
               "condition": "eq",
-              "keyValue": "={{ $json.vaca_id }}"
+              "keyValue": "={{ $json.coberturaId }}"
             }
           ]
         },
@@ -2413,12 +2439,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -50976,
-        44768
+        7712,
+        14704
       ],
-      "id": "04fa51bf-0b03-4bf2-9857-8c47ecfde9a0",
+      "id": "20bc4cc7-13dc-4282-afb7-33bbb6094cc3",
       "name": "Atualizar Diagnóstico Cobertura",
-      "alwaysOutputData": true,
+      "alwaysOutputData": false,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -2443,10 +2469,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -50688,
-        44768
+        8032,
+        14656
       ],
-      "id": "4e150a06-8503-4ce0-946a-057583e4404c",
+      "id": "c68a56d0-49c9-49c7-9458-d3ba8b94cfb7",
       "name": "Confirmar Diagnóstico"
     },
     {
@@ -2466,25 +2492,23 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -50880,
-        45008
+        8016,
+        14864
       ],
-      "id": "e4e168df-bf28-4345-bbd2-6072f667804d",
+      "id": "a23bbdcf-ad01-4a9b-9f09-e639db927e7f",
       "name": "Sem Cobertura Pendente"
     },
     {
       "parameters": {
-        "operation": "get",
+        "operation": "getAll",
         "tableId": "partos",
+        "orderBy": "=data_parto",
         "filters": {
           "conditions": [
             {
               "keyName": "vaca_id",
+              "condition": "eq",
               "keyValue": "={{ $('Buscar Vaca (Parto)').item.json.id }}"
-            },
-            {
-              "keyName": "ativa",
-              "keyValue": "true"
             }
           ]
         }
@@ -2492,10 +2516,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51504,
-        42864
+        6416,
+        11920
       ],
-      "id": "343a6f64-8050-4214-87b9-8c5a26bbba56",
+      "id": "9ce482cc-e542-4973-8705-39b20c75b3f0",
       "name": "Buscar Parto Anterior (Ativo)",
       "alwaysOutputData": true,
       "credentials": {
@@ -2503,7 +2527,8 @@
           "id": "n5A2qlsmhmmPqxSz",
           "name": "Supabase account 2"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -2513,9 +2538,9 @@
         "filters": {
           "conditions": [
             {
-              "keyName": "id",
+              "keyName": "parto_id",
               "condition": "eq",
-              "keyValue": "={{ $('Buscar Coberturas (Reprodutivo Individual)').item.json.id }}"
+              "keyValue": "={{ $('Buscar Parto Ativo (Reprodutivo)').item.json.id }}"
             }
           ]
         }
@@ -2523,10 +2548,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -50016,
-        43184
+        7536,
+        12432
       ],
-      "id": "a9ad3db4-f44a-4708-970d-53d7599db371",
+      "id": "3b1334c4-98ba-4122-b0fd-4e79de069076",
       "name": "Buscar Controle Leite Ativo (Reprodutivo)",
       "alwaysOutputData": true,
       "credentials": {
@@ -2534,7 +2559,8 @@
           "id": "n5A2qlsmhmmPqxSz",
           "name": "Supabase account 2"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -2548,11 +2574,13 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -50080,
-        43504
+        7520,
+        12624
       ],
-      "id": "40523752-227c-41c1-b299-0d2f842c61a1",
+      "id": "06fc9da3-fa1a-4023-a003-00869da93eb7",
       "name": "Buscar Controle Leite (Reprodutivo Geral)",
+      "alwaysOutputData": true,
+      "executeOnce": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -2562,51 +2590,16 @@
     },
     {
       "parameters": {
-        "jsCode": "const vaca = $('Buscar Vaca (Leite)').first().json;\nconst registro = $input.first().json; // saída do Inserir Controle Leite\n\nconst texto = `Registrado ${registro.litros}L da vaca ${vaca.numero_identificacao} em ${registro.data_controle}.`;\n\nreturn [{ json: { resposta_sugerida: texto } }];"
+        "jsCode": "const vaca = $('Buscar Vaca (Leite)').first().json;\nconst registro = $input.first().json; // saída do Inserir Controle Leite\n\nconst dataBR = registro.data_controle.split('-').reverse().join('-');\nconst texto = `Registrado ${registro.litros}L da vaca ${vaca.numero_identificacao} em ${dataBR}.`;\n\nreturn [{ json: { resposta_sugerida: texto } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -50720,
-        41904
+        7824,
+        11424
       ],
-      "id": "5400a5b9-8651-45aa-9d65-54d14c18c3f4",
+      "id": "5a754f9c-a05a-46ab-aac7-d606879d5857",
       "name": "Code in JavaScript"
-    },
-    {
-      "parameters": {
-        "operation": "delete",
-        "tableId": "controle_leite",
-        "matchType": "allFilters",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "data_controle",
-              "condition": "eq",
-              "keyValue": "={{ $json.data_controle }}"
-            },
-            {
-              "keyName": "vaca_id",
-              "condition": "eq",
-              "keyValue": "={{ $json.vaca_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        -51136,
-        42624
-      ],
-      "id": "708be3ed-d7e4-4b21-ab9b-12968309c9eb",
-      "name": "Delete a row",
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
     },
     {
       "parameters": {
@@ -2628,43 +2621,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51344,
-        42624
+        6464,
+        14512
       ],
-      "id": "649bcb08-3adb-48a7-befb-a6ecad2e0d47",
+      "id": "750e9c63-032c-418c-81cc-4973cccfdcde",
       "name": "Buscar Registro Leite (Deletar)",
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "get",
-        "tableId": "vacas",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "numero_identificacao",
-              "keyValue": "={{ $('Determinar Número da Vaca').item.json.numeroVaca }}"
-            },
-            {
-              "keyName": "propriedade_id",
-              "keyValue": "={{ $json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        -51088,
-        40848
-      ],
-      "id": "36259481-f56c-43ad-a871-909369906cec",
-      "name": "Verificar Vaca Existente (Cadastro)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -2678,19 +2640,19 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "loose",
+            "typeValidation": "strict",
             "version": 3
           },
           "conditions": [
             {
               "id": "340ba16d-a38d-4c02-91ff-b702a7c4a4c7",
-              "leftValue": "={{ String($json.id ?? '') }}",
+              "leftValue": "={{ $json.jaExiste }}",
               "operator": {
-                "type": "string",
-                "operation": "isNotEmpty",
-                "name": "filter.operator.isNotEmpty"
+                "type": "boolean",
+                "operation": "equals",
+                "name": "filter.operator.equals"
               },
-              "rightValue": ""
+              "rightValue": "true"
             }
           ],
           "combinator": "and"
@@ -2700,10 +2662,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -50800,
-        40848
+        6608,
+        13408
       ],
-      "id": "3d695dd7-ccb5-4b25-8c3d-eac1f258f073",
+      "id": "1bb0c770-25d5-4f17-993b-adf57ab8396a",
       "name": "Vaca Já Cadastrada?"
     },
     {
@@ -2723,24 +2685,22 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -50512,
-        40736
+        7504,
+        13312
       ],
-      "id": "89382f57-929c-4d66-8c01-3086054f1ef4",
+      "id": "efa40912-0dd3-49d0-b564-773242684ea9",
       "name": "Vaca Duplicada"
     },
     {
       "parameters": {
-        "operation": "get",
+        "operation": "getAll",
         "tableId": "vacas",
+        "returnAll": true,
         "filters": {
           "conditions": [
             {
-              "keyName": "numero_identificacao",
-              "keyValue": "={{ $('Parsear Resposta IA').item.json.entidades.numero_mae }}"
-            },
-            {
               "keyName": "propriedade_id",
+              "condition": "eq",
               "keyValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}"
             }
           ]
@@ -2749,10 +2709,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -50512,
-        40944
+        7504,
+        13504
       ],
-      "id": "46200131-3f16-4108-8c51-1cb68bc806db",
+      "id": "db0692ba-fb4e-481e-b701-7df181706ca6",
       "name": "Buscar Vaca Mãe (Cadastro)",
       "alwaysOutputData": true,
       "credentials": {
@@ -2770,9 +2730,9 @@
         "filters": {
           "conditions": [
             {
-              "keyName": "mae_id",
+              "keyName": "propriedade_id",
               "condition": "eq",
-              "keyValue": "={{ $('Buscar Vaca Mãe (Cadastro)').item.json.id }}"
+              "keyValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}"
             }
           ]
         }
@@ -2780,10 +2740,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -50224,
-        40944
+        8032,
+        13520
       ],
-      "id": "ca273128-5199-43b1-8ea8-cfcc9d97c99a",
+      "id": "95e5cfd1-f07f-4f9d-a2c4-fd21b17c0a6b",
       "name": "Buscar Bezerros da Mãe (Cadastro)",
       "alwaysOutputData": true,
       "credentials": {
@@ -2795,15 +2755,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\nlet maeId = null;\nlet bezerroId = null;\n\nif (entidades.numero_mae) {\n  try {\n    const maeItem = $('Buscar Vaca Mãe (Cadastro)').first();\n    const mae = maeItem ? maeItem.json : null;\n    if (mae && mae.id) {\n      maeId = mae.id;\n      let bezerros = [];\n      try { bezerros = dedupeById($('Buscar Bezerros da Mãe (Cadastro)').all().map(i => i.json)); } catch (e) {}\n      const naoVinculados = bezerros.filter(b => !b.vaca_id_gerada);\n      naoVinculados.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));\n      if (naoVinculados.length > 0) bezerroId = naoVinculados[0].id;\n    }\n  } catch (e) {}\n}\n\nreturn [{ json: { maeId, bezerroId } }];"
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\nlet maeId = null;\nlet bezerroId = null;\n\nconst ehComprada = entidades.origem_animal === 'comprada';\n\nif (entidades.numero_mae && !ehComprada) {\n  try {\n    const vacasPropriedade = dedupeById($('Buscar Vaca Mãe (Cadastro)').all().map(i => i.json));\n    const mae = vacasPropriedade.find(v => String(v.numero_identificacao) === String(entidades.numero_mae));\n    if (mae && mae.id) {\n      maeId = mae.id;\n      let bezerrosPropriedade = [];\n      try { bezerrosPropriedade = dedupeById($('Buscar Bezerros da Mãe (Cadastro)').all().map(i => i.json)); } catch (e) {}\n      const naoVinculados = bezerrosPropriedade.filter(b => b.mae_id === maeId && !b.vaca_id_gerada);\n      naoVinculados.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));\n      if (naoVinculados.length > 0) bezerroId = naoVinculados[0].id;\n    }\n  } catch (e) {}\n}\n\nreturn [{ json: { maeId, bezerroId, ehComprada } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -49936,
-        40848
+        8512,
+        13520
       ],
-      "id": "d6437432-bdba-406a-808e-02c2257c35e8",
+      "id": "6dbde206-4a5b-484a-aed2-a8ede42c5881",
       "name": "Preparar Dados Cadastro"
     },
     {
@@ -2837,10 +2797,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -49648,
-        40848
+        8896,
+        13520
       ],
-      "id": "71d8bd9b-9b0f-46e6-91a0-118236afdcab",
+      "id": "3f3b587a-af98-4bf3-aaa6-cb1c454f95b4",
       "name": "Inserir Vaca",
       "credentials": {
         "supabaseApi": {
@@ -2877,10 +2837,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -49360,
-        40848
+        9360,
+        13520
       ],
-      "id": "f3e416cd-f2e7-45d0-9910-16767747371c",
+      "id": "91202ac4-718d-4c2b-b80b-628291208f70",
       "name": "Tem Bezerro Pra Vincular?"
     },
     {
@@ -2908,10 +2868,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -49072,
-        40768
+        9696,
+        13344
       ],
-      "id": "a7b35cef-74f1-4555-bb85-5c905414c115",
+      "id": "a1da012f-1ff5-4831-8d22-83ebab747496",
       "name": "Vincular Bezerro",
       "credentials": {
         "supabaseApi": {
@@ -2937,10 +2897,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -48784,
-        40848
+        10096,
+        13520
       ],
-      "id": "0893acf4-fcd0-4306-a82c-31aecfd8a586",
+      "id": "f6fef31e-257c-455a-bca0-6b86f67aa77a",
       "name": "Confirmar Cadastro"
     },
     {
@@ -2961,10 +2921,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -51376,
-        40848
+        5872,
+        13408
       ],
-      "id": "20892a91-6e64-4415-b372-4f58b2d75e8e",
+      "id": "c35f4919-a5a0-4caf-b0d6-4c61429ce03c",
       "name": "Buscar Maior Número Vaca",
       "alwaysOutputData": true,
       "credentials": {
@@ -2976,15 +2936,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const entidades = $('Parsear Resposta IA').item.json.entidades;\nlet numeroVaca = entidades.numero_vaca;\nlet autoGerado = false;\n\nif (!numeroVaca) {\n  let vacas = [];\n  try { vacas = $('Buscar Maior Número Vaca').all().map(i => i.json); } catch (e) {}\n  const maior = vacas.reduce((max, v) => {\n    const n = Number(v.numero_identificacao) || 0;\n    return n > max ? n : max;\n  }, 0);\n  numeroVaca = maior + 1;\n  autoGerado = true;\n}\n\nreturn [{ json: { numeroVaca, autoGerado } }];"
+        "jsCode": "const entidades = $('Parsear Resposta IA').item.json.entidades;\nlet numeroVaca = entidades.numero_vaca;\nlet autoGerado = false;\n\nlet vacas = [];\ntry { vacas = $('Buscar Maior Número Vaca').all().map(i => i.json); } catch (e) {}\n\nif (!numeroVaca) {\n  const maior = vacas.reduce((max, v) => {\n    const n = Number(v.numero_identificacao) || 0;\n    return n > max ? n : max;\n  }, 0);\n  numeroVaca = maior + 1;\n  autoGerado = true;\n}\n\n// checagem de duplicidade feita aqui em codigo, sem depender do filtro multi-condicao do Supabase\nconst jaExiste = !autoGerado && vacas.some(v => String(v.numero_identificacao) === String(numeroVaca));\n\nreturn [{ json: { numeroVaca, autoGerado, jaExiste } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -51232,
-        40848
+        6112,
+        13408
       ],
-      "id": "11777532-544e-4798-a139-5bb619bfa421",
+      "id": "c7e1818e-b803-4a7d-bcd7-8d4eac20a87b",
       "name": "Determinar Número da Vaca"
     },
     {
@@ -3007,11 +2967,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -50720,
-        41232
+        5952,
+        15248
       ],
-      "id": "1f182640-bd4f-48a5-991d-1b34de638f48",
+      "id": "018f121b-cac8-4bba-a701-7e9e0606fca8",
       "name": "Buscar Vaca (Atualizar Vaca)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -3025,7 +2986,7 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "loose",
+            "typeValidation": "strict",
             "version": 3
           },
           "conditions": [
@@ -3038,19 +2999,29 @@
                 "name": "filter.operator.isNotEmpty"
               },
               "rightValue": ""
+            },
+            {
+              "id": "bf7e1895-cd5e-428b-9483-aec43be1f679",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
             }
           ],
-          "combinator": "and"
+          "combinator": "or"
         },
         "options": {}
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -50432,
-        41232
+        6912,
+        15280
       ],
-      "id": "a7c11f52-250b-41d7-9437-b0003861334c",
+      "id": "2265c75f-7019-4c5a-b08b-cfb2e5d747f2",
       "name": "Vaca Encontrada (Atualizar Vaca)?"
     },
     {
@@ -3070,10 +3041,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -50144,
-        41344
+        7200,
+        15392
       ],
-      "id": "ecd67df2-06f8-40f7-b6d0-97ae631bc056",
+      "id": "671b1506-e465-4498-a275-f8cbb7dc3cd5",
       "name": "Vaca Não Encontrada (Atualizar Vaca)"
     },
     {
@@ -3083,10 +3054,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -50144,
-        41136
+        7200,
+        15184
       ],
-      "id": "9c3ff54e-b045-4d76-9c40-53e83581a5fa",
+      "id": "29bd1856-c0d7-4c54-b54c-0f3fbd3983cf",
       "name": "Preparar Atualização Vaca"
     },
     {
@@ -3118,10 +3089,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -49856,
-        41136
+        7488,
+        15168
       ],
-      "id": "0b6d8195-0129-494d-828f-2a3c9244643b",
+      "id": "551da817-b5b0-4bc6-a59f-fcafcaf5c62e",
       "name": "Atualizar Vaca (Dados)",
       "credentials": {
         "supabaseApi": {
@@ -3147,10 +3118,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -49568,
-        41136
+        7776,
+        15184
       ],
-      "id": "7a30bfa4-f97a-4870-ad49-cc3621730fa6",
+      "id": "f47c42e1-5fd2-4d59-94db-584d8e92b58f",
       "name": "Confirmar Atualização Vaca"
     },
     {
@@ -3164,10 +3135,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        2592,
-        780
+        7392,
+        14432
       ],
-      "id": "e1d276c6-d353-4658-a62d-20df4f823900",
+      "id": "8178076b-5acd-4925-b25b-ba2813f4f9c3",
       "name": "Salvar Pendência Delete Leite",
       "credentials": {
         "redis": {
@@ -3207,10 +3178,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        1728,
-        2700
+        5968,
+        15552
       ],
-      "id": "86dc8981-88c9-4768-af1a-d5c8148c8649",
+      "id": "4b573abd-5a17-43b5-89a4-f41fafb3e28a",
       "name": "Inserir Financeiro",
       "credentials": {
         "supabaseApi": {
@@ -3227,7 +3198,7 @@
               "id": "672f9570-b6b2-40dc-bf08-96b1875462fe",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Lançado: {{ $('Parsear Resposta IA').item.json.entidades.tipo_financeiro }} de R$ {{ $('Parsear Resposta IA').item.json.entidades.valor }} ({{ $('Parsear Resposta IA').item.json.entidades.categoria || 'outros' }}) em {{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}."
+              "value": "=Lançado: {{ $('Parsear Resposta IA').item.json.entidades.tipo_financeiro }} de R$ {{ $('Parsear Resposta IA').item.json.entidades.valor }} ({{ $('Parsear Resposta IA').item.json.entidades.categoria || 'outros' }}) em {{ ($('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd')).split('-').reverse().join('-') }}."
             }
           ]
         },
@@ -3236,23 +3207,23 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2016,
-        2700
+        6544,
+        15584
       ],
-      "id": "6bf64e55-142d-49fa-9fea-dcab389e250b",
+      "id": "302c52c8-2cb9-411f-a43d-4ff62aa0ff7f",
       "name": "Confirmar Financeiro"
     },
     {
       "parameters": {
-        "jsCode": "const parsed = $('Parsear Resposta IA').item.json;\nconst periodoDiasClassificador = parsed.entidades.periodo_dias;\nconst mensagem = (parsed.mensagem_original || '').toLowerCase();\n\nconst hoje = new Date();\nlet inicio, label, periodoDias;\n\nif (periodoDiasClassificador && periodoDiasClassificador > 0) {\n  periodoDias = periodoDiasClassificador;\n  inicio = new Date(hoje);\n  inicio.setDate(inicio.getDate() - periodoDias);\n  label = `últimos ${periodoDias} dias`;\n} else if (/\\bhoje\\b/.test(mensagem)) {\n  periodoDias = 0;\n  inicio = new Date(hoje);\n  label = 'hoje';\n} else {\n  inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);\n  const diffMs = hoje - inicio;\n  periodoDias = Math.ceil(diffMs / 86400000);\n  label = 'mês atual e mês passado';\n}\n\nconst dataInicio = inicio.toISOString().slice(0, 10);\nreturn [{ json: { dataInicio, periodoDias, label } }];"
+        "jsCode": "const parsed = $('Parsear Resposta IA').item.json;\nconst periodoDiasClassificador = parsed.entidades.periodo_dias;\nconst mensagem = (parsed.mensagem_original || '').toLowerCase();\n\nconst hoje = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }) + 'T12:00:00Z');\nlet inicio, label, periodoDias;\n\nif (/\\bhoje\\b/.test(mensagem)) {\n  periodoDias = 0;\n  inicio = new Date(hoje);\n  label = 'hoje';\n} else if (/\\bm[eê]s\\b/.test(mensagem) && !/\\b(passado|anterior)\\b/.test(mensagem)) {\n  // \"esse mês\" / \"mês atual\" -> mês-calendário de verdade, não janela rolante.\n  // Prioridade sobre periodo_dias porque o classificador tende a converter\n  // \"mês\" em periodo_dias=30, o que não é a mesma coisa (dia 1 até hoje\n  // tem 23 dias em julho, por exemplo, não 30).\n  inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);\n  const diffMs = hoje - inicio;\n  periodoDias = Math.ceil(diffMs / 86400000);\n  label = 'mês atual';\n} else if (periodoDiasClassificador && periodoDiasClassificador > 0) {\n  periodoDias = periodoDiasClassificador;\n  inicio = new Date(hoje);\n  inicio.setDate(inicio.getDate() - periodoDias);\n  label = `últimos ${periodoDias} dias`;\n} else {\n  inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);\n  const diffMs = hoje - inicio;\n  periodoDias = Math.ceil(diffMs / 86400000);\n  label = 'mês atual e mês passado';\n}\n\nconst dataInicio = inicio.toISOString().slice(0, 10);\nreturn [{ json: { dataInicio, periodoDias, label } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1440,
-        3000
+        5968,
+        15776
       ],
-      "id": "76555759-37cf-4bcb-b67b-a49889c86d78",
+      "id": "1b94cf11-6208-4cd7-a2da-639d2649266e",
       "name": "Calcular Período Financeiro"
     },
     {
@@ -3264,13 +3235,13 @@
           "conditions": [
             {
               "keyName": "propriedade_id",
-              "keyValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}",
-              "condition": "eq"
+              "condition": "eq",
+              "keyValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}"
             },
             {
               "keyName": "data",
-              "keyValue": "={{ $json.dataInicio }}",
-              "condition": "gte"
+              "condition": "gte",
+              "keyValue": "={{ $json.dataInicio }}"
             }
           ]
         }
@@ -3278,11 +3249,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        1728,
-        3000
+        6576,
+        15872
       ],
-      "id": "147439a3-f676-47ee-b2d0-1118e827be7e",
+      "id": "5a47b46e-0736-4289-a87e-a729b2839570",
       "name": "Buscar Lançamentos Financeiros",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -3292,15 +3264,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst { periodoDias, label, dataInicio } = $('Calcular Período Financeiro').item.json;\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\n\nconst hoje = new Date();\nconst hojeStr = hoje.toISOString().slice(0, 10);\n\nlet lancamentos = dedupeById($input.all().map(i => i.json));\nlancamentos = lancamentos.filter(l => l.data >= dataInicio && l.data <= hojeStr);\nif (entidades.tipo_financeiro) {\n  lancamentos = lancamentos.filter(l => l.tipo === entidades.tipo_financeiro);\n}\n\nlet texto;\nif (lancamentos.length === 0) {\n  texto = `Nenhum lançamento financeiro encontrado (${label}).`;\n} else {\n  const despesas = lancamentos.filter(l => l.tipo === 'despesa');\n  const receitas = lancamentos.filter(l => l.tipo === 'receita');\n  const totalDespesas = despesas.reduce((s, l) => s + (Number(l.valor) || 0), 0);\n  const totalReceitas = receitas.reduce((s, l) => s + (Number(l.valor) || 0), 0);\n\n  const porCategoria = {};\n  for (const l of lancamentos) {\n    const chave = `${l.tipo} - ${l.categoria || 'outros'}`;\n    porCategoria[chave] = (porCategoria[chave] || 0) + (Number(l.valor) || 0);\n  }\n\n  texto = `Financeiro (${label}):\\n\\n`;\n  if (!entidades.tipo_financeiro || entidades.tipo_financeiro === 'receita') {\n    texto += `Receitas: R$ ${totalReceitas.toFixed(2)}\\n`;\n  }\n  if (!entidades.tipo_financeiro || entidades.tipo_financeiro === 'despesa') {\n    texto += `Despesas: R$ ${totalDespesas.toFixed(2)}\\n`;\n  }\n  if (!entidades.tipo_financeiro) {\n    texto += `Saldo: R$ ${(totalReceitas - totalDespesas).toFixed(2)}\\n`;\n  }\n  texto += `\\nPor categoria:\\n`;\n  texto += Object.entries(porCategoria).map(([k, v]) => `- ${k}: R$ ${v.toFixed(2)}`).join('\\n');\n}\n\nreturn [{ json: { resposta_sugerida: texto } }];"
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst { periodoDias, label, dataInicio } = $('Calcular Período Financeiro').item.json;\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\nconst origemAudio = $('Preparar Entrada Agente').item.json.origem_audio;\n\nconst hoje = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }) + 'T12:00:00Z');\nconst hojeStr = hoje.toISOString().slice(0, 10);\n\nlet lancamentos = dedupeById($input.all().map(i => i.json));\nlancamentos = lancamentos.filter(l => l.data >= dataInicio && l.data <= hojeStr);\nif (entidades.tipo_financeiro) {\n  lancamentos = lancamentos.filter(l => l.tipo === entidades.tipo_financeiro);\n}\n\nlet texto;\nif (lancamentos.length === 0) {\n  texto = `Nenhum lançamento financeiro encontrado (${label}).`;\n} else {\n  const despesas = lancamentos.filter(l => l.tipo === 'despesa');\n  const receitas = lancamentos.filter(l => l.tipo === 'receita');\n  const totalDespesas = despesas.reduce((s, l) => s + (Number(l.valor) || 0), 0);\n  const totalReceitas = receitas.reduce((s, l) => s + (Number(l.valor) || 0), 0);\n\n  if (origemAudio) {\n    let partes = [`Financeiro, ${label}.`];\n    if (!entidades.tipo_financeiro || entidades.tipo_financeiro === 'receita') {\n      partes.push(`Receitas de R$ ${totalReceitas.toFixed(2)}.`);\n    }\n    if (!entidades.tipo_financeiro || entidades.tipo_financeiro === 'despesa') {\n      partes.push(`Despesas de R$ ${totalDespesas.toFixed(2)}.`);\n    }\n    if (!entidades.tipo_financeiro) {\n      partes.push(`Saldo de R$ ${(totalReceitas - totalDespesas).toFixed(2)}.`);\n    }\n    texto = partes.join(' ');\n  } else {\n    const porCategoria = {};\n    for (const l of lancamentos) {\n      const chave = `${l.tipo} - ${l.categoria || 'outros'}`;\n      porCategoria[chave] = (porCategoria[chave] || 0) + (Number(l.valor) || 0);\n    }\n\n    texto = `Financeiro (${label}):\\n\\n`;\n    if (!entidades.tipo_financeiro || entidades.tipo_financeiro === 'receita') {\n      texto += `Receitas: R$ ${totalReceitas.toFixed(2)}\\n`;\n    }\n    if (!entidades.tipo_financeiro || entidades.tipo_financeiro === 'despesa') {\n      texto += `Despesas: R$ ${totalDespesas.toFixed(2)}\\n`;\n    }\n    if (!entidades.tipo_financeiro) {\n      texto += `Saldo: R$ ${(totalReceitas - totalDespesas).toFixed(2)}\\n`;\n    }\n    texto += `\\nPor categoria:\\n`;\n    texto += Object.entries(porCategoria).map(([k, v]) => `- ${k}: R$ ${v.toFixed(2)}`).join('\\n');\n  }\n}\n\nreturn [{ json: { resposta_sugerida: texto } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2016,
-        3000
+        7088,
+        15872
       ],
-      "id": "b004b669-0cde-483a-a97e-cbdd1619fdec",
+      "id": "b2e60a29-e765-4ffa-93e3-63b643049e62",
       "name": "Montar Relatório Financeiro"
     },
     {
@@ -3312,8 +3284,8 @@
           "conditions": [
             {
               "keyName": "propriedade_id",
-              "keyValue": "={{ $json.propriedade_id }}",
-              "condition": "eq"
+              "condition": "eq",
+              "keyValue": "={{ $json.propriedade_id }}"
             }
           ]
         }
@@ -3321,11 +3293,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        1728,
-        3300
+        6000,
+        16176
       ],
-      "id": "90120f01-0e08-4480-b6ac-fdb6f08f18f8",
+      "id": "24e2a0ef-88f9-4295-b429-70d9a98c682c",
       "name": "Buscar Lançamentos (Atualizar Financeiro)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -3340,10 +3313,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2016,
-        3300
+        7248,
+        16160
       ],
-      "id": "30826b25-d5f0-4980-993c-60cdc8d85619",
+      "id": "c1becd15-c003-455d-b4d5-acd02f920ea0",
       "name": "Selecionar Lançamento Alvo (Atualizar)"
     },
     {
@@ -3352,7 +3325,7 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "loose",
+            "typeValidation": "strict",
             "version": 3
           },
           "conditions": [
@@ -3365,19 +3338,29 @@
                 "name": "filter.operator.isNotEmpty"
               },
               "rightValue": ""
+            },
+            {
+              "id": "467796c7-b92f-4cc4-a5c1-5ccaf9bbf651",
+              "leftValue": "={{ !!$json.alvoId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
             }
           ],
-          "combinator": "and"
+          "combinator": "or"
         },
         "options": {}
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        2304,
-        3300
+        7536,
+        16160
       ],
-      "id": "4043c182-02ba-4eb2-9a62-6d6c31f4ef84",
+      "id": "57bf6785-2c85-4e07-99b1-76b9e4810759",
       "name": "Lançamento Encontrado (Atualizar)?"
     },
     {
@@ -3388,8 +3371,8 @@
           "conditions": [
             {
               "keyName": "id",
-              "keyValue": "={{ $json.alvoId }}",
-              "condition": "eq"
+              "condition": "eq",
+              "keyValue": "={{ $json.alvoId }}"
             }
           ]
         },
@@ -3409,10 +3392,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        2592,
-        3200
+        7824,
+        16048
       ],
-      "id": "73f15044-ce33-4571-8413-b3408219371e",
+      "id": "d5275a7f-3ad7-41a7-9c0b-1d3c3be40ac2",
       "name": "Atualizar Financeiro (Dados)",
       "credentials": {
         "supabaseApi": {
@@ -3438,10 +3421,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2880,
-        3200
+        8112,
+        16048
       ],
-      "id": "a4e99e72-a10c-4875-aba2-adf9e2f44b37",
+      "id": "beac40a9-e9c1-46eb-b467-e64713c387df",
       "name": "Confirmar Atualização Financeiro"
     },
     {
@@ -3461,10 +3444,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2592,
-        3400
+        7824,
+        16256
       ],
-      "id": "d1197980-7ad1-4d79-aeb0-07857c643c21",
+      "id": "1c110e07-d06d-45b0-8cab-f51a7b80496d",
       "name": "Lançamento Não Encontrado (Atualizar)"
     },
     {
@@ -3476,8 +3459,8 @@
           "conditions": [
             {
               "keyName": "propriedade_id",
-              "keyValue": "={{ $json.propriedade_id }}",
-              "condition": "eq"
+              "condition": "eq",
+              "keyValue": "={{ $json.propriedade_id }}"
             }
           ]
         }
@@ -3485,11 +3468,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        1728,
-        3700
+        5984,
+        16448
       ],
-      "id": "f5442cb9-03a1-42a4-b99d-9d674dab928f",
+      "id": "97877cbb-cf01-4b33-93a8-5106d52655c4",
       "name": "Buscar Lançamentos (Deletar Financeiro)",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -3504,10 +3488,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2016,
-        3700
+        7152,
+        16784
       ],
-      "id": "78b3d0ae-6ff7-4e11-bfa1-bf8db53cc2de",
+      "id": "a47ccfbb-d7d5-466d-b25c-43c325e9ec83",
       "name": "Selecionar Lançamento Alvo (Deletar)"
     },
     {
@@ -3529,32 +3513,43 @@
                 "name": "filter.operator.isNotEmpty"
               },
               "rightValue": ""
+            },
+            {
+              "id": "72946f16-999f-4f5d-83b7-a852ff738bd2",
+              "leftValue": "={{ !!$json.alvoId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
             }
           ],
-          "combinator": "and"
+          "combinator": "or"
         },
+        "looseTypeValidation": true,
         "options": {}
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        2304,
-        3700
+        7792,
+        16784
       ],
-      "id": "c5037365-3381-4695-81a7-37bf8a4c16c1",
+      "id": "aef2f37e-d173-4b3b-90a2-80cc7ff52a1e",
       "name": "Lançamento Encontrado (Deletar)?"
     },
     {
       "parameters": {
-        "jsCode": "const alvo = $json.alvo;\nconst telefone = $('Parsear Resposta IA').first().json.telefone;\nconst pendencia = {\n  tipo: 'financeiro',\n  lancamento_id: alvo.id,\n  tipo_financeiro: alvo.tipo,\n  categoria: alvo.categoria,\n  valor: alvo.valor,\n  data: alvo.data\n};\nconst texto = `Confirma excluir o lançamento de ${alvo.tipo} (${alvo.categoria || 'outros'}, R$ ${alvo.valor}, ${alvo.data})? Responda SIM para confirmar ou NAO para cancelar.`;\nreturn [{ json: { telefone, pendencia: JSON.stringify(pendencia), resposta_sugerida: texto } }];"
+        "jsCode": "const alvo = $json.alvo;\nconst telefone = $('Parsear Resposta IA').first().json.telefone;\nconst pendencia = {\n  tipo: 'financeiro',\n  lancamento_id: alvo.id,\n  tipo_financeiro: alvo.tipo,\n  categoria: alvo.categoria,\n  valor: alvo.valor,\n  data: alvo.data\n};\nconst dataBR = alvo.data ? alvo.data.split('-').reverse().join('-') : 'data não informada';\nconst texto = `Confirma excluir o lançamento de ${alvo.tipo} (${alvo.categoria || 'outros'}, R$ ${alvo.valor}, ${dataBR})? Responda SIM para confirmar ou NAO para cancelar.`;\nreturn [{ json: { telefone, pendencia: JSON.stringify(pendencia), resposta_sugerida: texto } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2592,
-        3650
+        8448,
+        16528
       ],
-      "id": "b58eb31e-f27c-4cde-a4d9-04e8afa85f32",
+      "id": "632bfcd5-4413-4ca3-ac1b-9cd81aa64ffa",
       "name": "Preparar Pendência Delete Financeiro"
     },
     {
@@ -3568,10 +3563,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        2880,
-        3650
+        9360,
+        16496
       ],
-      "id": "b9486471-128e-41ee-8c5e-9115e5e90fb7",
+      "id": "380e76a2-fe73-41fc-87ef-0818be677e73",
       "name": "Salvar Pendência Delete Financeiro",
       "credentials": {
         "redis": {
@@ -3597,10 +3592,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2592,
-        3800
+        9312,
+        16832
       ],
-      "id": "78777588-2822-4a18-8ec4-88940a8b3170",
+      "id": "04c2ffc2-5b9a-46df-84a0-830d9950614a",
       "name": "Lançamento Não Encontrado (Deletar)"
     },
     {
@@ -3631,10 +3626,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1808,
-        -200
+        6304,
+        10864
       ],
-      "id": "d5b865e4-fc14-419b-8ddb-b3ff7dc36901",
+      "id": "a73ee973-8fe7-4ec3-b593-67e67702c2df",
       "name": "Tipo de Pendência (Delete)?"
     },
     {
@@ -3645,8 +3640,8 @@
           "conditions": [
             {
               "keyName": "id",
-              "keyValue": "={{ $json.pendencia.lancamento_id }}",
-              "condition": "eq"
+              "condition": "eq",
+              "keyValue": "={{ $json.pendencia.lancamento_id }}"
             }
           ]
         }
@@ -3654,11 +3649,12 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        2096,
-        -260
+        6672,
+        10608
       ],
-      "id": "84b1acc4-4d18-465f-8981-edd678ebdc52",
+      "id": "e1601195-fb54-48bd-aaf9-14da3e88b790",
       "name": "Deletar Lançamento Financeiro",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
@@ -3674,7 +3670,7 @@
               "id": "9bce3cc0-efda-4a59-8a00-8246eed1db1a",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Lançamento de {{ $('Processar Confirmação Delete').item.json.pendencia.tipo_financeiro }} ({{ $('Processar Confirmação Delete').item.json.pendencia.categoria }}, R$ {{ $('Processar Confirmação Delete').item.json.pendencia.valor }}, {{ $('Processar Confirmação Delete').item.json.pendencia.data }}) excluído com sucesso."
+              "value": "=Lançamento de {{ $('Processar Confirmação Delete').item.json.pendencia.tipo_financeiro }} ({{ $('Processar Confirmação Delete').item.json.pendencia.categoria }}, R$ {{ $('Processar Confirmação Delete').item.json.pendencia.valor }}, {{ $('Processar Confirmação Delete').item.json.pendencia.data ? $('Processar Confirmação Delete').item.json.pendencia.data.split('-').reverse().join('-') : 'data não informada' }}) excluído com sucesso."
             }
           ]
         },
@@ -3683,10 +3679,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2384,
-        -260
+        7856,
+        10800
       ],
-      "id": "36f3f398-4a22-4169-ba24-b2868488be54",
+      "id": "1517d4e5-0619-43d0-93dc-fb2271774959",
       "name": "Confirmar Delete Financeiro"
     },
     {
@@ -3717,10 +3713,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        2240,
-        -320
+        7408,
+        10864
       ],
-      "id": "cdcae070-a62e-440b-bcbb-a06a2cc9f4f5",
+      "id": "1e4f2ed0-b1e6-4667-a694-884439e057e1",
       "name": "Tipo de Pendência (Confirmação)?"
     },
     {
@@ -3729,7 +3725,7 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "loose",
+            "typeValidation": "strict",
             "version": 3
           },
           "conditions": [
@@ -3742,19 +3738,29 @@
                 "name": "filter.operator.isNotEmpty"
               },
               "rightValue": ""
+            },
+            {
+              "id": "4c4f8fd9-103c-4d13-afaf-7c45b44e34c9",
+              "leftValue": "={{ $json.ativa }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
             }
           ],
-          "combinator": "and"
+          "combinator": "or"
         },
         "options": {}
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        2172,
-        -432
+        7040,
+        11520
       ],
-      "id": "c4891ddd-6fa1-4f06-8b53-f758bd70147a",
+      "id": "4d376533-85ce-4ca3-bcc6-9b6c3a605b04",
       "name": "Tem Lactação Ativa?"
     },
     {
@@ -3774,11 +3780,702 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2172,
-        -280
+        7488,
+        11696
       ],
-      "id": "93823e43-4949-4dcb-a834-210447a0616b",
+      "id": "b4a0f431-299e-411a-ae29-8b1c0a672755",
       "name": "Sem Lactação Ativa"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "Gabriel Bandeira",
+        "remoteJid": "558598149317@s.whatsapp.net",
+        "messageText": "={{ $json.resposta_sugerida }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        4448,
+        17408
+      ],
+      "id": "bbb06639-d638-4a3b-baa1-5d0c87ee5947",
+      "name": "Enviar texto1",
+      "credentials": {
+        "evolutionApi": {
+          "id": "gtlPdveg89MKtmGW",
+          "name": "Evolution Gabriel"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8e4c3a3f-ab3c-4c9c-a32d-ba240bac4478",
+              "leftValue": "={{ $json.bloqueado }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        6192,
+        12224
+      ],
+      "id": "c6006438-07a8-4327-80c6-6c21fcd7f142",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "coberturas",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vaca_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        4656,
+        12400
+      ],
+      "id": "a7797ba3-520b-42c4-9b2f-cc5dde588f97",
+      "name": "Get a row",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "partos",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vaca_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Buscar Vaca (Cobertura)').item.json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        5296,
+        12368
+      ],
+      "id": "87e9d1da-a19d-4d23-8e3a-cc8194487b1d",
+      "name": "Buscar Partos (Validação Cobertura)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\nconst dataCobertura = entidades.data || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });\n\nconst coberturas = dedupeById($('Get a row').all().map(i => i.json));\nlet partos = [];\ntry { partos = dedupeById($('Buscar Partos (Validação Cobertura)').all().map(i => i.json)); } catch (e) {}\nconst coberturaIdsComParto = new Set(partos.filter(p => p.cobertura_id).map(p => p.cobertura_id));\n\nconst duplicada = coberturas.some(c => c.data_cobertura === dataCobertura);\nconst prenhaConfirmada = coberturas.some(c => c.diagnostico_prenhez === 'positivo' && !coberturaIdsComParto.has(c.id));\n\nlet bloqueado = false;\nlet motivo = '';\nif (duplicada) {\n  bloqueado = true;\n  motivo = `Ja existe uma cobertura registrada pra essa vaca na data ${dataCobertura}. Nao lancei de novo pra evitar duplicidade.`;\n} else if (prenhaConfirmada) {\n  bloqueado = true;\n  motivo = 'Essa vaca ja tem uma prenhez confirmada em aberto (ainda nao pariu). Nao faz sentido registrar nova cobertura antes do parto.';\n}\n\nreturn [{ json: { bloqueado, motivo } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5824,
+        12336
+      ],
+      "id": "3bdf485e-f29f-47a7-b5f1-c7a183a63cfa",
+      "name": "Validar Cobertura"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "97c31f4c-de57-4e99-ba60-6530900c67fc",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "={{ $json.motivo }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6944,
+        12112
+      ],
+      "id": "0ed36607-b1b1-4a4e-8b00-0a946df714c6",
+      "name": "Cobertura Rejeitada"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "47afe504-8409-46a9-9e6d-57c1556adb3e",
+              "leftValue": "={{ String($json.id ?? \"\") }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "name": "filter.operator.isNotEmpty"
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "27ad3bc4-0e5f-42c1-9413-56d7104ea2ee",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        6736,
+        14080
+      ],
+      "id": "f3930a24-998d-4832-8e06-fe57cd6d9968",
+      "name": "Registro Encontrado (Atualizar)?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "675fbeb4-6c56-4d19-9b38-0a970c60f075",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "=Não encontrei nenhum registro de leite da vaca {{ $('Buscar Vaca (Atualizar)').item.json.numero_identificacao }} nessa data pra corrigir. Confira o número da vaca e a data."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7216,
+        14144
+      ],
+      "id": "55563176-0eb0-46c1-bc57-e58e68a1a794",
+      "name": "Registro Não Encontrado (Atualizar)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const usuario = $json;\nlet status = 'ok';\nlet mensagem = '';\nif (!usuario.id) {\n  status = 'nao_cadastrado';\n  mensagem = 'Esse numero de WhatsApp ainda nao esta cadastrado no sistema. Entre em contato com o tecnico responsavel pela sua propriedade pra liberar o acesso.';\n} else if (usuario.ativo !== true) {\n  status = 'desativado';\n  mensagem = 'Seu acesso esta desativado no momento. Entre em contato com o tecnico responsavel pela sua propriedade.';\n}\nreturn [{ json: { ...usuario, statusAcesso: status, mensagemAcesso: mensagem } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7600,
+        14032
+      ],
+      "id": "999b842d-9b04-43d2-ab42-ce4875ee78ae",
+      "name": "Verificar Status Usuário"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "11b6b8d2-974e-43ed-8ddc-2e629f3d7c4b",
+              "leftValue": "={{ $('Webhook').item.json.body.data.key.fromMe }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cc362061-bc29-47d5-8e15-b51dc64bef0a",
+              "leftValue": "={{ $('Webhook').item.json.body.data.key.remoteJid }}",
+              "rightValue": "={{ $('Webhook').item.json.body.sender }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -7296,
+        14032
+      ],
+      "id": "157f53c5-e02b-45eb-a165-164499cd17f5",
+      "name": "Acesso Liberado?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst coberturas = dedupeById($input.all().map(i => i.json));\ncoberturas.sort((a, b) => new Date(b.data_cobertura) - new Date(a.data_cobertura));\nconst maisRecente = coberturas[0] || null;\nreturn [{ json: { coberturaId: maisRecente ? maisRecente.id : null, dataCobertura: maisRecente ? maisRecente.data_cobertura : null } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6832,
+        14864
+      ],
+      "id": "60ec74f5-10cf-42d7-9613-6ad6a557e12a",
+      "name": "Selecionar Cobertura Mais Recente"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9e6ef60b-7efe-46b4-87e1-544312c72be0",
+              "leftValue": "={{ $json.created_at }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        5904,
+        11936
+      ],
+      "id": "0325035e-688a-454b-9d15-1ab1aef05e06",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Este nó roda na rota FALSE do IF (Vaca não encontrada no banco)\nreturn [\n  {\n    json: {\n      sucesso: false,\n      resposta_sugerida: \"Vaca não localizada no sistema. Por favor, verifique o número ou nome digitado e tente novamente.\",\n      // Passa os metadados para o fluxo de resposta saber para quem responder\n      telefone: $('Identificar Usuario').first().json.telefone || null,\n      waba_id: $('Identificar Usuario').first().json.waba_id || null\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6144,
+        12048
+      ],
+      "id": "20e0c2d8-e0b2-4572-af97-d3b00f79e162",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -6912,
+        14176
+      ],
+      "id": "1ad26b07-cd97-4009-ba3d-9ab103183e24",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d735f033-ed2d-4bcc-bc65-b84201b99255",
+              "leftValue": "={{ String($json.id ?? '') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        6032,
+        11696
+      ],
+      "id": "0af2c7ab-9b90-4b47-8ecf-3fb1a5d90e2b",
+      "name": "Vaca Encontrada (Leite)?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6932cdcb-295f-464c-b2a5-5f5f94462f06",
+              "name": "resposta_sugerida",
+              "value": "=Não encontrei a vaca {{ $('Parsear Resposta IA').item.json.entidades.numero_vaca }} cadastrada. Confira o número.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6240,
+        11792
+      ],
+      "id": "0b8a2921-11c7-476a-b63a-72bc89660842",
+      "name": "Vaca Não Encontrada (Leite)"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "vacas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "propriedade_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        7744,
+        13072
+      ],
+      "id": "2176e528-4527-452d-9117-dd6152b42fa4",
+      "name": "Buscar Vacas Propriedade (Geral)",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=audio:{{ $json.telefone }}",
+        "value": "={{ $json.origem_audio }}",
+        "keyType": "string",
+        "expire": true,
+        "ttl": 120
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -5104,
+        14208
+      ],
+      "id": "6bc5ef1e-3924-4e17-a6d3-0276b7b32471",
+      "name": "Salvar Flag Áudio",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "origem_audio_raw",
+        "key": "=audio:{{ $('Preparar Dados Buffer').item.json.telefone }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -3488,
+        13808
+      ],
+      "id": "745b0b0d-feb9-49ec-96ea-2aa8f05e9248",
+      "name": "Ler Flag Áudio",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -3056,
+        13744
+      ],
+      "id": "6a5b0bdd-74b8-43b1-acf8-c6b7f52c6d2a",
+      "name": "Combinar Dados Finais"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "09a62c1b-fdb7-4309-a35f-05cec01aa06c",
+              "leftValue": "={{ $('Webhook').item.json.body.data.messageType }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "audioMessage"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        16160,
+        13472
+      ],
+      "id": "f29aa787-b69d-4853-b809-39bb13b3d7e3",
+      "name": "Origem Áudio? (Principal)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "1f5b38ee-db79-49f3-9fb3-b4777f8b40ab",
+              "leftValue": "={{ $('Webhook').item.json.body.data.messageType }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "audioMessage"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3424,
+        16976
+      ],
+      "id": "f48a61e7-b148-40df-8eed-378931f6d108",
+      "name": "Origem Áudio? (Fallback)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/speech",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  \"model\": \"gpt-4o-mini-tts\",\n  \"voice\": \"alloy\",\n  \"input\": $json.resposta_sugerida,\n  \"instructions\": \"Fale em português brasileiro, com pronúncia e sotaque naturais de um brasileiro, sem nenhum traço de sotaque americano ou estrangeiro. Ritmo calmo e claro, como alguém explicando algo pra um produtor rural.\",\n  \"response_format\": \"mp3\"\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        16864,
+        17008
+      ],
+      "id": "bc35132c-b446-43fe-a0c4-dbfbc26041c1",
+      "name": "Gerar Áudio (OpenAI TTS)",
+      "credentials": {
+        "openAiApi": {
+          "id": "kmMGxTfDic8jahYF",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "operation": "send-audio",
+        "instanceName": "Gabriel Bandeira",
+        "remoteJid": "558598149317@s.whatsapp.net",
+        "media": "={{ $json.audioBase64 }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        17504,
+        17008
+      ],
+      "id": "31cc97c9-9b00-44a2-bc9f-fea0f8725e84",
+      "name": "Enviar Áudio",
+      "credentials": {
+        "evolutionApi": {
+          "id": "gtlPdveg89MKtmGW",
+          "name": "Evolution Gabriel"
+        }
+      },
+      "notes": "AJUSTAR: escolher a operation certa de enviar audio/voice, e apontar o campo de midia para o binario gerado no node anterior."
+    },
+    {
+      "parameters": {
+        "jsCode": "const buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst base64 = buffer.toString('base64');\n\nreturn [{\n  json: {\n    ...$input.item.json,\n    audioBase64: base64\n  },\n  binary: $input.item.binary\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17152,
+        17008
+      ],
+      "id": "1459731d-6a13-4fdf-9303-2fec4627e7db",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0f080c67-5d30-453c-b1d8-3f7c4ed722b5",
+              "leftValue": "={{ String($json.id ?? '') }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "name": "filter.operator.isNotEmpty"
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        7736,
+        13056
+      ],
+      "id": "cf261b87-846e-4556-a5ac-cdba80e8a202",
+      "name": "Vaca Encontrada (Relatório)?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9a013321-1f43-443f-9efb-40415f93810d",
+              "name": "resposta_sugerida",
+              "value": "=Não encontrei a vaca {{ $('Parsear Resposta IA').item.json.entidades.numero_vaca }} cadastrada. Confira o número.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8016,
+        13232
+      ],
+      "id": "8e745166-042b-4220-b527-0ce25a11bcf2",
+      "name": "Vaca Não Encontrada (Relatório)"
     }
   ],
   "pinData": {},
@@ -3798,7 +4495,7 @@
       "main": [
         [
           {
-            "node": "É Áudio?",
+            "node": "Verificar Status Usuário",
             "type": "main",
             "index": 0
           }
@@ -3918,7 +4615,7 @@
         ],
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Fallback)",
             "type": "main",
             "index": 0
           }
@@ -3929,7 +4626,7 @@
       "main": [
         [
           {
-            "node": "Buscar Parto Ativo (Leite)",
+            "node": "Vaca Encontrada (Leite)?",
             "type": "main",
             "index": 0
           }
@@ -3985,6 +4682,11 @@
         [
           {
             "node": "Buffer - Ler Existente",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Salvar Flag Áudio",
             "type": "main",
             "index": 0
           }
@@ -4064,6 +4766,11 @@
             "node": "Buffer - Ler Final",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Ler Flag Áudio",
+            "type": "main",
+            "index": 0
           }
         ],
         [
@@ -4079,7 +4786,7 @@
       "main": [
         [
           {
-            "node": "Preparar Entrada Agente",
+            "node": "Combinar Dados Finais",
             "type": "main",
             "index": 0
           }
@@ -4106,7 +4813,7 @@
       "main": [
         [
           {
-            "node": "Buscar Histórico Leite",
+            "node": "Vaca Encontrada (Relatório)?",
             "type": "main",
             "index": 0
           }
@@ -4128,7 +4835,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4150,7 +4857,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4172,7 +4879,7 @@
       "main": [
         [
           {
-            "node": "Atualizar Registro Leite",
+            "node": "Registro Encontrado (Atualizar)?",
             "type": "main",
             "index": 0
           }
@@ -4194,7 +4901,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4307,7 +5014,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4329,7 +5036,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4351,7 +5058,7 @@
       "main": [
         [
           {
-            "node": "Buscar Parto Anterior (Ativo)",
+            "node": "If1",
             "type": "main",
             "index": 0
           }
@@ -4359,17 +5066,6 @@
       ]
     },
     "Buscar Cobertura Recente (Parto)": {
-      "main": [
-        [
-          {
-            "node": "Fechar Lactação Anterior",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fechar Lactação Anterior": {
       "main": [
         [
           {
@@ -4428,7 +5124,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4439,7 +5135,7 @@
       "main": [
         [
           {
-            "node": "Inserir Cobertura",
+            "node": "Get a row",
             "type": "main",
             "index": 0
           }
@@ -4461,7 +5157,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4541,7 +5237,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4585,7 +5281,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4625,7 +5321,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4705,7 +5401,7 @@
       "main": [
         [
           {
-            "node": "Buscar Produção Geral (Hoje)",
+            "node": "Buscar Vacas Propriedade (Geral)",
             "type": "main",
             "index": 0
           }
@@ -4727,7 +5423,7 @@
       "main": [
         [
           {
-            "node": "Tem Cobertura Pendente?",
+            "node": "Selecionar Cobertura Mais Recente",
             "type": "main",
             "index": 0
           }
@@ -4767,7 +5463,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4778,7 +5474,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4822,18 +5518,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Delete a row": {
-      "main": [
-        [
-          {
-            "node": "Preparar Pendência Delete",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4844,18 +5529,7 @@
       "main": [
         [
           {
-            "node": "Delete a row",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Verificar Vaca Existente (Cadastro)": {
-      "main": [
-        [
-          {
-            "node": "Vaca Já Cadastrada?",
+            "node": "Preparar Pendência Delete",
             "type": "main",
             "index": 0
           }
@@ -4884,7 +5558,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4968,7 +5642,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -4990,7 +5664,7 @@
       "main": [
         [
           {
-            "node": "Verificar Vaca Existente (Cadastro)",
+            "node": "Vaca Já Cadastrada?",
             "type": "main",
             "index": 0
           }
@@ -5030,7 +5704,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -5063,7 +5737,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -5074,7 +5748,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -5096,7 +5770,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -5129,7 +5803,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -5191,7 +5865,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -5202,7 +5876,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -5264,7 +5938,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -5275,7 +5949,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -5333,7 +6007,7 @@
       "main": [
         [
           {
-            "node": "Enviar texto",
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -5362,7 +6036,316 @@
       "main": [
         [
           {
+            "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Cobertura Rejeitada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Inserir Cobertura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a row": {
+      "main": [
+        [
+          {
+            "node": "Buscar Partos (Validação Cobertura)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Partos (Validação Cobertura)": {
+      "main": [
+        [
+          {
+            "node": "Validar Cobertura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Cobertura": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cobertura Rejeitada": {
+      "main": [
+        [
+          {
+            "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registro Encontrado (Atualizar)?": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Registro Leite",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registro Não Encontrado (Atualizar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registro Não Encontrado (Atualizar)": {
+      "main": [
+        [
+          {
+            "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Status Usuário": {
+      "main": [
+        [
+          {
+            "node": "Acesso Liberado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acesso Liberado?": {
+      "main": [
+        [
+          {
+            "node": "É Áudio?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Selecionar Cobertura Mais Recente": {
+      "main": [
+        [
+          {
+            "node": "Tem Cobertura Pendente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Buscar Parto Anterior (Ativo)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vaca Encontrada (Leite)?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Parto Ativo (Leite)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Vaca Não Encontrada (Leite)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vaca Não Encontrada (Leite)": {
+      "main": [
+        [
+          {
+            "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Vacas Propriedade (Geral)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Produção Geral (Hoje)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler Flag Áudio": {
+      "main": [
+        [
+          {
+            "node": "Combinar Dados Finais",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Combinar Dados Finais": {
+      "main": [
+        [
+          {
+            "node": "Preparar Entrada Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Origem Áudio? (Principal)": {
+      "main": [
+        [
+          {
+            "node": "Gerar Áudio (OpenAI TTS)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Origem Áudio? (Fallback)": {
+      "main": [
+        [
+          {
+            "node": "Gerar Áudio (OpenAI TTS)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar texto1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar Áudio (OpenAI TTS)": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Enviar Áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vaca Encontrada (Relatório)?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Histórico Leite",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Vaca Não Encontrada (Relatório)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vaca Não Encontrada (Relatório)": {
+      "main": [
+        [
+          {
+            "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
           }
@@ -5370,18 +6353,17 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "f480a1e5-7ac6-4e47-8d51-e1150674085c",
+  "versionId": "70d4b210-6189-4d7f-9e0b-f48bfb2f46f5",
   "meta": {
-    "templateCredsSetupCompleted": true,
     "instanceId": "3c6254208dfc25270c0f6139aedc58cb4cf18d05739e92e54e373b12bd587439"
   },
   "nodeGroups": [],
-  "id": "kjxXbV3ykHB3t6cE",
+  "id": "cTgEznIMPO2HMSxc",
   "tags": []
 }
