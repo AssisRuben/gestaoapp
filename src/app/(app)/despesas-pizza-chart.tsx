@@ -4,6 +4,9 @@ const CORES_STROKE = [
   "stroke-leite",
   "stroke-reproducao",
   "stroke-bezerros",
+  "stroke-ranking",
+  "stroke-alerta",
+  "stroke-agente",
   "stroke-brand-green",
 ];
 const CORES_BG = [
@@ -12,16 +15,23 @@ const CORES_BG = [
   "bg-leite",
   "bg-reproducao",
   "bg-bezerros",
+  "bg-ranking",
+  "bg-alerta",
+  "bg-agente",
   "bg-brand-green",
 ];
 
 const CATEGORIA_LABEL: Record<string, string> = {
   racao: "Ração",
+  medicacao: "Medicação",
   veterinario: "Veterinário",
   combustivel: "Combustível",
+  "energia eletrica": "Energia elétrica",
   "mao de obra": "Mão de obra",
   manutencao: "Manutenção",
-  insumos: "Insumos",
+  "produtos da ordenha": "Produtos da ordenha",
+  "inseminacao artificial": "Inseminação artificial",
+  "custo com pastagem": "Custo com pastagem",
   outros: "Outros",
 };
 
@@ -49,7 +59,13 @@ export function DespesasPizzaChart({
   const itens = [...porCategoria.entries()].sort((a, b) => b[1] - a[1]);
   const total = itens.reduce((soma, [, v]) => soma + v, 0);
 
+  const fatias: { categoria: string; valor: number; comprimento: number; offset: number }[] = [];
   let acumulado = 0;
+  for (const [categoria, valor] of itens) {
+    const comprimento = (valor / total) * CIRC;
+    fatias.push({ categoria, valor, comprimento, offset: -acumulado });
+    acumulado += comprimento;
+  }
 
   return (
     <div className="rounded-2xl border bg-surface border-black/[.08] p-4 dark:border-white/[.145]">
@@ -65,24 +81,19 @@ export function DespesasPizzaChart({
       ) : (
         <div className="flex flex-col items-center gap-5 sm:flex-row">
           <svg viewBox="0 0 140 140" className="h-40 w-40 shrink-0 -rotate-90">
-            {itens.map(([categoria, valor], i) => {
-              const comprimento = (valor / total) * CIRC;
-              const offset = -acumulado;
-              acumulado += comprimento;
-              return (
-                <circle
-                  key={categoria}
-                  cx="70"
-                  cy="70"
-                  r={R}
-                  fill="none"
-                  strokeWidth={STROKE}
-                  strokeDasharray={`${comprimento} ${CIRC - comprimento}`}
-                  strokeDashoffset={offset}
-                  className={CORES_STROKE[i % CORES_STROKE.length]}
-                />
-              );
-            })}
+            {fatias.map(({ categoria, comprimento, offset }, i) => (
+              <circle
+                key={categoria}
+                cx="70"
+                cy="70"
+                r={R}
+                fill="none"
+                strokeWidth={STROKE}
+                strokeDasharray={`${comprimento} ${CIRC - comprimento}`}
+                strokeDashoffset={offset}
+                className={CORES_STROKE[i % CORES_STROKE.length]}
+              />
+            ))}
           </svg>
 
           <ul className="flex w-full flex-col gap-2">

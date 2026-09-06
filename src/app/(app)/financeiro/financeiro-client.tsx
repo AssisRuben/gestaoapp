@@ -35,16 +35,32 @@ function primeiroDiaMesAtualStr() {
 
 // Mesmas categorias e mesmo formato (minúsculo, sem acento) que o prompt do agente de IA do
 // bot de WhatsApp usa/normaliza — assim os dados batem independente de quem lançou.
-const CATEGORIAS_DESPESA = ["racao", "veterinario", "combustivel", "mao de obra", "manutencao", "insumos", "outros"];
+const CATEGORIAS_DESPESA = [
+  "racao",
+  "medicacao",
+  "veterinario",
+  "combustivel",
+  "energia eletrica",
+  "mao de obra",
+  "manutencao",
+  "produtos da ordenha",
+  "inseminacao artificial",
+  "custo com pastagem",
+  "outros",
+];
 const CATEGORIAS_RECEITA = ["venda de leite", "venda de animal", "outros"];
 
 const CATEGORIA_LABEL: Record<string, string> = {
   racao: "Ração",
+  medicacao: "Medicação",
   veterinario: "Veterinário",
   combustivel: "Combustível",
+  "energia eletrica": "Energia elétrica",
   "mao de obra": "Mão de obra",
   manutencao: "Manutenção",
-  insumos: "Insumos",
+  "produtos da ordenha": "Produtos da ordenha",
+  "inseminacao artificial": "Inseminação artificial",
+  "custo com pastagem": "Custo com pastagem",
   "venda de leite": "Venda de leite",
   "venda de animal": "Venda de animal",
   outros: "Outros",
@@ -171,23 +187,29 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
 
   useEffect(() => {
     if (criarState?.success) {
-      criarFormRef.current?.reset();
-      setDrawerAberto(false);
-      mostrarToast("Lançamento salvo!");
+      queueMicrotask(() => {
+        criarFormRef.current?.reset();
+        setDrawerAberto(false);
+        mostrarToast("Lançamento salvo!");
+      });
     }
   }, [criarState, mostrarToast]);
 
   useEffect(() => {
     if (editarState?.success) {
-      setLancamentoEmEdicao(null);
-      mostrarToast("Lançamento atualizado!");
+      queueMicrotask(() => {
+        setLancamentoEmEdicao(null);
+        mostrarToast("Lançamento atualizado!");
+      });
     }
   }, [editarState, mostrarToast]);
 
   useEffect(() => {
     if (excluirState?.success) {
-      setLancamentoParaExcluir(null);
-      mostrarToast("Lançamento excluído!");
+      queueMicrotask(() => {
+        setLancamentoParaExcluir(null);
+        mostrarToast("Lançamento excluído!");
+      });
     }
   }, [excluirState, mostrarToast]);
 

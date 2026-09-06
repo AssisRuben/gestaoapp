@@ -208,10 +208,14 @@ o ideal é portar isso pra funções RPC no Postgres — assim bot e site chamam
 8. **Módulo financeiro** — regras de negócio (hoje só existem no prompt da IA do bot, sem
    enforcement em SQL/JS; considerar mover pra RPC/constraint se o site for a fonte de verdade):
    - `registrar_financeiro`: se a categoria não vier na mensagem, a IA **infere** uma categoria
-     curta e padronizada (ex.: "ração", "veterinário", "combustível", "mão de obra",
-     "manutenção", "venda de leite", "venda de animal", "insumos", "outros"); categoria vazia
-     grava como `'outros'`. Normalização pra minúsculo/sem acento é feita só pela IA no prompt —
-     **não há garantia no banco** de que os dados estejam limpos.
+     curta e padronizada. Lista de categorias em uso (site e bot, definida em
+     `src/app/(app)/financeiro/financeiro-client.tsx`, 2026-09-06): despesa — "ração",
+     "medicação", "veterinário", "combustível", "energia elétrica", "mão de obra", "manutenção",
+     "produtos da ordenha", "inseminação artificial", "custo com pastagem", "outros"; receita —
+     "venda de leite", "venda de animal", "outros". "veterinário" cobre só visita/consulta;
+     remédio/vacina/vermífugo vai em "medicação". Categoria vazia grava como `'outros'`.
+     Normalização pra minúsculo/sem acento é feita só pela IA no prompt — **não há garantia no
+     banco** de que os dados estejam limpos.
    - `consultar_financeiro`: período default (sem `periodo_dias` explícito e sem "hoje" na
      mensagem) é **mês atual + mês passado**. Calcula total de despesas, receitas e saldo, e
      agrupa por `"tipo - categoria"`.
