@@ -252,7 +252,7 @@ export function DashboardClient({
       </div>
 
       <div className="flex flex-row items-end gap-3">
-        <div className="flex flex-1 flex-col gap-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <label htmlFor="dash_inicio" className={LABEL_CLASSES}>
             De
           </label>
@@ -264,7 +264,7 @@ export function DashboardClient({
             className={`w-full ${CAMPO_CLASSES}`}
           />
         </div>
-        <div className="flex flex-1 flex-col gap-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <label htmlFor="dash_fim" className={LABEL_CLASSES}>
             Até
           </label>

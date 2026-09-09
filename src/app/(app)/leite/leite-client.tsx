@@ -94,7 +94,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-row items-end gap-3">
-          <div className="flex flex-1 flex-col gap-1">
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
             <label htmlFor="inicio" className={LABEL_CLASSES}>
               De
             </label>
@@ -106,7 +106,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
               className={`w-full ${CAMPO_CLASSES}`}
             />
           </div>
-          <div className="flex flex-1 flex-col gap-1">
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
             <label htmlFor="fim" className={LABEL_CLASSES}>
               Até
             </label>
