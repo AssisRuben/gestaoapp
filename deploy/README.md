@@ -1,68 +1,46 @@
-# Hospedagem no PC (assisrubens.shop via Cloudflare Tunnel)
+# Hospedagem (assisrubens.shop via Easypanel)
 
-Visão geral: PM2 (`pm2-runtime`) roda o Next.js em produção na porta 3000
-local. O `cloudflared` conecta essa máquina na rede da Cloudflare por uma
-conexão de **saída** (outbound) e expõe `assisrubens.shop` /
-`www.assisrubens.shop` — sem abrir nenhuma porta no roteador, sem depender
-de IP fixo, e com HTTPS resolvido pela própria Cloudflare. Os dois processos
-sobem como **Serviço do Windows** via NSSM, então voltam sozinhos depois de
-reiniciar o PC, sem precisar estar logado.
+> Este documento descrevia antes uma hospedagem self-hosted no PC via
+> Cloudflare Tunnel + NSSM (`GestaoAppNext`/`GestaoAppCloudflared`). Essa
+> configuração foi abandonada — os dois serviços do Windows continuam
+> registrados na máquina, mas **desabilitados**, e não servem tráfego real há
+> tempo. O site roda hoje em outro lugar (abaixo). Os arquivos antigos
+> (`setup-windows-services.ps1`, `cloudflared-config.yml`, `nssm.exe`) ficam
+> aqui só como histórico; não use como referência de deploy atual.
 
-Por que Cloudflare Tunnel em vez de Caddy + port forwarding: o domínio já
-usa os nameservers da Cloudflare, então dá pra usar o Tunnel direto — mais
-simples, funciona mesmo atrás de CGNAT (comum em operadoras brasileiras), e
-não expõe a rede de casa a conexões de entrada da internet.
+## Onde roda hoje
 
-## Já feito nesta sessão
+**Easypanel**, projeto `fazendaleite`, app `gestaopec`
+(`/etc/easypanel/projects/fazendaleite/gestaopec/code/` na VPS). Build via
+Nixpacks (detecta Node 22 pelo `engines` do `package.json`) empacotado em
+Docker; processo final sobe com `npm start` (`next start`).
 
-- `cloudflared` instalado em `C:\cloudflared\cloudflared.exe`, autenticado
-  (`C:\Users\Assis Montenegro\.cloudflared\cert.pem`)
-- Tunnel `gestaoapp` criado (id `11f1ed22-cabd-4632-bc55-a3b2d61a2c9c`)
-- DNS já apontado na Cloudflare: `assisrubens.shop` e `www.assisrubens.shop`
-  → tunnel (CNAME automático, gerenciado pela Cloudflare)
-- Testado manualmente: `https://assisrubens.shop` respondendo HTTP 200
-- `deploy/cloudflared-config.yml` com o ingress pro `localhost:3000`
+## Deploy
 
-## O que falta rodar manualmente
+Disparado manualmente pelo painel do Easypanel (puxa o commit mais recente de
+`origin/main` do GitHub e builda do zero — não é deploy automático em todo
+push). Passos:
 
-### 1. Rodar o script de setup (uma vez, como Administrador)
+1. Dar merge/push do que for deployar em `main`.
+2. No painel do Easypanel, projeto `fazendaleite` → app `gestaopec`, disparar
+   o deploy (rebuild).
+3. Acompanhar o log de build. Se falhar com `npm error network` no passo
+   `npm ci`, é falha transitória de rede do container de build — tentar de
+   novo resolve na maioria das vezes.
+4. Confirmar que voltou no ar: `curl -I https://assisrubens.shop/` (deve
+   redirecionar pra `/login`).
 
-Abrir PowerShell **como Administrador** e rodar:
+## Variáveis de ambiente
 
-```powershell
-cd "C:\Users\Assis Montenegro\Desktop\gestaoapp"
-.\deploy\setup-windows-services.ps1
-```
+Passadas como build args do Docker (`NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`), configuradas
+no painel do Easypanel, não em `.env.local` no repositório.
 
-Isso registra dois serviços do Windows com auto-start e auto-restart em
-crash:
-- `GestaoAppNext` — o site (Next.js via pm2-runtime)
-- `GestaoAppCloudflared` — o túnel
-
-Não precisa mexer em firewall nem no roteador — o tunnel só faz conexão de
-saída.
-
-## Operação do dia a dia
-
-```powershell
-Get-Service GestaoAppNext, GestaoAppCloudflared       # status
-Restart-Service GestaoAppNext                          # aplicar novo deploy
-Get-Content C:\nssm\logs\next-err.log -Tail 50          # logs de erro do site
-Get-Content C:\nssm\logs\cloudflared-err.log -Tail 50   # logs do tunnel
-```
-
-## Deploy de uma atualização de código
-
-```powershell
-git pull
-npm install
-npm run build
-Restart-Service GestaoAppNext
-```
-
-## `.env.local` (na raiz do projeto, nunca commitado)
-
-```
-NEXT_PUBLIC_SUPABASE_URL=https://zlgtkcdscwzxgnltodhb.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon public key do dashboard>
-```
+**Atenção**: o build do Docker já avisa (`SecretsUsedInArgOrEnv`) que
+`SUPABASE_SERVICE_ROLE_KEY` — que dá acesso total ao banco, ignorando RLS —
+fica como `ARG`/`ENV` no Dockerfile gerado, o que grava o valor no histórico
+de camadas da imagem. Isso é gerado automaticamente pelo Nixpacks a partir da
+configuração do Easypanel, não é algo que o código deste repositório
+controla — mas vale revisar no painel se há uma forma de passar essa chave
+como secret em vez de build arg, já que qualquer pessoa com acesso à imagem
+Docker consegue extrair o valor.
