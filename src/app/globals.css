@@ -134,3 +134,12 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Indicador de foco visível só pra navegação por teclado (não aparece em
+   clique de mouse). Fica fora de qualquer @layer de propósito: regras sem
+   layer sempre vencem as utilities do Tailwind (inclusive o outline-none
+   usado nos inputs/botões do app), sem precisar de !important. */
+*:focus-visible {
+  outline: 2px solid var(--color-alerta);
+  outline-offset: 2px;
+}
