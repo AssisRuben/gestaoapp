@@ -150,7 +150,7 @@ export function ReproducaoClient({
   }, [partos, busca]);
 
   return (
-    <div className="flex flex-1 flex-col gap-4 pb-20 sm:pb-0">
+    <div className="flex flex-1 flex-col gap-4 pb-52 sm:pb-0">
       <SuccessToast mensagem={mensagemToast} />
 
       <div className="flex items-center justify-between">
@@ -158,11 +158,19 @@ export function ReproducaoClient({
         <button
           type="button"
           onClick={() => setDrawerAberto(true)}
-          className="whitespace-nowrap rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark"
+          className="hidden whitespace-nowrap rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark sm:inline-flex"
         >
           + Nova Cobertura
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setDrawerAberto(true)}
+        className="fixed bottom-20 right-4 z-30 rounded-full bg-brand-green px-5 py-3 text-sm font-medium text-white shadow-lg transition-colors hover:bg-brand-green-dark sm:hidden"
+      >
+        + Nova Cobertura
+      </button>
 
       <input
         type="text"
@@ -270,11 +278,19 @@ export function ReproducaoClient({
         <button
           type="button"
           onClick={() => setDrawerPartoAberto(true)}
-          className="whitespace-nowrap rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark"
+          className="hidden whitespace-nowrap rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark sm:inline-flex"
         >
           + Novo Parto
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setDrawerPartoAberto(true)}
+        className="fixed bottom-36 right-4 z-30 rounded-full bg-brand-green px-5 py-3 text-sm font-medium text-white shadow-lg transition-colors hover:bg-brand-green-dark sm:hidden"
+      >
+        + Novo Parto
+      </button>
 
       <div className="hidden overflow-x-auto rounded-2xl border bg-surface border-black/[.08] sm:block dark:border-white/[.145]">
         <table className="w-full text-left text-base">

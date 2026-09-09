@@ -139,7 +139,7 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
   }, [bezerros, busca]);
 
   return (
-    <div className="flex flex-1 flex-col gap-4 pb-20 sm:pb-0">
+    <div className="flex flex-1 flex-col gap-4 pb-36 sm:pb-0">
       <SuccessToast mensagem={mensagemToast} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">

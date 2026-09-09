@@ -48,7 +48,7 @@ export function FazendaTrigger({
         <button
           type="button"
           onClick={abrir}
-          className="max-w-full truncate text-lg font-bold text-black hover:underline sm:text-2xl lg:text-3xl dark:text-zinc-50"
+          className="max-w-full truncate text-lg font-bold text-black hover:underline lg:text-3xl dark:text-zinc-50"
         >
           {propriedade.nome_propriedade}
         </button>

@@ -89,7 +89,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
   }, [registros, registroEmEdicao]);
 
   return (
-    <div className="flex flex-1 flex-col gap-4 pb-20 sm:pb-0">
+    <div className="flex flex-1 flex-col gap-4 pb-36 sm:pb-0">
       <SuccessToast mensagem={mensagemToast} />
 
       <div className="flex flex-col gap-3">
