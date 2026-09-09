@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { registrarLancamento, atualizarLancamento, deletarLancamento } from "./actions";
 import { MobileCardList, MobileCard, CardHeader, CardRow } from "../mobile-list";
 import { useSuccessToast, SuccessToast } from "../toast";
+import { formatarDataBR } from "../format";
 import type { Lancamento } from "./types";
 
 const TIPO_LABEL: Record<string, string> = {
@@ -326,7 +327,7 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
                   i % 2 === 1 ? "bg-black/[.02] dark:bg-white/[.03]" : ""
                 }`}
               >
-                <td className="px-4 py-2 text-black dark:text-zinc-50">{lancamento.data}</td>
+                <td className="px-4 py-2 text-black dark:text-zinc-50">{formatarDataBR(lancamento.data)}</td>
                 <td className={`px-4 py-2 ${TIPO_CLASSES[lancamento.tipo]}`}>
                   {TIPO_LABEL[lancamento.tipo] ?? lancamento.tipo}
                 </td>
@@ -362,7 +363,7 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
               }
             />
             <CardRow label="Tipo" value={TIPO_LABEL[lancamento.tipo] ?? lancamento.tipo} />
-            <CardRow label="Data" value={lancamento.data} />
+            <CardRow label="Data" value={formatarDataBR(lancamento.data)} />
           </MobileCard>
         ))}
         {lancamentosFiltrados.length === 0 && (
@@ -488,7 +489,8 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               {TIPO_LABEL[lancamentoParaExcluir.tipo]} de{" "}
               {formatarMoeda(Number(lancamentoParaExcluir.valor))} em{" "}
-              {lancamentoParaExcluir.categoria ?? "outros"} ({lancamentoParaExcluir.data}). Essa ação
+              {lancamentoParaExcluir.categoria ?? "outros"} ({formatarDataBR(lancamentoParaExcluir.data)}). Essa
+              ação
               não pode ser desfeita.
             </p>
 

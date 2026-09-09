@@ -8,6 +8,7 @@ import { confirmarSecagem, confirmarDiagnostico } from "./dashboard-actions";
 import { TagIcon, MilkIcon, MoneyIcon } from "./nav-icons";
 import { useSuccessToast, SuccessToast } from "./toast";
 import { Meter } from "./meter";
+import { formatarDataBR } from "./format";
 import type { Propriedade } from "@/lib/propriedade";
 
 const CAMPO_CLASSES =
@@ -22,6 +23,31 @@ function hojeStr() {
 // e "R$ 2.145,87" estourava a largura do card num celular estreito.
 const formatarMoeda = (valor: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(valor);
+
+type Urgencia = "atrasado" | "proximo" | "normal";
+
+const URGENCIA_CLASSES: Record<Urgencia, string> = {
+  atrasado: "text-alerta-ink font-semibold",
+  proximo: "text-alerta-ink",
+  normal: "text-zinc-600 dark:text-zinc-400",
+};
+
+// "Vacas pra secar": secagemPrevista é a data limite — atrasado se já passou.
+function urgenciaSecagem(secagemPrevista: string, hoje: string): Urgencia {
+  const diffDias = (Date.parse(secagemPrevista) - Date.parse(hoje)) / 86_400_000;
+  if (diffDias < 0) return "atrasado";
+  if (diffDias <= 7) return "proximo";
+  return "normal";
+}
+
+// "Diagnósticos pendentes": data_cobertura é quando a cobertura foi feita, não
+// um prazo — considera atrasado se já faz bastante tempo sem diagnóstico.
+function urgenciaDiagnostico(dataCobertura: string, hoje: string): Urgencia {
+  const diasDesde = (Date.parse(hoje) - Date.parse(dataCobertura)) / 86_400_000;
+  if (diasDesde > 60) return "atrasado";
+  if (diasDesde > 45) return "proximo";
+  return "normal";
+}
 
 function ConfirmarSecagemModal({
   vaca,
@@ -286,7 +312,7 @@ export function DashboardClient({
             <MoneyIcon className="h-5 w-5 text-financeiro-ink" />
           </span>
           <p
-            className={`w-full truncate text-center font-mono text-xl font-bold tabular-nums sm:text-2xl ${saldoPeriodo >= 0 ? "text-brand-green" : "text-red-600 dark:text-red-400"}`}
+            className={`w-full text-center font-mono text-lg font-bold tabular-nums sm:text-2xl ${saldoPeriodo >= 0 ? "text-brand-green" : "text-red-600 dark:text-red-400"}`}
           >
             {formatarMoeda(saldoPeriodo)}
           </p>
@@ -343,7 +369,9 @@ export function DashboardClient({
                   }`}
                 >
                   <td className="px-4 py-2 text-black dark:text-zinc-50">Vaca {v.numero}</td>
-                  <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">{v.secagemPrevista}</td>
+                  <td className={`px-4 py-2 ${URGENCIA_CLASSES[urgenciaSecagem(v.secagemPrevista, hojeStr())]}`}>
+                    {formatarDataBR(v.secagemPrevista)}
+                  </td>
                   <td className="px-4 py-2 text-right">
                     <button
                       type="button"
@@ -386,7 +414,11 @@ export function DashboardClient({
                   }`}
                 >
                   <td className="px-4 py-2 text-black dark:text-zinc-50">Vaca {d.numero}</td>
-                  <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">{d.data_cobertura}</td>
+                  <td
+                    className={`px-4 py-2 ${URGENCIA_CLASSES[urgenciaDiagnostico(d.data_cobertura, hojeStr())]}`}
+                  >
+                    {formatarDataBR(d.data_cobertura)}
+                  </td>
                   <td className="px-4 py-2 text-right">
                     <button
                       type="button"

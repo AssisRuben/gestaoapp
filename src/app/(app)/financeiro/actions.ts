@@ -22,12 +22,17 @@ export async function registrarLancamento(
     return { error: "Nenhuma propriedade vinculada à sua conta." };
   }
 
+  const valor = Number(formData.get("valor"));
+  if (!valor || valor <= 0) {
+    return { error: "Informe um valor maior que zero." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.from("financeiro").insert({
     propriedade_id: propriedadeAtual.id,
     tipo: formData.get("tipo") as string,
     categoria: normalizarCategoria((formData.get("categoria") as string) ?? ""),
-    valor: Number(formData.get("valor")),
+    valor,
     data: formData.get("data") as string,
   });
 
@@ -48,13 +53,18 @@ export async function atualizarLancamento(
 ): Promise<AtualizarLancamentoState> {
   const id = formData.get("id") as string;
 
+  const valor = Number(formData.get("valor"));
+  if (!valor || valor <= 0) {
+    return { error: "Informe um valor maior que zero." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("financeiro")
     .update({
       tipo: formData.get("tipo") as string,
       categoria: normalizarCategoria((formData.get("categoria") as string) ?? ""),
-      valor: Number(formData.get("valor")),
+      valor,
       data: formData.get("data") as string,
     })
     .eq("id", id);

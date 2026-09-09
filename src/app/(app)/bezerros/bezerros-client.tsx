@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { cadastrarBezerro, atualizarBezerro, deletarBezerro } from "./actions";
 import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../mobile-list";
 import { useSuccessToast, SuccessToast } from "../toast";
+import { formatarDataBR } from "../format";
 import type { Bezerro, VacaOpcao } from "./types";
 
 const SEXO_LABEL: Record<string, string> = {
@@ -26,7 +27,7 @@ function CamposBezerro({
 }: {
   vacas: VacaOpcao[];
   numeroObrigatorio?: boolean;
-  defaultNumero?: number;
+  defaultNumero?: number | null;
   defaultMaeId?: string;
   defaultSexo?: string;
   defaultDataNascimento?: string;
@@ -43,7 +44,7 @@ function CamposBezerro({
           type="number"
           required={numeroObrigatorio}
           placeholder={numeroObrigatorio ? undefined : "automático"}
-          defaultValue={defaultNumero}
+          defaultValue={defaultNumero ?? undefined}
           className={CAMPO_CLASSES}
         />
       </div>
@@ -188,7 +189,7 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
                   {bezerro.sexo ? SEXO_LABEL[bezerro.sexo] ?? bezerro.sexo : "—"}
                 </td>
                 <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
-                  {bezerro.data_nascimento ?? "—"}
+                  {bezerro.data_nascimento ? formatarDataBR(bezerro.data_nascimento) : "—"}
                 </td>
                 <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
                   {bezerro.vaca_gerada
@@ -212,7 +213,7 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
         {bezerrosFiltrados.map((bezerro) => (
           <MobileCard key={bezerro.id} onClick={() => setBezerroEmEdicao(bezerro)}>
             <CardHeader
-              title={`Bezerro ${bezerro.numero_identificacao}`}
+              title={`Bezerro ${bezerro.numero_identificacao ?? "sem número"}`}
               accentClassName="bg-bezerros"
               badge={
                 <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-sm font-medium text-zinc-600 dark:text-zinc-400">
@@ -221,7 +222,10 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
               }
             />
             <CardRow label="Mãe" value={bezerro.mae ? bezerro.mae.numero_identificacao : "—"} />
-            <CardRow label="Nascimento" value={bezerro.data_nascimento ?? "—"} />
+            <CardRow
+              label="Nascimento"
+              value={bezerro.data_nascimento ? formatarDataBR(bezerro.data_nascimento) : "—"}
+            />
             <CardRow
               label="Virou vaca?"
               value={
@@ -290,7 +294,7 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
             <input type="hidden" name="bezerro_id" value={bezerroEmEdicao.id} />
 
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">
-              Editar bezerro {bezerroEmEdicao.numero_identificacao}
+              Editar bezerro {bezerroEmEdicao.numero_identificacao ?? "sem número"}
             </h2>
 
             <CamposBezerro
@@ -350,7 +354,8 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
 
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Excluir bezerro?</h2>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Bezerro {bezerroParaExcluir.numero_identificacao}. Essa ação não pode ser desfeita.
+              Bezerro {bezerroParaExcluir.numero_identificacao ?? "sem número"}. Essa ação não pode ser
+              desfeita.
             </p>
 
             {excluirState?.error && (

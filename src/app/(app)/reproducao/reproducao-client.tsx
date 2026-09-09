@@ -11,6 +11,7 @@ import {
 } from "./actions";
 import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../mobile-list";
 import { useSuccessToast, SuccessToast } from "../toast";
+import { formatarDataBR } from "../format";
 import type { Cobertura, Parto, VacaOpcao } from "./types";
 
 const SEXO_BEZERRO_LABEL: Record<string, string> = {
@@ -203,7 +204,7 @@ export function ReproducaoClient({
                     {cobertura.vaca.numero_identificacao}
                   </td>
                   <td className="px-4 py-2 text-black dark:text-zinc-50">
-                    {cobertura.data_cobertura}
+                    {formatarDataBR(cobertura.data_cobertura)}
                   </td>
                   <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
                     {cobertura.touro_semen ?? "—"}
@@ -212,10 +213,10 @@ export function ReproducaoClient({
                     {DIAGNOSTICO_LABEL[cobertura.diagnostico_prenhez] ?? cobertura.diagnostico_prenhez}
                   </td>
                   <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
-                    {partoPrevisto ?? "—"}
+                    {partoPrevisto ? formatarDataBR(partoPrevisto) : "—"}
                   </td>
                   <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
-                    {secagemPrevista ?? "—"}
+                    {secagemPrevista ? formatarDataBR(secagemPrevista) : "—"}
                   </td>
                 </tr>
               );
@@ -252,10 +253,10 @@ export function ReproducaoClient({
                   </span>
                 }
               />
-              <CardRow label="Data cobertura" value={cobertura.data_cobertura} />
+              <CardRow label="Data cobertura" value={formatarDataBR(cobertura.data_cobertura)} />
               <CardRow label="Touro/Sêmen" value={cobertura.touro_semen ?? "—"} />
-              <CardRow label="Parto previsto" value={partoPrevisto ?? "—"} />
-              <CardRow label="Secagem prevista" value={secagemPrevista ?? "—"} />
+              <CardRow label="Parto previsto" value={partoPrevisto ? formatarDataBR(partoPrevisto) : "—"} />
+              <CardRow label="Secagem prevista" value={secagemPrevista ? formatarDataBR(secagemPrevista) : "—"} />
             </MobileCard>
           );
         })}
@@ -297,7 +298,7 @@ export function ReproducaoClient({
                 <td className="px-4 py-2 text-black dark:text-zinc-50">
                   {parto.vaca.numero_identificacao}
                 </td>
-                <td className="px-4 py-2 text-black dark:text-zinc-50">{parto.data_parto}</td>
+                <td className="px-4 py-2 text-black dark:text-zinc-50">{formatarDataBR(parto.data_parto)}</td>
                 <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">{parto.iep ?? "—"}</td>
                 <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
                   {parto.ativa ? "Sim" : "Não"}
@@ -333,7 +334,7 @@ export function ReproducaoClient({
                 </span>
               }
             />
-            <CardRow label="Data do parto" value={parto.data_parto} />
+            <CardRow label="Data do parto" value={formatarDataBR(parto.data_parto)} />
             <CardRow label="IEP (dias)" value={parto.iep ?? "—"} />
           </MobileCard>
         ))}

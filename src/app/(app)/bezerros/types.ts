@@ -8,7 +8,7 @@ export type Bezerro = {
   parto_id: string | null;
   mae_id: string | null;
   vaca_id_gerada: string | null;
-  numero_identificacao: number;
+  numero_identificacao: number | null;
   sexo: Sexo | null;
   data_nascimento: string | null;
   created_at: string;
