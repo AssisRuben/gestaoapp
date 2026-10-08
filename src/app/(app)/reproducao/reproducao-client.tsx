@@ -12,7 +12,16 @@ import {
 import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../mobile-list";
 import { useSuccessToast, SuccessToast } from "../toast";
 import { formatarDataBR } from "../format";
-import type { Cobertura, Parto, VacaOpcao } from "./types";
+import { DosesPrograma, CamposTouro } from "./doses-programa";
+import type {
+  Cobertura,
+  Parto,
+  VacaOpcao,
+  Touro,
+  EntregaDoses,
+  SaldoDoses,
+  BaixaDoses,
+} from "./types";
 
 const SEXO_BEZERRO_LABEL: Record<string, string> = {
   macho: "Macho",
@@ -36,6 +45,14 @@ const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
 const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
 
+function SeloPrograma() {
+  return (
+    <span className="ml-2 rounded-full bg-reproducao-tint px-2 py-0.5 text-xs font-semibold text-reproducao-ink">
+      Programa
+    </span>
+  );
+}
+
 function hoje() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -50,10 +67,18 @@ export function ReproducaoClient({
   coberturas,
   partos,
   vacas,
+  touros,
+  entregas,
+  saldos,
+  baixas,
 }: {
   coberturas: Cobertura[];
   partos: Parto[];
   vacas: VacaOpcao[];
+  touros: Touro[];
+  entregas: EntregaDoses[];
+  saldos: SaldoDoses[];
+  baixas: BaixaDoses[];
 }) {
   const [busca, setBusca] = useState("");
   const [drawerAberto, setDrawerAberto] = useState(false);
@@ -153,6 +178,14 @@ export function ReproducaoClient({
     <div className="flex flex-1 flex-col gap-4 pb-52 sm:pb-0">
       <SuccessToast mensagem={mensagemToast} />
 
+      <DosesPrograma
+        touros={touros}
+        entregas={entregas}
+        saldos={saldos}
+        baixas={baixas}
+        onConfirmado={mostrarToast}
+      />
+
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Coberturas</h2>
         <button
@@ -216,6 +249,7 @@ export function ReproducaoClient({
                   </td>
                   <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
                     {cobertura.touro_semen ?? "—"}
+                    {cobertura.dose_programa && <SeloPrograma />}
                   </td>
                   <td className={`px-4 py-2 ${DIAGNOSTICO_CLASSES[cobertura.diagnostico_prenhez]}`}>
                     {DIAGNOSTICO_LABEL[cobertura.diagnostico_prenhez] ?? cobertura.diagnostico_prenhez}
@@ -262,7 +296,15 @@ export function ReproducaoClient({
                 }
               />
               <CardRow label="Data cobertura" value={formatarDataBR(cobertura.data_cobertura)} />
-              <CardRow label="Touro/Sêmen" value={cobertura.touro_semen ?? "—"} />
+              <CardRow
+                label="Touro/Sêmen"
+                value={
+                  <>
+                    {cobertura.touro_semen ?? "—"}
+                    {cobertura.dose_programa && <SeloPrograma />}
+                  </>
+                }
+              />
               <CardRow label="Parto previsto" value={partoPrevisto ? formatarDataBR(partoPrevisto) : "—"} />
               <CardRow label="Secagem prevista" value={secagemPrevista ? formatarDataBR(secagemPrevista) : "—"} />
             </MobileCard>
@@ -567,12 +609,7 @@ export function ReproducaoClient({
               />
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label htmlFor="touro_semen" className={LABEL_CLASSES}>
-                Touro/Sêmen (opcional)
-              </label>
-              <input id="touro_semen" name="touro_semen" type="text" className={CAMPO_CLASSES} />
-            </div>
+            <CamposTouro touros={touros} saldos={saldos} />
 
             {criarState?.error && (
               <p className="text-sm text-red-600 dark:text-red-400">{criarState.error}</p>
@@ -626,18 +663,13 @@ export function ReproducaoClient({
               />
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label htmlFor="touro_semen" className={LABEL_CLASSES}>
-                Touro/Sêmen (opcional)
-              </label>
-              <input
-                id="touro_semen"
-                name="touro_semen"
-                type="text"
-                defaultValue={coberturaEmEdicao.touro_semen ?? ""}
-                className={CAMPO_CLASSES}
-              />
-            </div>
+            <CamposTouro
+              touros={touros}
+              saldos={saldos}
+              touroIdInicial={coberturaEmEdicao.touro_id ?? ""}
+              doseProgramaInicial={coberturaEmEdicao.dose_programa}
+              touroSemenInicial={coberturaEmEdicao.touro_id ? "" : (coberturaEmEdicao.touro_semen ?? "")}
+            />
 
             <div className="flex flex-col gap-1">
               <label htmlFor="diagnostico_prenhez" className={LABEL_CLASSES}>

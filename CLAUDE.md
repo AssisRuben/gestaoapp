@@ -263,21 +263,84 @@ devem ser reintroduzidos ao portar lógica pro site/RPC.
 6. **`remoteJid` hardcoded no nó de envio de resposta** — toda resposta do bot vai pro mesmo
    número de WhatsApp fixo, independente de quem mandou a mensagem original. Provavelmente
    artefato de ambiente de teste (só um produtor testando hoje), mas bloqueante pra uso
-   multi-fazenda real caso ainda esteja assim quando o site for ao ar.
+   multi-fazenda real caso ainda esteja assim quando o site for ao ar. **Corrigido no JSON do repo
+   (0022)**: os 3 nós de envio usam o remoteJid do webhook — vale só depois de reimportar no n8n.
 7. **`usuarios_whatsapp.ativo` nunca é checado** — `Identificar Usuario` filtra só por
    `telefone`. Desativar um usuário no banco não impede que ele continue interagindo com o bot.
 8. **`tipo_relatorio='geral'` não tem branch próprio** — o switch só trata explicitamente
    `reprodutivo` e `cadastro`; qualquer outro valor (incluindo `geral` e `leite`) cai no relatório
    de produção de leite.
 
+## Programa de doação de sêmen (0018_programa_semen.sql)
+
+- `touros`: catálogo central (sem propriedade_id). Só o gestor escreve; qualquer usuário logado lê.
+- `entregas_doses`: o gestor registra a entrega (pode corrigir/excluir enquanto não confirmada); a
+  fazenda confirma via `confirmar_recebimento_doses`. Só entregas confirmadas entram no saldo.
+- Saldo (view `saldo_doses`) é sempre calculado: recebidas − coberturas com `dose_programa` −
+  baixas, **somando `coberturas_historico`** (registrar_parto arquiva coberturas; sem o histórico a
+  dose "voltaria" a cada parto). Excluir a cobertura devolve a dose.
+- `baixas_doses` (0021): dose que sai do saldo sem virar inseminação (perda, descarte,
+  transferência). A fazenda registra/desfaz via `registrar_baixa_doses`/`deletar_baixa_doses`.
+- Coberturas do bot gastam dose desde 0022 (ver seção do bot abaixo).
+- `indicadores_reprodutivos_programa` (0021): por fazenda, só doses do programa — taxa de
+  concepção (positivas ÷ diagnosticadas; pendentes fora), doses por prenhez, gestações em curso,
+  nascimentos. `bezerros.dose_programa` marca o bezerro nascido de dose do programa.
+- registrar_parto (desde 0021) só vincula cobertura positiva que **ainda não gerou parto** — antes,
+  um segundo parto sem cobertura nova herdava a cobertura (e o touro/dose) do parto anterior.
+- `registrar_cobertura`/`atualizar_cobertura` bloqueiam dose sem saldo (`_garantir_saldo_dose`).
+- `bezerros.touro_id` (pai) é gravado em registrar_parto a partir da cobertura vinculada — fica no
+  bezerro porque `bezerros.parto_id` é zerado quando a lactação é arquivada.
+- O gestor escreve só em touros, entregas e adesões; as RPCs de dados da fazenda continuam sem
+  enxergá-lo.
+
+### Adesão e linha de base (0019_adesao_linha_base.sql)
+
+- `adesoes_programa`: uma linha por fazenda, com data de adesão e a linha de base **gravada**
+  (congelada — lançamento retroativo não muda o ponto de partida). O gestor registra; o sistema
+  sugere os valores via `sugerir_linha_base` e o gestor revisa (fazenda nova não tem histórico, aí
+  vale o diagnóstico da visita).
+- `calcular_indicadores(propriedade, data)` é a régua única da linha de base e do valor de hoje
+  (`indicadores_atuais_programa()`): litros/vaca/dia = média das pesagens (soma por vaca/dia) nos
+  30 dias até a data; produção/dia = isso × vacas em lactação; receita/despesa = média dos meses com
+  lançamento nos 12 meses até a data; custo/litro = despesa mensal ÷ (produção/dia × 30). Rebanho
+  usa o status ATUAL das vacas (não há histórico de status).
+
+## Painel do gestor (0020_gestor_dados_reais.sql)
+
+- Todas as abas leem dados reais, agregados no banco: `leite_diario_propriedade` e
+  `financeiro_diario_propriedade` (uma linha por fazenda/dia, incluindo lactações arquivadas),
+  `resumo_fazendas` (rebanho, último lançamento, IEP, WhatsApp de contato) e
+  `indicadores_todas_fazendas()` (régua de calcular_indicadores).
+- **Limite de 1000 linhas do PostgREST** (max_rows padrão do Supabase): uma consulta maior é cortada
+  sem erro. TODA leitura de lista em src/lib/cached-data.ts passa por `buscarTodasPaginas` — ao
+  criar uma nova, use o helper e termine a ordenação num campo único (ex.: id).
+- Aba Agente lê `interacoes_log`, mas o workflow do bot exportado no repo **não grava** nessa
+  tabela: a tela fica vazia até o bot ganhar um nó de insert (propriedade_id, intencao_detectada,
+  mensagem_recebida, resposta_enviada).
+
 ## O que NÃO existe ainda (gaps conhecidos)
 
-- Touro/sêmen usado na cobertura não é persistido
+- Touro/sêmen: `coberturas.touro_semen` (texto, 0006) e, desde 0018, `touro_id` do catálogo
+  central. Até 0022 o bot gravava o texto num campo `touro`; coberturas antigas do bot podem ter o
+  touro só ali (ou em lugar nenhum, se essa coluna não existir no banco)
 - `patrimonio` não tem nenhuma integração com o bot ainda
 - Não existe tabela de vínculo técnico↔propriedades (necessária se o veterinário/zootecnista for
   atender mais de uma propriedade no site)
 - Relatório de cadastro/censo (`tipo_relatorio=cadastro`: total de vacas agrupado por
   `status_produtivo`/`status_reprodutivo`) existe no bot mas não está portado/planejado pro site
+
+## Bot usando as funções do banco (0022_bot_registro.sql)
+
+- Cobertura e parto pelo WhatsApp passam por `bot_registrar_cobertura`/`bot_registrar_parto`
+  (nós HTTP "Registrar Cobertura (RPC)" e "Registrar Parto (RPC)" no workflow), que identificam a
+  fazenda pelo telefone e chamam as mesmas funções internas do site (`_registrar_cobertura`,
+  `_registrar_parto`). Só a service role executa. Devolvem `{ok, mensagem}` — nunca erro.
+- O touro falado é procurado no catálogo por nome ou código (sem acento/maiúscula/espaço); se a
+  fazenda tem saldo desse touro, a cobertura gasta dose do programa.
+- Nó "Registrar Interação (Log)" grava toda resposta em `interacoes_log` (ramo paralelo, não
+  bloqueia a resposta). Intenção `confirmacao_exclusao` = resposta SIM/NÃO de exclusão.
+- Os nós de envio (Evolution) respondem pro remoteJid do webhook — antes era um número fixo.
+- A URL do Supabase está escrita nos nós HTTP (https://zlgtkcdscwzxgnltodhb.supabase.co).
 
 ## Infra do bot (não afeta schema, mas relevante pra UX se o site replicar)
 

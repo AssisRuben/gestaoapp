@@ -98,3 +98,13 @@ export function ChatIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export function StrawIcon({ className }: { className?: string }) {
+  return (
+    <svg {...commonProps} className={className}>
+      <rect x="10" y="3" width="4" height="18" rx="2" />
+      <line x1="10" y1="8" x2="14" y2="8" />
+      <line x1="10" y1="16" x2="14" y2="16" />
+    </svg>
+  );
+}

@@ -4,14 +4,12 @@ import { useMemo, useState } from "react";
 import { Meter } from "../(app)/meter";
 import { CearaMap } from "./ceara-map";
 import { TagIcon, MilkIcon, MoneyIcon, CycleIcon } from "../(app)/nav-icons";
+import { hojeBrasil, type LeiteDiario, type FinanceiroDiario } from "@/lib/gestor";
 
 const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
 const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
 
-function hojeStr() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 const formatarMoeda = (valor: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(valor);
@@ -36,11 +34,11 @@ export function GestorDashboardClient({
   iepMedio,
 }: {
   fazendas: Fazenda[];
-  registrosLeite: { propriedade_id: string; litros: number; data_controle: string }[];
-  lancamentos: { propriedade_id: string; tipo: string; valor: number; data: string }[];
+  registrosLeite: LeiteDiario[];
+  lancamentos: FinanceiroDiario[];
   iepMedio: number | null;
 }) {
-  const hoje = hojeStr();
+  const hoje = hojeBrasil();
   const [inicio, setInicio] = useState(`${hoje.slice(0, 7)}-01`);
   const [fim, setFim] = useState(hoje);
   const [fazendaSelecionadaId, setFazendaSelecionadaId] = useState<string | null>(null);
@@ -49,7 +47,7 @@ export function GestorDashboardClient({
     setFazendaSelecionadaId((atual) => (atual === id ? null : id));
 
   const registrosFiltrados = useMemo(
-    () => registrosLeite.filter((r) => r.data_controle >= inicio && r.data_controle <= fim),
+    () => registrosLeite.filter((r) => r.data >= inicio && r.data <= fim),
     [registrosLeite, inicio, fim],
   );
   const lancamentosFiltrados = useMemo(
@@ -68,8 +66,7 @@ export function GestorDashboardClient({
   const saldoPorFazenda = useMemo(() => {
     const mapa = new Map<string, number>();
     for (const l of lancamentosFiltrados) {
-      const delta = l.tipo === "receita" ? l.valor : -l.valor;
-      mapa.set(l.propriedade_id, (mapa.get(l.propriedade_id) ?? 0) + delta);
+      mapa.set(l.propriedade_id, (mapa.get(l.propriedade_id) ?? 0) + l.receita - l.despesa);
     }
     return mapa;
   }, [lancamentosFiltrados]);
@@ -103,19 +100,16 @@ export function GestorDashboardClient({
   const mediaSaldoPorFazenda = fazendas.length ? saldoTotal / fazendas.length : 0;
 
   const vacasTotalSoma = fazendas.reduce((soma, f) => soma + f.vacasTotal, 0);
-  const vacasEmLactacaoSoma = fazendas.reduce((soma, f) => soma + f.vacasEmLactacao, 0);
   const mediaVacasPorFazenda = fazendas.length ? vacasTotalSoma / fazendas.length : 0;
 
-  // Produção média por vaca em lactação por dia — indicador clássico de produtividade
-  // (litros/vaca/dia), não depende de "por fazenda", é o total do período dividido pelos dias e
-  // pelo total de vacas em lactação em todas as fazendas.
-  const numDiasPeriodo = useMemo(() => {
-    const d1 = new Date(`${inicio}T00:00:00`);
-    const d2 = new Date(`${fim}T00:00:00`);
-    return Math.max(1, Math.round((d2.getTime() - d1.getTime()) / 86400000) + 1);
-  }, [inicio, fim]);
-  const producaoMediaPorVacaDia =
-    vacasEmLactacaoSoma > 0 ? litrosTotal / numDiasPeriodo / vacasEmLactacaoSoma : 0;
+  // Produção média por vaca/dia (litros/vaca/dia): média das pesagens do período (soma dos litros
+  // ÷ vacas pesadas), mesma régua de calcular_indicadores — não depende de toda vaca ser pesada
+  // todo dia (controle leiteiro mensal também dá o número certo).
+  const pesagensTotal = useMemo(
+    () => registrosFiltrados.reduce((soma, r) => soma + r.pesagens, 0),
+    [registrosFiltrados],
+  );
+  const producaoMediaPorVacaDia = pesagensTotal > 0 ? litrosTotal / pesagensTotal : 0;
 
   const fazendasParaMapa = useMemo(
     () =>

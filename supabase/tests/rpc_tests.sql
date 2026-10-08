@@ -1,5 +1,7 @@
 -- Testes de regressão para as funções RPC de negócio: cadastrar_vaca, registrar_parto
--- (incluindo o arquivamento de lactação encerrada), secar_vaca e confirmar_diagnostico.
+-- (incluindo o arquivamento de lactação encerrada), secar_vaca, confirmar_diagnostico, o
+-- saldo e baixa de doses do programa de sêmen, indicadores reprodutivos do programa, as
+-- funções do bot do WhatsApp e o cálculo de indicadores da linha de base.
 --
 -- Como rodar: cole este arquivo inteiro no SQL Editor do Supabase e execute. Roda inteiro
 -- dentro de uma transação e sempre termina com ROLLBACK — não deixa nenhum dado de teste
@@ -30,6 +32,23 @@ declare
   v_parto_1 partos;
   v_parto_2 partos;
   v_status text;
+  v_touro_id uuid;
+  v_entrega_id uuid;
+  v_vaca_prog_id uuid;
+  v_cob_prog_1 uuid;
+  v_cob_prog_2 uuid;
+  v_cob_prog_3 uuid;
+  v_saldo integer;
+  v_prop_ind uuid;
+  v_vaca_a uuid;
+  v_vaca_b uuid;
+  v_vaca_c uuid;
+  v_parto_a uuid;
+  v_parto_b uuid;
+  v_ind record;
+  v_baixa_id uuid;
+  v_bezerro_parto2 bezerros;
+  v_bot jsonb;
 begin
   select id into v_usuario_id from auth.users limit 1;
   if v_usuario_id is null then
@@ -223,6 +242,306 @@ begin
       raise exception 'FALHOU [confirmar_diagnostico]: erro inesperado no teste de valor inválido: %', sqlerrm;
     end if;
   end;
+
+  -- ============================================================
+  -- programa de sêmen: saldo de doses (0018_programa_semen.sql)
+  -- ============================================================
+
+  insert into touros (nome, codigo) values ('__touro_teste__', '__TESTE__') returning id into v_touro_id;
+  insert into entregas_doses (propriedade_id, touro_id, quantidade, data_entrega)
+  values (v_propriedade_id, v_touro_id, 3, current_date - 320)
+  returning id into v_entrega_id;
+
+  v_vaca_prog_id := (cadastrar_vaca(v_propriedade_id)).id;
+
+  begin
+    perform registrar_cobertura(v_vaca_prog_id, current_date - 300, null, v_touro_id, true);
+    raise exception 'FALHOU [programa]: entrega não confirmada não deveria dar saldo';
+  exception when others then
+    if sqlerrm not ilike '%confirme o recebimento%' then
+      raise exception 'FALHOU [programa]: erro inesperado sem confirmação: %', sqlerrm;
+    end if;
+  end;
+
+  perform confirmar_recebimento_doses(v_entrega_id);
+
+  begin
+    perform confirmar_recebimento_doses(v_entrega_id);
+    raise exception 'FALHOU [programa]: não deveria confirmar a mesma entrega duas vezes';
+  exception when others then
+    if sqlerrm not ilike '%já foi confirmada%' then
+      raise exception 'FALHOU [programa]: erro inesperado na confirmação dupla: %', sqlerrm;
+    end if;
+  end;
+
+  v_cob_prog_1 := (registrar_cobertura(v_vaca_prog_id, current_date - 300, null, v_touro_id, true)).id;
+  if (select touro_semen from coberturas where id = v_cob_prog_1) is distinct from '__touro_teste__' then
+    raise exception 'FALHOU [programa]: touro_semen deveria receber o nome do touro do catálogo';
+  end if;
+  perform confirmar_diagnostico(v_cob_prog_1, 'positivo');
+  perform registrar_parto(v_vaca_prog_id, current_date - 210, null, 'femea');
+
+  if not exists (
+    select 1 from bezerros where mae_id = v_vaca_prog_id and touro_id = v_touro_id
+  ) then
+    raise exception 'FALHOU [programa]: bezerro deveria herdar o touro da cobertura do parto';
+  end if;
+
+  v_cob_prog_2 := (registrar_cobertura(v_vaca_prog_id, current_date - 150, null, v_touro_id, true)).id;
+  perform confirmar_diagnostico(v_cob_prog_2, 'negativo');
+
+  v_cob_prog_3 := (registrar_cobertura(v_vaca_prog_id, current_date - 100, null, v_touro_id, true)).id;
+
+  select saldo into v_saldo from saldo_doses
+  where propriedade_id = v_propriedade_id and touro_id = v_touro_id;
+  if v_saldo is distinct from 0 then
+    raise exception 'FALHOU [programa]: saldo deveria ser 0 depois de usar as 3 doses (veio %)', v_saldo;
+  end if;
+
+  begin
+    perform registrar_cobertura(v_vaca_prog_id, current_date - 90, null, v_touro_id, true);
+    raise exception 'FALHOU [programa]: não deveria usar dose sem saldo';
+  exception when others then
+    if sqlerrm not ilike '%sem saldo%' then
+      raise exception 'FALHOU [programa]: erro inesperado sem saldo: %', sqlerrm;
+    end if;
+  end;
+
+  -- excluir uma cobertura lançada por engano devolve a dose
+  perform deletar_cobertura(v_cob_prog_3);
+  select saldo into v_saldo from saldo_doses
+  where propriedade_id = v_propriedade_id and touro_id = v_touro_id;
+  if v_saldo is distinct from 1 then
+    raise exception 'FALHOU [programa]: excluir a cobertura deveria devolver a dose (saldo esperado 1, veio %)', v_saldo;
+  end if;
+
+  -- o segundo parto arquiva a cobertura negativa; a dose dela continua contando como usada
+  perform registrar_parto(v_vaca_prog_id, current_date, null, 'macho');
+  if not exists (
+    select 1 from coberturas_historico where id = v_cob_prog_2 and dose_programa and touro_id = v_touro_id
+  ) then
+    raise exception 'FALHOU [programa]: arquivamento deveria levar touro_id e dose_programa pro histórico';
+  end if;
+
+  select saldo into v_saldo from saldo_doses
+  where propriedade_id = v_propriedade_id and touro_id = v_touro_id;
+  if v_saldo is distinct from 1 then
+    raise exception 'FALHOU [programa]: arquivar a cobertura não deveria devolver a dose ao saldo (esperado 1, veio %)', v_saldo;
+  end if;
+
+  -- o segundo parto não tem cobertura positiva nova (a de 300 dias atrás já gerou o primeiro):
+  -- não pode herdar o touro/dose do parto anterior
+  if (select cobertura_id from partos where vaca_id = v_vaca_prog_id and ativa) is not null then
+    raise exception 'FALHOU [registrar_parto]: segundo parto não deveria reaproveitar cobertura que já gerou parto';
+  end if;
+  select * into v_bezerro_parto2 from bezerros
+  where mae_id = v_vaca_prog_id and data_nascimento = current_date;
+  if v_bezerro_parto2.dose_programa or v_bezerro_parto2.touro_id is not null then
+    raise exception 'FALHOU [registrar_parto]: bezerro do segundo parto não deveria contar como do programa';
+  end if;
+
+  -- ============================================================
+  -- indicadores_reprodutivos_programa (0021)
+  -- ============================================================
+  -- doses usadas: a de 300 dias (positiva, pariu) e a de 150 (negativa, arquivada)
+  select * into v_ind from indicadores_reprodutivos_programa where propriedade_id = v_propriedade_id;
+  if v_ind.doses_usadas <> 2 or v_ind.prenhezes <> 1 or v_ind.negativos <> 1 or v_ind.matrizes_inseminadas <> 1 then
+    raise exception 'FALHOU [indicadores_programa]: contagem errada (doses %, prenhezes %, negativos %, matrizes %)',
+      v_ind.doses_usadas, v_ind.prenhezes, v_ind.negativos, v_ind.matrizes_inseminadas;
+  end if;
+  if v_ind.taxa_concepcao <> 50.0 or v_ind.doses_por_prenhez <> 2.00 then
+    raise exception 'FALHOU [indicadores_programa]: taxa % / doses por prenhez % (esperado 50 / 2)',
+      v_ind.taxa_concepcao, v_ind.doses_por_prenhez;
+  end if;
+  if v_ind.gestacoes_em_curso <> 0 or v_ind.nascimentos <> 1 or v_ind.femeas <> 1 then
+    raise exception 'FALHOU [indicadores_programa]: gestações % / nascimentos % / fêmeas % (esperado 0 / 1 / 1)',
+      v_ind.gestacoes_em_curso, v_ind.nascimentos, v_ind.femeas;
+  end if;
+
+  -- ============================================================
+  -- baixa de doses (0021) — saldo atual desse touro: 1
+  -- ============================================================
+  begin
+    perform registrar_baixa_doses(v_propriedade_id, v_touro_id, 2, 'perda', current_date);
+    raise exception 'FALHOU [baixa]: não deveria baixar mais doses do que o saldo';
+  exception when others then
+    if sqlerrm not ilike '%sem saldo%' then
+      raise exception 'FALHOU [baixa]: erro inesperado: %', sqlerrm;
+    end if;
+  end;
+
+  begin
+    perform registrar_baixa_doses(v_propriedade_id, v_touro_id, 1, 'roubada', current_date);
+    raise exception 'FALHOU [baixa]: deveria rejeitar motivo inválido';
+  exception when others then
+    if sqlerrm not ilike '%motivo inválido%' then
+      raise exception 'FALHOU [baixa]: erro inesperado no motivo: %', sqlerrm;
+    end if;
+  end;
+
+  v_baixa_id := (registrar_baixa_doses(v_propriedade_id, v_touro_id, 1, 'perda', current_date, 'botijão')).id;
+  select saldo into v_saldo from saldo_doses where propriedade_id = v_propriedade_id and touro_id = v_touro_id;
+  if v_saldo is distinct from 0 then
+    raise exception 'FALHOU [baixa]: saldo deveria zerar depois da baixa (veio %)', v_saldo;
+  end if;
+
+  begin
+    perform registrar_cobertura(v_vaca_prog_id, current_date, null, v_touro_id, true);
+    raise exception 'FALHOU [baixa]: dose baixada não deveria poder ser usada';
+  exception when others then
+    if sqlerrm not ilike '%sem saldo%' then
+      raise exception 'FALHOU [baixa]: erro inesperado ao usar dose baixada: %', sqlerrm;
+    end if;
+  end;
+
+  perform deletar_baixa_doses(v_baixa_id);
+  select saldo into v_saldo from saldo_doses where propriedade_id = v_propriedade_id and touro_id = v_touro_id;
+  if v_saldo is distinct from 1 then
+    raise exception 'FALHOU [baixa]: desfazer a baixa deveria devolver a dose (veio %)', v_saldo;
+  end if;
+
+  -- ============================================================
+  -- funções do bot (0022) — saldo desse touro: 1; vaca número 1 = v_vaca_mae_id
+  -- ============================================================
+  insert into usuarios_whatsapp (propriedade_id, telefone) values (v_propriedade_id, '5500000000001');
+
+  v_bot := bot_registrar_cobertura('5599999999999@s.whatsapp.net', 1, current_date, 'qualquer');
+  if (v_bot->>'ok')::boolean then
+    raise exception 'FALHOU [bot]: telefone não cadastrado deveria ser recusado';
+  end if;
+
+  v_bot := bot_registrar_cobertura('5500000000001@s.whatsapp.net', 9999, current_date, null);
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%não encontrei a vaca 9999%' then
+    raise exception 'FALHOU [bot]: vaca inexistente deveria responder sem erro (veio %)', v_bot;
+  end if;
+
+  -- nome falado com acento/maiúscula/espaço diferente do catálogo ('__touro_teste__')
+  v_bot := bot_registrar_cobertura('5500000000001@s.whatsapp.net', 1, current_date, 'Touro Testé');
+  if not (v_bot->>'ok')::boolean or not (v_bot->>'dose_programa')::boolean then
+    raise exception 'FALHOU [bot]: touro do programa com saldo deveria gastar dose (veio %)', v_bot;
+  end if;
+  if (v_bot->>'saldo_restante')::integer <> 0 then
+    raise exception 'FALHOU [bot]: saldo restante deveria ser 0 (veio %)', v_bot->>'saldo_restante';
+  end if;
+  if not exists (
+    select 1 from coberturas where vaca_id = v_vaca_mae_id and data_cobertura = current_date
+      and touro_id = v_touro_id and dose_programa
+  ) then
+    raise exception 'FALHOU [bot]: cobertura do bot deveria ficar ligada ao touro e à dose';
+  end if;
+
+  -- sem saldo: liga o touro do catálogo, mas não gasta dose
+  v_bot := bot_registrar_cobertura('5500000000001', 1, current_date - 1, '__TESTE__');
+  if not (v_bot->>'ok')::boolean or (v_bot->>'dose_programa')::boolean then
+    raise exception 'FALHOU [bot]: sem saldo, deveria registrar sem dose do programa (veio %)', v_bot;
+  end if;
+
+  -- parto pelo bot passa pela mesma regra do site (cria bezerro, status lactação)
+  v_bot := bot_registrar_parto('5500000000001@s.whatsapp.net', 1, current_date, null, 'Femea');
+  if not (v_bot->>'ok')::boolean then
+    raise exception 'FALHOU [bot_registrar_parto]: deveria registrar (veio %)', v_bot;
+  end if;
+  if (select status_produtivo from vacas where id = v_vaca_mae_id) <> 'lactacao'
+     or not exists (select 1 from bezerros where mae_id = v_vaca_mae_id and data_nascimento = current_date and sexo = 'femea') then
+    raise exception 'FALHOU [bot_registrar_parto]: deveria criar a bezerra e pôr a vaca em lactação';
+  end if;
+
+  v_bot := bot_registrar_parto('5500000000001', 1, current_date, 1, null);
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%já existe um animal%' then
+    raise exception 'FALHOU [bot_registrar_parto]: número de bezerro repetido deveria virar mensagem (veio %)', v_bot;
+  end if;
+
+  -- ============================================================
+  -- calcular_indicadores / sugerir_linha_base (0019_adesao_linha_base.sql)
+  -- ============================================================
+
+  -- fazenda separada, com dados montados à mão pra conferir cada número
+  insert into propriedades (nome_propriedade, nome_produtor)
+  values ('__teste_indicadores__', '__teste__') returning id into v_prop_ind;
+  insert into usuarios_propriedades (usuario_id, propriedade_id) values (v_usuario_id, v_prop_ind);
+
+  insert into vacas (propriedade_id, numero_identificacao, status_produtivo)
+  values (v_prop_ind, 1, 'lactacao') returning id into v_vaca_a;
+  insert into vacas (propriedade_id, numero_identificacao, status_produtivo)
+  values (v_prop_ind, 2, 'lactacao') returning id into v_vaca_b;
+  insert into vacas (propriedade_id, numero_identificacao, status_produtivo)
+  values (v_prop_ind, 3, 'seca') returning id into v_vaca_c;
+  insert into vacas (propriedade_id, numero_identificacao, status_produtivo)
+  values (v_prop_ind, 4, 'novilha');
+
+  insert into partos (vaca_id, data_parto) values (v_vaca_a, current_date - 60) returning id into v_parto_a;
+  insert into partos (vaca_id, data_parto) values (v_vaca_b, current_date - 60) returning id into v_parto_b;
+
+  -- vaca A: 10 + 8 no mesmo dia (= 18) e 20 noutro dia; vaca B: 14; pesagem de 40 dias atrás
+  -- fica fora da janela de 30 dias. Média por vaca/dia = (18 + 20 + 14) / 3 = 17.33
+  insert into controle_leite (vaca_id, parto_id, litros, data_controle) values
+    (v_vaca_a, v_parto_a, 10, current_date - 1),
+    (v_vaca_a, v_parto_a, 8, current_date - 1),
+    (v_vaca_a, v_parto_a, 20, current_date - 5),
+    (v_vaca_b, v_parto_b, 14, current_date - 2),
+    (v_vaca_b, v_parto_b, 100, current_date - 40);
+
+  insert into bezerros (propriedade_id, mae_id, sexo, numero_identificacao) values
+    (v_prop_ind, v_vaca_a, 'femea', 10),
+    (v_prop_ind, v_vaca_b, 'macho', 11),
+    (v_prop_ind, v_vaca_c, 'natimorto', 12);
+
+  -- dois meses com lançamento (5 e 70 dias atrás caem sempre em meses diferentes); o de 400
+  -- dias atrás fica fora da janela de 12 meses
+  insert into financeiro (propriedade_id, tipo, categoria, valor, data) values
+    (v_prop_ind, 'receita', 'venda de leite', 6000, current_date - 5),
+    (v_prop_ind, 'despesa', 'racao', 3000, current_date - 5),
+    (v_prop_ind, 'despesa', 'racao', 1000, current_date - 70),
+    (v_prop_ind, 'despesa', 'racao', 9999, current_date - 400);
+
+  select * into v_ind from calcular_indicadores(v_prop_ind, current_date);
+
+  if v_ind.total_animais <> 6 then
+    raise exception 'FALHOU [indicadores]: total_animais esperado 6 (4 vacas + 2 crias vivas), veio %', v_ind.total_animais;
+  end if;
+  if v_ind.matrizes <> 3 or v_ind.vacas_lactacao <> 2 or v_ind.novilhas <> 1 or v_ind.bezerras <> 1 then
+    raise exception 'FALHOU [indicadores]: rebanho errado (matrizes %, lactação %, novilhas %, bezerras %)',
+      v_ind.matrizes, v_ind.vacas_lactacao, v_ind.novilhas, v_ind.bezerras;
+  end if;
+  if v_ind.litros_vaca_dia <> 17.33 then
+    raise exception 'FALHOU [indicadores]: litros_vaca_dia esperado 17.33, veio %', v_ind.litros_vaca_dia;
+  end if;
+  if v_ind.producao_dia <> 34.7 then
+    raise exception 'FALHOU [indicadores]: producao_dia esperado 34.7, veio %', v_ind.producao_dia;
+  end if;
+  if v_ind.receita_mensal <> 3000 or v_ind.despesa_mensal <> 2000 then
+    raise exception 'FALHOU [indicadores]: médias mensais erradas (receita %, despesa %)',
+      v_ind.receita_mensal, v_ind.despesa_mensal;
+  end if;
+  if v_ind.custo_litro <> 1.92 then
+    raise exception 'FALHOU [indicadores]: custo_litro esperado 1.92 (2000 / (34.7 × 30)), veio %', v_ind.custo_litro;
+  end if;
+
+  -- fazenda sem nenhum lançamento: indicadores de leite e dinheiro vêm nulos, não zero
+  select * into v_ind from calcular_indicadores(v_prop_ind, current_date - 1000);
+  if v_ind.litros_vaca_dia is not null or v_ind.custo_litro is not null or v_ind.receita_mensal is not null then
+    raise exception 'FALHOU [indicadores]: sem dados no período, leite/dinheiro deveriam ser nulos';
+  end if;
+
+  begin
+    perform sugerir_linha_base(v_prop_ind, current_date);
+    raise exception 'FALHOU [sugerir_linha_base]: deveria exigir gestor';
+  exception when others then
+    if sqlerrm not ilike '%gestor%' then
+      raise exception 'FALHOU [sugerir_linha_base]: erro inesperado: %', sqlerrm;
+    end if;
+  end;
+
+  insert into gestores (usuario_id) values (v_usuario_id) on conflict do nothing;
+  if (select litros_vaca_dia from sugerir_linha_base(v_prop_ind, current_date)) <> 17.33 then
+    raise exception 'FALHOU [sugerir_linha_base]: deveria devolver o mesmo cálculo de calcular_indicadores';
+  end if;
+
+  insert into adesoes_programa (propriedade_id, data_adesao, litros_vaca_dia)
+  values (v_prop_ind, current_date - 1, 12);
+  if (select litros_vaca_dia from indicadores_atuais_programa() where propriedade_id = v_prop_ind) <> 17.33 then
+    raise exception 'FALHOU [indicadores_atuais_programa]: deveria trazer o valor de hoje da fazenda que aderiu';
+  end if;
 
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;

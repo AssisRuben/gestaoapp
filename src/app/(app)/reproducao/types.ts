@@ -8,6 +8,8 @@ export type Cobertura = {
   data_cobertura: string;
   diagnostico_prenhez: DiagnosticoPrenhez;
   touro_semen: string | null;
+  touro_id: string | null;
+  dose_programa: boolean;
   created_at: string;
   vaca: { id: string; numero_identificacao: number };
 };
@@ -22,3 +24,5 @@ export type Parto = {
   created_at: string;
   vaca: { id: string; numero_identificacao: number };
 };
+
+export type { Touro, EntregaDoses, SaldoDoses, BaixaDoses } from "@/lib/programa";

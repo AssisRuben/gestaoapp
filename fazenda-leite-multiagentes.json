@@ -504,7 +504,7 @@
       "parameters": {
         "resource": "messages-api",
         "instanceName": "Gabriel Bandeira",
-        "remoteJid": "558598149317@s.whatsapp.net",
+        "remoteJid": "={{ $('Webhook').first().json.body.data.key.remoteJid }}",
         "messageText": "={{ $json.resposta_sugerida }}",
         "options_message": {}
       },
@@ -1465,199 +1465,13 @@
     },
     {
       "parameters": {
-        "operation": "getAll",
-        "tableId": "coberturas",
-        "returnAll": true,
-        "matchType": "allFilters",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "vaca_id",
-              "condition": "eq",
-              "keyValue": "={{ $('Buscar Vaca (Parto)').item.json.id }}"
-            },
-            {
-              "keyName": "diagnostico_prenhez",
-              "condition": "eq",
-              "keyValue": "positivo"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6800,
-        11920
-      ],
-      "id": "db21bac3-d4f2-439f-94fa-4e6505759f53",
-      "name": "Buscar Cobertura Recente (Parto)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "let iep = null;\nlet partoAnterior = null;\n\ntry {\n  // Busca todos os itens retornados pelo nó anterior\n  const dadosPartoNode = $('Buscar Parto Anterior (Ativo)').all();\n  \n  // Valida se o retorno é uma lista válida e possui elementos\n  if (Array.isArray(dadosPartoNode) && dadosPartoNode.length > 0) {\n    \n    // Se o nó veio com erro por causa do 'On Error' ou vazio, o primeiro item não terá .json válido\n    if (dadosPartoNode[0].error || !dadosPartoNode[0].json || Object.keys(dadosPartoNode[0].json).length === 0) {\n      partoAnterior = null;\n    } \n    // Se houver mais de 1 parto na lista, o índice 1 é o parto anterior real (já que o novo acabou de entrar)\n    else if (dadosPartoNode.length >= 2) {\n      partoAnterior = dadosPartoNode[1].json;\n    } \n    // Se só houver 1 parto válido, é o primeiro parto da vida da vaca\n    else {\n      partoAnterior = null;\n    }\n  }\n} catch (e) {\n  // Se qualquer busca falhar ou o nó não foi executado, assume ausência de informação com segurança\n  partoAnterior = null;\n}\n\n// Se encontrou um histórico de parto válido, calcula o IEP (Intervalo Entre Partos)\nif (partoAnterior && partoAnterior.data_parto) {\n  // Pega a data do parto atual (pode puxar do nó de intenção ou usar a data de hoje como fallback)\n  let dataAtualStr = $('Rotear Intencao').first().json.data_atual || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });\n  \n  const dataAtual = new Date(dataAtualStr);\n  const dataAntiga = new Date(partoAnterior.data_parto);\n  \n  // Calcula a diferença exata em dias\n  const diferencaTempo = Math.abs(dataAtual - dataAntiga);\n  iep = Math.ceil(diferencaTempo / (1000 * 60 * 60 * 24));\n} else {\n  // Força nulo se for primípara/ausência de dados\n  iep = null;\n}\n\n// Garante o retorno no formato padrão exigido pelo n8n [item: { json: { ... } }]\nreturn [\n  {\n    json: {\n      vaca_id: $('Buscar Vaca (Parto)').first().json.id || null,\n      iep: iep,\n      tem_historico: partoAnterior ? true : false,\n      data_parto_anterior: partoAnterior ? partoAnterior.data_parto : null\n    }\n  }\n];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7456,
-        11920
-      ],
-      "id": "4ca57909-78a7-47c8-80cc-91669387b1f3",
-      "name": "Preparar Dados Parto"
-    },
-    {
-      "parameters": {
-        "tableId": "partos",
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "vaca_id",
-              "fieldValue": "={{ $('Buscar Vaca (Parto)').item.json.id }}"
-            },
-            {
-              "fieldId": "cobertura_id",
-              "fieldValue": "={{ $json.cobertura_id }}"
-            },
-            {
-              "fieldId": "data_parto",
-              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
-            },
-            {
-              "fieldId": "ativa",
-              "fieldValue": "true"
-            },
-            {
-              "fieldId": "iep",
-              "fieldValue": "={{ $json.iep }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        7712,
-        11920
-      ],
-      "id": "1ea45e48-5691-492a-af74-5681976fba1f",
-      "name": "Inserir Parto",
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "tableId": "vacas",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "id",
-              "condition": "eq",
-              "keyValue": "={{ $('Buscar Vaca (Parto)').item.json.id }}"
-            }
-          ]
-        },
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "status_produtivo",
-              "fieldValue": "lactacao"
-            },
-            {
-              "fieldId": "status_reprodutivo",
-              "fieldValue": "vazia"
-            },
-            {
-              "fieldId": "data_parto",
-              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        7968,
-        11936
-      ],
-      "id": "7f822607-352b-410d-89d5-c116ed361b06",
-      "name": "Atualizar Vaca (Pós-Parto)",
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "tableId": "bezerros",
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "propriedade_id",
-              "fieldValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}"
-            },
-            {
-              "fieldId": "parto_id",
-              "fieldValue": "={{ $('Inserir Parto').item.json.id }}"
-            },
-            {
-              "fieldId": "mae_id",
-              "fieldValue": "={{ $('Buscar Vaca (Parto)').item.json.id }}"
-            },
-            {
-              "fieldId": "numero_identificacao",
-              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.numero_bezerro }}"
-            },
-            {
-              "fieldId": "sexo",
-              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.sexo_bezerro }}"
-            },
-            {
-              "fieldId": "data_nascimento",
-              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        8272,
-        11952
-      ],
-      "id": "31ff60ab-484c-4639-9b52-b33ac500f6e9",
-      "name": "Criar Bezerro",
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
               "id": "6a5fb22e-eea7-4fce-8d0b-dcb8f7b0a3e4",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Parto da vaca {{ $('Buscar Vaca (Parto)').item.json.numero_identificacao }} registrado em {{ ($('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd')).split('-').reverse().join('-') }}.{{ $('Parsear Resposta IA').item.json.entidades.sexo_bezerro ? ' Bezerro(a): ' + $('Parsear Resposta IA').item.json.entidades.sexo_bezerro + '.' : '' }}{{ $('Parsear Resposta IA').item.json.entidades.numero_bezerro ? ' Numero do bezerro: ' + $('Parsear Resposta IA').item.json.entidades.numero_bezerro + '.' : '' }}. {{ $('Buscar Parto Anterior (Ativo)').all().length > 0 ? ' Lactacao anterior encerrada.' : '' }}"
+              "value": "={{ $json.mensagem || 'Não consegui registrar o parto agora. Tente de novo em alguns minutos.' }}"
             }
           ]
         },
@@ -1707,52 +1521,13 @@
     },
     {
       "parameters": {
-        "tableId": "coberturas",
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "vaca_id",
-              "fieldValue": "={{ $('Buscar Vaca (Cobertura)').item.json.id }}"
-            },
-            {
-              "fieldId": "data_cobertura",
-              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
-            },
-            {
-              "fieldId": "diagnostico_prenhez",
-              "fieldValue": "pendente"
-            },
-            {
-              "fieldId": "touro",
-              "fieldValue": "={{ $('Rotear Intencao').item.json.entidades.touro_semen }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6656,
-        12288
-      ],
-      "id": "496f19dc-fa01-4925-b39c-d575a02eb8fb",
-      "name": "Inserir Cobertura",
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
               "id": "796d93a7-de2d-4d24-9196-d43a5f70c99a",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Cobertura da vaca {{ $('Buscar Vaca (Cobertura)').item.json.numero_identificacao }} registrada em {{ ($('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd')).split('-').reverse().join('-') }}{{ $('Parsear Resposta IA').item.json.entidades.touro_semen ? ' (sêmen/touro: ' + $('Parsear Resposta IA').item.json.entidades.touro_semen + ')' : '' }}. Diagnóstico de prenhez: pendente."
+              "value": "={{ $json.mensagem || 'Não consegui registrar a cobertura agora. Tente de novo em alguns minutos.' }}"
             }
           ]
         },
@@ -2497,38 +2272,6 @@
       ],
       "id": "a23bbdcf-ad01-4a9b-9f09-e639db927e7f",
       "name": "Sem Cobertura Pendente"
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "partos",
-        "orderBy": "=data_parto",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "vaca_id",
-              "condition": "eq",
-              "keyValue": "={{ $('Buscar Vaca (Parto)').item.json.id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6416,
-        11920
-      ],
-      "id": "9ce482cc-e542-4973-8705-39b20c75b3f0",
-      "name": "Buscar Parto Anterior (Ativo)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      },
-      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -3790,7 +3533,7 @@
       "parameters": {
         "resource": "messages-api",
         "instanceName": "Gabriel Bandeira",
-        "remoteJid": "558598149317@s.whatsapp.net",
+        "remoteJid": "={{ $('Webhook').first().json.body.data.key.remoteJid }}",
         "messageText": "={{ $json.resposta_sugerida }}",
         "options_message": {}
       },
@@ -4387,7 +4130,7 @@
         "resource": "messages-api",
         "operation": "send-audio",
         "instanceName": "Gabriel Bandeira",
-        "remoteJid": "558598149317@s.whatsapp.net",
+        "remoteJid": "={{ $('Webhook').first().json.body.data.key.remoteJid }}",
         "media": "={{ $json.audioBase64 }}",
         "options_message": {}
       },
@@ -4476,6 +4219,96 @@
       ],
       "id": "8e745166-042b-4220-b527-0ce25a11bcf2",
       "name": "Vaca Não Encontrada (Relatório)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_registrar_cobertura",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_numero_vaca: Number($('Parsear Resposta IA').item.json.entidades.numero_vaca),\n  p_data_cobertura: ($('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd')),\n  p_touro_texto: $('Parsear Resposta IA').item.json.entidades.touro_semen || null\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6656,
+        12288
+      ],
+      "id": "b72987a1-690b-4d6f-9291-61b358f92a30",
+      "name": "Registrar Cobertura (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_registrar_parto",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_numero_vaca: Number($('Parsear Resposta IA').item.json.entidades.numero_vaca),\n  p_data_parto: ($('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd')),\n  p_numero_bezerro: $('Parsear Resposta IA').item.json.entidades.numero_bezerro ? Number($('Parsear Resposta IA').item.json.entidades.numero_bezerro) : null,\n  p_sexo_bezerro: $('Parsear Resposta IA').item.json.entidades.sexo_bezerro || null\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6416,
+        11920
+      ],
+      "id": "9637be89-d0f1-40af-9499-af6b9d0397e1",
+      "name": "Registrar Parto (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/interacoes_log",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  propriedade_id: $('Identificar Usuario').first().json.propriedade_id || null,\n  intencao_detectada: $('Parsear Resposta IA').isExecuted ? $('Parsear Resposta IA').first().json.intencao : 'confirmacao_exclusao',\n  entidades_extraidas: $('Parsear Resposta IA').isExecuted ? $('Parsear Resposta IA').first().json.entidades : null,\n  mensagem_recebida: $('Buffer - Ler Final').isExecuted ? ($('Buffer - Ler Final').first().json.data || null) : null,\n  resposta_enviada: $json.resposta_sugerida || null\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        16160,
+        13872
+      ],
+      "id": "8d4d4387-b4a1-46ce-bcef-9f8cf617738c",
+      "name": "Registrar Interação (Log)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
@@ -4838,6 +4671,11 @@
             "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -4858,6 +4696,11 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -4902,6 +4745,11 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -5017,6 +4865,11 @@
             "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -5037,6 +4890,11 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -5065,66 +4923,16 @@
         ]
       ]
     },
-    "Buscar Cobertura Recente (Parto)": {
-      "main": [
-        [
-          {
-            "node": "Preparar Dados Parto",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Preparar Dados Parto": {
-      "main": [
-        [
-          {
-            "node": "Inserir Parto",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Inserir Parto": {
-      "main": [
-        [
-          {
-            "node": "Atualizar Vaca (Pós-Parto)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Atualizar Vaca (Pós-Parto)": {
-      "main": [
-        [
-          {
-            "node": "Criar Bezerro",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Criar Bezerro": {
-      "main": [
-        [
-          {
-            "node": "Confirmar Parto",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Confirmar Parto": {
       "main": [
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -5142,22 +4950,16 @@
         ]
       ]
     },
-    "Inserir Cobertura": {
-      "main": [
-        [
-          {
-            "node": "Confirmar Cobertura",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Confirmar Cobertura": {
       "main": [
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -5240,6 +5042,11 @@
             "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -5284,6 +5091,11 @@
             "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -5322,6 +5134,11 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -5466,6 +5283,11 @@
             "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -5477,15 +5299,9 @@
             "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Parto Anterior (Ativo)": {
-      "main": [
-        [
+          },
           {
-            "node": "Buscar Cobertura Recente (Parto)",
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -5519,6 +5335,11 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -5559,6 +5380,11 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -5645,6 +5471,11 @@
             "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -5707,6 +5538,11 @@
             "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -5740,6 +5576,11 @@
             "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -5749,6 +5590,11 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -5771,6 +5617,11 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -5804,6 +5655,11 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -5868,6 +5724,11 @@
             "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -5877,6 +5738,11 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -5941,6 +5807,11 @@
             "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -5950,6 +5821,11 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -6010,6 +5886,11 @@
             "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -6039,6 +5920,11 @@
             "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -6054,7 +5940,7 @@
         ],
         [
           {
-            "node": "Inserir Cobertura",
+            "node": "Registrar Cobertura (RPC)",
             "type": "main",
             "index": 0
           }
@@ -6101,6 +5987,11 @@
             "node": "Origem Áudio? (Principal)",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -6128,6 +6019,11 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -6178,7 +6074,7 @@
       "main": [
         [
           {
-            "node": "Buscar Parto Anterior (Ativo)",
+            "node": "Registrar Parto (RPC)",
             "type": "main",
             "index": 0
           }
@@ -6197,6 +6093,11 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -6226,6 +6127,11 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -6346,6 +6252,33 @@
         [
           {
             "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Cobertura (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Cobertura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Parto (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Parto",
             "type": "main",
             "index": 0
           }
