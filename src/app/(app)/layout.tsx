@@ -29,7 +29,8 @@ export default async function AppLayout({
   const propriedadeAtual = await getPropriedadeAtual();
 
   return (
-    <div className="flex flex-1 flex-col">
+    // overflow-x-clip: nenhum conteúdo alarga a página além da tela (barra de baixo fica parada)
+    <div className="flex flex-1 flex-col overflow-x-clip">
       <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b print:hidden border-black/[.08] px-3 py-2.5 sm:px-6 sm:py-3 dark:border-white/[.145]">
         {propriedadeAtual ? (
           <FazendaTrigger propriedade={propriedadeAtual} vinculos={vinculos} />
