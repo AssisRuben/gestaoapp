@@ -464,6 +464,14 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   dias, secagem/parto atrasados, vazia +120 dias em lactação, doses sem confirmação +7 dias. O
   botão de documento de cada alerta abre o resumo da fazenda.
 
+## Cobertura atual (0038_cobertura_atual.sql)
+
+- "Pra secar", "partos previstos" e "aguardando diagnóstico" usam só a **cobertura atual** de cada
+  vaca: a mais recente da lactação atual (data >= parto ativo; sem parto, todas), ignorando a que
+  já virou parto. Banco: view `coberturas_atuais` (bot, lembretes, alertas do gestor). Site:
+  `coberturaAtualPorVaca` em `src/lib/indicadores.ts` (Início e resumo da fazenda). Positiva de
+  antes do parto atual, sem vínculo, é gestação que já terminou — não vira "secagem atrasada".
+
 ## Gestor: gestores, planilhas e fazenda própria (0037_gestores.sql)
 
 - Aba "Acessos" (`/gestor/tecnicos`): seção "Gestores do programa" — `listar_gestores`,

@@ -1019,10 +1019,14 @@ begin
   -- alertas reprodutivos do gestor (0028)
   -- ============================================================
 
-  insert into coberturas (vaca_id, data_cobertura) values (v_vaca_status, _hoje_fazenda() - 50);
+  -- novilha (sem parto): a pendente de 50 dias é a cobertura atual dela. Na 90001 não serviria —
+  -- ela pariu há 5 dias e cobertura de antes do parto já não conta (0038).
+  insert into vacas (propriedade_id, numero_identificacao, status_produtivo)
+  values (v_propriedade_id, 90950, 'novilha') returning id into v_cob_status;
+  insert into coberturas (vaca_id, data_cobertura) values (v_cob_status, _hoje_fazenda() - 50);
   if not exists (
     select 1 from alertas_reprodutivos()
-    where propriedade_id = v_propriedade_id and tipo = 'diagnostico_atrasado' and numero = 90001 and dias = 50
+    where propriedade_id = v_propriedade_id and tipo = 'diagnostico_atrasado' and numero = 90950 and dias = 50
   ) then
     raise exception 'FALHOU [alertas_reprodutivos]: cobertura pendente há 50 dias deveria alertar';
   end if;
@@ -1114,7 +1118,7 @@ begin
   end if;
 
   -- ============================================================
-  -- lembretes diários (0031) — a vaca 90001 tem cobertura pendente há 50 dias (teste de 0028)
+  -- lembretes diários (0031) — a novilha 90950 tem cobertura pendente há 50 dias (teste de 0028)
   -- ============================================================
 
   if exists (select 1 from lembretes_do_dia() where propriedade_id = v_propriedade_id) then
@@ -1125,7 +1129,7 @@ begin
   if not exists (
     select 1 from lembretes_do_dia()
     where propriedade_id = v_propriedade_id
-      and mensagem ilike '%Diagnóstico de prenhez: vaca 90001 (coberta há 50 dias)%'
+      and mensagem ilike '%Diagnóstico de prenhez: vaca 90950 (coberta há 50 dias)%'
   ) then
     raise exception 'FALHOU [lembretes_do_dia]: deveria lembrar do diagnóstico pendente (veio %)',
       (select mensagem from lembretes_do_dia() where propriedade_id = v_propriedade_id);
@@ -1307,6 +1311,54 @@ begin
   exception when others then
     if sqlerrm not ilike '%Só o gestor%' then
       raise exception 'FALHOU [listar_gestores]: erro inesperado: %', sqlerrm;
+    end if;
+  end;
+
+  -- ============================================================
+  -- cobertura atual (0038): positiva de antes do parto ativo e pendente repetida não contam
+  -- ============================================================
+
+  declare
+    v_vaca_velha uuid;
+    v_vaca_dupla uuid;
+  begin
+    insert into vacas (propriedade_id, numero_identificacao, status_produtivo)
+    values (v_propriedade_id, 90901, 'lactacao') returning id into v_vaca_velha;
+    -- positiva solta de 300 dias atrás (gestação que já terminou) e parto ativo depois dela
+    insert into coberturas (vaca_id, data_cobertura, diagnostico_prenhez)
+    values (v_vaca_velha, _hoje_fazenda() - 300, 'positivo');
+    insert into partos (vaca_id, data_parto, ativa) values (v_vaca_velha, _hoje_fazenda() - 20, true);
+
+    insert into vacas (propriedade_id, numero_identificacao, status_produtivo)
+    values (v_propriedade_id, 90902, 'novilha') returning id into v_vaca_dupla;
+    insert into coberturas (vaca_id, data_cobertura, diagnostico_prenhez)
+    values (v_vaca_dupla, _hoje_fazenda() - 61, 'pendente'), (v_vaca_dupla, _hoje_fazenda() - 60, 'pendente');
+
+    if exists (select 1 from coberturas_atuais where vaca_id = v_vaca_velha) then
+      raise exception 'FALHOU [coberturas_atuais]: positiva de antes do parto ativo não deveria contar';
+    end if;
+    if (select count(*) from coberturas_atuais where vaca_id = v_vaca_dupla) <> 1 then
+      raise exception 'FALHOU [coberturas_atuais]: deveria haver uma linha por vaca';
+    end if;
+
+    v_bot := bot_consultar('5500000000001', 'consultar_relatorio', '{"tipo_relatorio": "reprodutivo"}', '', false);
+    if v_bot->>'mensagem' ilike '%Vaca 90901: parto em%' or v_bot->>'mensagem' ilike '%Vaca 90901: secar%' then
+      raise exception 'FALHOU [_rel_reproducao_fazenda]: vaca vazia apareceu com parto/secagem (veio %)', v_bot;
+    end if;
+    if (length(v_bot->>'mensagem') - length(replace(v_bot->>'mensagem', 'Vaca 90902: coberta', ''))) / length('Vaca 90902: coberta') <> 1 then
+      raise exception 'FALHOU [_rel_reproducao_fazenda]: vaca com duas pendentes deveria aparecer uma vez (veio %)', v_bot;
+    end if;
+
+    v_bot := bot_consultar('5500000000001', 'consultar_vaca', '{"numero_vaca": "90901", "tipo_relatorio": "reprodutivo"}', '', false);
+    if v_bot->>'mensagem' ilike '%Parto previsto%' or v_bot->>'mensagem' not ilike '%Nenhuma cobertura nesta lactação%' then
+      raise exception 'FALHOU [_rel_vaca_reproducao]: cobertura de antes do parto não deveria dar parto previsto (veio %)', v_bot;
+    end if;
+
+    if exists (select 1 from alertas_reprodutivos() where vaca_id = v_vaca_velha and tipo in ('secagem_atrasada', 'parto_atrasado')) then
+      raise exception 'FALHOU [alertas_reprodutivos]: vaca vazia com alerta de secagem/parto';
+    end if;
+    if (select count(*) from alertas_reprodutivos() where vaca_id = v_vaca_dupla and tipo = 'diagnostico_atrasado') <> 1 then
+      raise exception 'FALHOU [alertas_reprodutivos]: diagnóstico atrasado deveria aparecer uma vez por vaca';
     end if;
   end;
 
