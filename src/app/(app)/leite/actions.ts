@@ -18,6 +18,7 @@ export async function registrarLeite(
     p_vaca_id: vacaId,
     p_litros: Number(litros),
     p_data_controle: dataControle,
+    p_periodo: (formData.get("periodo") as string) || null,
   });
 
   if (error) {
@@ -44,6 +45,7 @@ export async function atualizarLeite(
     p_registro_id: registroId,
     p_litros: Number(litros),
     p_data_controle: dataControle,
+    p_periodo: (formData.get("periodo") as string) || null,
   });
 
   if (error) {

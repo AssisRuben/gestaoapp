@@ -87,11 +87,9 @@ controle_leite
   litros numeric NOT NULL
   data_controle date NOT NULL
   created_at timestamptz
-  -- `periodo` NÃO existe mais nesta instância (confirmado via information_schema em
-  -- 2026-07-19) — apesar do que este documento dizia antes. registrar_leite/atualizar_leite
-  -- (site) e registrar_parto (arquivamento) ainda tentavam gravar/ler essa coluna e quebravam
-  -- de verdade; corrigido em supabase/migrations/0016_remove_periodo_controle_leite.sql. Se o
-  -- bot do WhatsApp ainda referencia `periodo` em algum fluxo, esse fluxo também está quebrado.
+  periodo text   -- opcional: 'manha' | 'tarde' | 'dia_inteiro'. Recriada em 0025 (não existia
+                 -- desde 0016). Serve pra saber qual ordenha corrigir/apagar quando há mais de uma
+                 -- no dia. Não vai pro controle_leite_historico ao arquivar a lactação.
 
 financeiro
   id uuid PK
@@ -242,6 +240,10 @@ Estes são bugs REAIS no fluxo em produção, não só gaps de documentação. R
 site compartilha o mesmo banco e pode ter que lidar com dados sujos deixados por eles, e (b) não
 devem ser reintroduzidos ao portar lógica pro site/RPC.
 
+**Os bugs 1, 3, 4, 5, 6 e 7 não existem mais no JSON do repo** (0022, 0024 e 0025: o bot passa
+pelas funções do banco — ver seção "Bot: todas as escritas pelo banco"). Ficam descritos porque
+explicam dados antigos. Os bugs 2 e 8 (relatórios) continuam.
+
 1. **[Crítico] Exclusão de registro de leite não é segura de fato.** No fluxo `deletar_registro`
    (leite), o `DELETE` no Supabase roda **antes** de pedir confirmação SIM/NAO — a mensagem de
    confirmação é decorativa, o registro já foi apagado quando o usuário a lê. Contradiz a regra 6
@@ -362,6 +364,22 @@ devem ser reintroduzidos ao portar lógica pro site/RPC.
 - Quadro status produtivo × reprodutivo no topo da tela Vacas (`vacas/censo-rebanho.tsx`),
   calculado no cliente a partir da lista de vacas; tocar num número filtra a lista. Status fora do
   vocabulário (ou nulo) conta como "Outro" pra fechar com o total.
+
+## Bot: todas as escritas pelo banco (0025_bot_funcoes_banco.sql)
+
+- Leite, diagnóstico, cadastro/correção de vaca e financeiro do WhatsApp passam por funções
+  `bot_*` (nós "... (RPC)" no workflow), com a mesma regra do site — o n8n não grava mais direto
+  em tabela nenhuma. Todas devolvem `{ok, mensagem}`; o nó "Confirmar ..." seguinte só repassa a
+  mensagem.
+- Leite (`_registrar_leite`, também usado pelo site): litros entre 0 e 100, data não futura (fuso
+  de Fortaleza, `_hoje_fazenda()`) e não anterior ao parto ativo; mesma ordenha repetida no mesmo
+  dia é recusada. Corrigir/apagar com mais de uma ordenha no dia usa o período falado; sem dar pra
+  saber qual, responde listando as opções em vez de adivinhar.
+- Exclusões (leite e financeiro) continuam em duas etapas: `bot_localizar_*_exclusao` devolve a
+  pergunta e o id (pendência no Redis); só depois do SIM `bot_excluir_*` apaga, conferindo que o
+  registro é da fazenda do telefone.
+- Corrigir/apagar financeiro exige categoria ou data (antes pegava o lançamento mais recente da
+  fazenda). Categoria gravada pelo bot é normalizada no banco (`_categoria_normalizada`).
 
 ## Bot usando as funções do banco (0022_bot_registro.sql)
 

@@ -14,6 +14,33 @@ const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
 const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
 
+const PERIODO_LABEL: Record<string, string> = {
+  manha: "Manhã",
+  tarde: "Tarde",
+  dia_inteiro: "Dia inteiro",
+};
+
+function dataComOrdenha(registro: RegistroLeite) {
+  const data = formatarDataBR(registro.data_controle);
+  return registro.periodo ? `${data} · ${PERIODO_LABEL[registro.periodo]}` : data;
+}
+
+function CampoOrdenha({ id, defaultValue }: { id: string; defaultValue?: string | null }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={id} className={LABEL_CLASSES}>
+        Ordenha (opcional)
+      </label>
+      <select id={id} name="periodo" defaultValue={defaultValue ?? ""} className={CAMPO_CLASSES}>
+        <option value="">Não informada</option>
+        <option value="manha">Manhã</option>
+        <option value="tarde">Tarde</option>
+        <option value="dia_inteiro">Dia inteiro (total do dia)</option>
+      </select>
+    </div>
+  );
+}
+
 function formatarLitros(litros: number) {
   return `${litros.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} L`;
 }
@@ -166,7 +193,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
                 <td className="px-4 py-2 text-black dark:text-zinc-50">
                   {registro.vaca.numero_identificacao}
                 </td>
-                <td className="px-4 py-2 text-black dark:text-zinc-50">{formatarDataBR(registro.data_controle)}</td>
+                <td className="px-4 py-2 text-black dark:text-zinc-50">{dataComOrdenha(registro)}</td>
                 <td className="px-4 py-2 text-black dark:text-zinc-50">
                   {formatarLitros(Number(registro.litros))}
                 </td>
@@ -195,7 +222,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
                 </span>
               }
             />
-            <CardRow label="Data" value={formatarDataBR(registro.data_controle)} />
+            <CardRow label="Data" value={dataComOrdenha(registro)} />
           </MobileCard>
         ))}
         {registrosFiltrados.length === 0 && (
@@ -267,6 +294,8 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
                 className={CAMPO_CLASSES}
               />
             </div>
+
+            <CampoOrdenha id="periodo" />
 
             {criarState?.error && (
               <p className="text-sm text-red-600 dark:text-red-400">{criarState.error}</p>
@@ -348,6 +377,8 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
               />
             </div>
 
+            <CampoOrdenha id="edit_periodo" defaultValue={registroEmEdicao.periodo} />
+
             {editarState?.error && (
               <p className="text-sm text-red-600 dark:text-red-400">{editarState.error}</p>
             )}
@@ -397,7 +428,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Excluir registro?</h2>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Vaca {registroParaExcluir.vaca.numero_identificacao} — {formatarLitros(Number(registroParaExcluir.litros))} em{" "}
-              {formatarDataBR(registroParaExcluir.data_controle)}. Essa ação não pode ser desfeita.
+              {dataComOrdenha(registroParaExcluir)}. Essa ação não pode ser desfeita.
             </p>
 
             {excluirState?.error && (

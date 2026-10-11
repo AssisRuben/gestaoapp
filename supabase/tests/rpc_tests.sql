@@ -54,6 +54,9 @@ declare
   v_qtd integer;
   v_vaca_status uuid;
   v_cob_status uuid;
+  v_vaca_bot uuid;
+  v_alvo_bot jsonb;
+  v_num_auto integer;
 begin
   select id into v_usuario_id from auth.users limit 1;
   if v_usuario_id is null then
@@ -745,6 +748,176 @@ begin
   delete from coberturas where id = v_cob_status;
   if (select status_reprodutivo from vacas where id = v_vaca_status) <> 'vazia' then
     raise exception 'FALHOU [status_reprodutivo]: sem cobertura na lactação atual deveria voltar pra vazia (a anterior ao parto não conta)';
+  end if;
+
+  -- ============================================================
+  -- bot: leite, diagnóstico, vacas e financeiro pelo banco (0025)
+  -- ============================================================
+
+  if _fmt_reais(1234.5) <> 'R$ 1.234,50' or _fmt_num(12.0) <> '12' or _fmt_num(12.5) <> '12,5' then
+    raise exception 'FALHOU [formatação]: veio % / % / %', _fmt_reais(1234.5), _fmt_num(12.0), _fmt_num(12.5);
+  end if;
+
+  insert into vacas (propriedade_id, numero_identificacao, status_produtivo, status_reprodutivo)
+  values (v_propriedade_id, 90002, 'lactacao', 'vazia')
+  returning id into v_vaca_bot;
+  insert into partos (vaca_id, data_parto, ativa) values (v_vaca_bot, _hoje_fazenda() - 10, true);
+
+  v_bot := bot_registrar_leite('5500000000001@s.whatsapp.net', 90002, 12.5, _hoje_fazenda(), 'manhã');
+  if not (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%12,5 L%manhã%' then
+    raise exception 'FALHOU [bot_registrar_leite]: deveria registrar com o período (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_registrar_leite('5500000000001', 90002, 10, _hoje_fazenda(), 'manha');
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%já existe lançamento%' then
+    raise exception 'FALHOU [bot_registrar_leite]: mesma ordenha no mesmo dia deveria ser recusada (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_registrar_leite('5500000000001', 90002, 8, _hoje_fazenda(), 'tarde');
+  if not (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%Total da vaca no dia: 20,5 L%' then
+    raise exception 'FALHOU [bot_registrar_leite]: segunda ordenha deveria somar o total do dia (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_registrar_leite('5500000000001', 90002, 8, _hoje_fazenda() + 2, null);
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%ainda não chegou%' then
+    raise exception 'FALHOU [bot_registrar_leite]: data futura deveria ser recusada (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_registrar_leite('5500000000001', 90002, 8, _hoje_fazenda() - 20, null);
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%anterior ao parto%' then
+    raise exception 'FALHOU [bot_registrar_leite]: data antes do parto deveria ser recusada (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_registrar_leite('5500000000001', 90002, null, _hoje_fazenda(), null);
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%quantos litros%' then
+    raise exception 'FALHOU [bot_registrar_leite]: sem litros deveria perguntar (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_corrigir_leite('5500000000001', 90002, _hoje_fazenda(), null, 9);
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%2 lançamentos%' then
+    raise exception 'FALHOU [bot_corrigir_leite]: duas ordenhas sem período deveria perguntar qual (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_corrigir_leite('5500000000001', 90002, _hoje_fazenda(), 'tarde', 9);
+  if not (v_bot->>'ok')::boolean
+     or (select litros from controle_leite where vaca_id = v_vaca_bot and periodo = 'tarde') <> 9
+     or (select litros from controle_leite where vaca_id = v_vaca_bot and periodo = 'manha') <> 12.5 then
+    raise exception 'FALHOU [bot_corrigir_leite]: deveria corrigir só a ordenha da tarde (veio %)', v_bot;
+  end if;
+
+  v_alvo_bot := bot_localizar_leite_exclusao('5500000000001', 90002, _hoje_fazenda(), 'manha');
+  if not (v_alvo_bot->>'ok')::boolean or v_alvo_bot->>'mensagem' not ilike 'Confirma excluir%' then
+    raise exception 'FALHOU [bot_localizar_leite_exclusao]: deveria achar a ordenha da manhã (veio %)', v_alvo_bot;
+  end if;
+  if not exists (select 1 from controle_leite where id = (v_alvo_bot->>'registro_id')::uuid) then
+    raise exception 'FALHOU [bot_localizar_leite_exclusao]: não pode apagar nada antes da confirmação';
+  end if;
+
+  v_bot := bot_excluir_leite('5599999999999', (v_alvo_bot->>'registro_id')::uuid);
+  if (v_bot->>'ok')::boolean then
+    raise exception 'FALHOU [bot_excluir_leite]: telefone de fora da fazenda não pode apagar';
+  end if;
+
+  v_bot := bot_excluir_leite('5500000000001', (v_alvo_bot->>'registro_id')::uuid);
+  if not (v_bot->>'ok')::boolean or exists (select 1 from controle_leite where id = (v_alvo_bot->>'registro_id')::uuid) then
+    raise exception 'FALHOU [bot_excluir_leite]: deveria apagar depois da confirmação (veio %)', v_bot;
+  end if;
+  v_bot := bot_excluir_leite('5500000000001', (v_alvo_bot->>'registro_id')::uuid);
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%não existe mais%' then
+    raise exception 'FALHOU [bot_excluir_leite]: apagar de novo deveria avisar (veio %)', v_bot;
+  end if;
+
+  -- site: registrar_leite passa a gravar o período
+  perform registrar_leite(v_vaca_bot, 15, _hoje_fazenda() - 1, 'dia_inteiro');
+  if not exists (select 1 from controle_leite where vaca_id = v_vaca_bot and data_controle = _hoje_fazenda() - 1 and periodo = 'dia_inteiro') then
+    raise exception 'FALHOU [registrar_leite]: deveria gravar o período';
+  end if;
+
+  v_bot := bot_diagnosticar_prenhez('5500000000001', 90002, 'positivo');
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%não tem cobertura%' then
+    raise exception 'FALHOU [bot_diagnosticar_prenhez]: sem cobertura deveria avisar (veio %)', v_bot;
+  end if;
+
+  insert into coberturas (vaca_id, data_cobertura) values (v_vaca_bot, _hoje_fazenda() - 3);
+  v_bot := bot_diagnosticar_prenhez('5500000000001', 90002, 'talvez');
+  if (v_bot->>'ok')::boolean then
+    raise exception 'FALHOU [bot_diagnosticar_prenhez]: resultado inválido deveria ser recusado';
+  end if;
+
+  v_bot := bot_diagnosticar_prenhez('5500000000001', 90002, 'positivo');
+  if not (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%Parto previsto%'
+     or (select status_reprodutivo from vacas where id = v_vaca_bot) <> 'prenhe' then
+    raise exception 'FALHOU [bot_diagnosticar_prenhez]: positivo deveria deixar a vaca prenhe e prever o parto (veio %)', v_bot;
+  end if;
+
+  -- cadastro: número automático considera os bezerros (antes o bot olhava só as vacas)
+  insert into bezerros (propriedade_id, mae_id, numero_identificacao, sexo, data_nascimento)
+  values (v_propriedade_id, v_vaca_bot, 90010, 'femea', _hoje_fazenda() - 10);
+
+  v_bot := bot_cadastrar_vaca('5500000000001', null, null, null, null, null);
+  v_num_auto := (v_bot->>'numero')::integer;
+  if not (v_bot->>'ok')::boolean or v_num_auto <= 90010 then
+    raise exception 'FALHOU [bot_cadastrar_vaca]: número automático deveria passar do maior bezerro (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_cadastrar_vaca('5500000000001', 90002, null, null, null, null);
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%já está cadastrada%' then
+    raise exception 'FALHOU [bot_cadastrar_vaca]: número repetido deveria avisar (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_cadastrar_vaca('5500000000001', 90010, 90002, 'nascida', null, null);
+  if not (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%vinculada ao registro de nascimento%'
+     or (select vaca_id_gerada from bezerros where propriedade_id = v_propriedade_id and numero_identificacao = 90010) is null then
+    raise exception 'FALHOU [bot_cadastrar_vaca]: filha deveria ser vinculada ao bezerro (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_cadastrar_vaca('5500000000001', 90020, 90002, 'comprada', null, null);
+  if not (v_bot->>'ok')::boolean
+     or (select mae_id from vacas where propriedade_id = v_propriedade_id and numero_identificacao = 90020) is not null then
+    raise exception 'FALHOU [bot_cadastrar_vaca]: vaca comprada não deveria ganhar mãe (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_atualizar_vaca('5500000000001', 90020, 'seca', null);
+  if not (v_bot->>'ok')::boolean
+     or (select status_produtivo from vacas where propriedade_id = v_propriedade_id and numero_identificacao = 90020) <> 'seca' then
+    raise exception 'FALHOU [bot_atualizar_vaca]: deveria marcar seca (veio %)', v_bot;
+  end if;
+  v_bot := bot_atualizar_vaca('5500000000001', 90020, null, null);
+  if (v_bot->>'ok')::boolean then
+    raise exception 'FALHOU [bot_atualizar_vaca]: sem nada pra mudar deveria perguntar';
+  end if;
+
+  -- financeiro
+  v_bot := bot_registrar_financeiro('5500000000001', 'despesa', 200, '  Ração ', null);
+  if not (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%R$ 200,00%'
+     or not exists (select 1 from financeiro where propriedade_id = v_propriedade_id and categoria = 'racao' and valor = 200) then
+    raise exception 'FALHOU [bot_registrar_financeiro]: deveria gravar com categoria normalizada (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_registrar_financeiro('5500000000001', 'talvez', 200, 'racao', null);
+  if (v_bot->>'ok')::boolean then
+    raise exception 'FALHOU [bot_registrar_financeiro]: tipo inválido deveria ser recusado';
+  end if;
+
+  v_bot := bot_corrigir_financeiro('5500000000001', null, null, null, 250);
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%categoria ou a data%' then
+    raise exception 'FALHOU [bot_corrigir_financeiro]: sem categoria nem data deveria perguntar (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_corrigir_financeiro('5500000000001', 'despesa', 'RAÇÃO', null, 250);
+  if not (v_bot->>'ok')::boolean
+     or not exists (select 1 from financeiro where propriedade_id = v_propriedade_id and categoria = 'racao' and valor = 250) then
+    raise exception 'FALHOU [bot_corrigir_financeiro]: deveria corrigir o valor (veio %)', v_bot;
+  end if;
+
+  v_alvo_bot := bot_localizar_financeiro_exclusao('5500000000001', 'despesa', 'racao', _hoje_fazenda());
+  if not (v_alvo_bot->>'ok')::boolean or v_alvo_bot->>'mensagem' not ilike 'Confirma excluir%' then
+    raise exception 'FALHOU [bot_localizar_financeiro_exclusao]: deveria achar o lançamento (veio %)', v_alvo_bot;
+  end if;
+
+  v_bot := bot_excluir_financeiro('5500000000001', (v_alvo_bot->>'lancamento_id')::uuid);
+  if not (v_bot->>'ok')::boolean or exists (select 1 from financeiro where id = (v_alvo_bot->>'lancamento_id')::uuid) then
+    raise exception 'FALHOU [bot_excluir_financeiro]: deveria apagar depois da confirmação (veio %)', v_bot;
   end if;
 
   raise notice 'TODOS OS TESTES PASSARAM';

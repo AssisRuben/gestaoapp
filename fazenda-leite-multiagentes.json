@@ -427,78 +427,6 @@
     },
     {
       "parameters": {
-        "operation": "get",
-        "tableId": "vacas",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "numero_identificacao",
-              "keyValue": "={{ $json.entidades.numero_vaca }}"
-            },
-            {
-              "keyName": "propriedade_id",
-              "keyValue": "={{ $json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        5824,
-        11696
-      ],
-      "id": "1cc52b9f-7274-4964-bb4e-03bca4b79db4",
-      "name": "Buscar Vaca (Leite)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "tableId": "controle_leite",
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "vaca_id",
-              "fieldValue": "={{ $('Buscar Vaca (Leite)').item.json.id }}"
-            },
-            {
-              "fieldId": "parto_id",
-              "fieldValue": "={{ $('Buscar Parto Ativo (Leite)').item.json.id }}"
-            },
-            {
-              "fieldId": "litros",
-              "fieldValue": "={{ $('Rotear Intencao').item.json.entidades.litros }}"
-            },
-            {
-              "fieldId": "data_controle",
-              "fieldValue": "={{ $('Rotear Intencao').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        7488,
-        11424
-      ],
-      "id": "781cbdf7-82ad-4e12-9b71-282649d89435",
-      "name": "Inserir Controle Leite",
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
         "resource": "messages-api",
         "instanceName": "Gabriel Bandeira",
         "remoteJid": "={{ $('Webhook').first().json.body.data.key.remoteJid }}",
@@ -991,116 +919,13 @@
     },
     {
       "parameters": {
-        "operation": "get",
-        "tableId": "vacas",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "numero_identificacao",
-              "keyValue": "={{ $json.entidades.numero_vaca }}"
-            },
-            {
-              "keyName": "propriedade_id",
-              "keyValue": "={{ $json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        5904,
-        14112
-      ],
-      "id": "0d693111-007f-4527-913c-63264b21b41d",
-      "name": "Buscar Vaca (Atualizar)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "get",
-        "tableId": "controle_leite",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "vaca_id",
-              "keyValue": "={{ $('Buscar Vaca (Atualizar)').item.json.id }}"
-            },
-            {
-              "keyName": "data_controle",
-              "keyValue": "={{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6240,
-        14096
-      ],
-      "id": "9a0457a7-9b85-43c7-91f7-d013b31db281",
-      "name": "Buscar Registro Leite (Atualizar)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "tableId": "controle_leite",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "id",
-              "condition": "eq",
-              "keyValue": "={{ $json.id }}"
-            }
-          ]
-        },
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "litros",
-              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.litros }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        7168,
-        13792
-      ],
-      "id": "c793ef34-9f3f-477e-93c1-5ce5ccc86aa5",
-      "name": "Atualizar Registro Leite",
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
               "id": "0f3e1ade-4184-4d86-8701-c0ca9249531c",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Registro atualizado: vaca {{ $('Buscar Vaca (Atualizar)').item.json.numero_identificacao }} agora com {{ $('Parsear Resposta IA').item.json.entidades.litros }}L em {{ ($('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd')).split('-').reverse().join('-') }}."
+              "value": "={{ $json.mensagem || 'Não consegui corrigir o leite agora. Tente de novo em alguns minutos.' }}"
             }
           ]
         },
@@ -1117,40 +942,7 @@
     },
     {
       "parameters": {
-        "operation": "get",
-        "tableId": "vacas",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "numero_identificacao",
-              "keyValue": "={{ $json.entidades.numero_vaca }}"
-            },
-            {
-              "keyName": "propriedade_id",
-              "keyValue": "={{ $json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        5936,
-        14448
-      ],
-      "id": "99898f9b-aef7-44fd-960b-2162c427bfd2",
-      "name": "Buscar Vaca (Deletar)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const registro = $input.first().json;\nconst vaca = $('Buscar Vaca (Deletar)').first().json;\nconst telefone = $('Parsear Resposta IA').first().json.telefone;\nconst pendencia = {\n  tipo: 'leite',\n  registro_id: registro.id,\n  numero_vaca: vaca.numero_identificacao,\n  data_controle: registro.data_controle,\n  periodo: registro.periodo,\n  litros: registro.litros\n};\nconst periodoTexto = registro.periodo ? `, ${registro.periodo}` : '';\nconst dataBR = registro.data_controle.split('-').reverse().join('-');\nconst texto = `Confirma excluir o registro da vaca ${vaca.numero_identificacao} (${dataBR}${periodoTexto}, ${registro.litros}L)? Responda SIM para confirmar ou NAO para cancelar.`;\nreturn [{ json: { telefone, pendencia: JSON.stringify(pendencia), resposta_sugerida: texto } }];"
+        "jsCode": "const r = $input.first().json;\nconst telefone = $('Parsear Resposta IA').first().json.telefone;\nif (!r.ok) {\n  return [{ json: { telefone, salvar: false, resposta_sugerida: r.mensagem || 'Não consegui localizar o registro agora. Tente de novo em alguns minutos.' } }];\n}\nconst pendencia = { tipo: 'leite', registro_id: r.registro_id, descricao: r.descricao };\nreturn [{ json: { telefone, salvar: true, pendencia: JSON.stringify(pendencia), resposta_sugerida: r.mensagem } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1280,36 +1072,6 @@
     {
       "parameters": {
         "operation": "delete",
-        "tableId": "controle_leite",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "id",
-              "condition": "eq",
-              "keyValue": "={{ $json.pendencia.registro_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6672,
-        11088
-      ],
-      "id": "d66ac813-d489-4ccc-9a01-774cdb4096a7",
-      "name": "Deletar Registro Leite",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "delete",
         "key": "=pendente_delete:{{ $('Processar Confirmação Delete').item.json.telefone }}"
       },
       "type": "n8n-nodes-base.redis",
@@ -1335,7 +1097,7 @@
               "id": "642ae0d4-2129-481e-b5be-ddb07b73fc6c",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Registro da vaca {{ $('Processar Confirmação Delete').item.json.pendencia.numero_vaca }} ({{ $('Processar Confirmação Delete').item.json.pendencia.data_controle.split('-').reverse().join('-') }}, {{ $('Processar Confirmação Delete').item.json.pendencia.periodo }}) excluído com sucesso."
+              "value": "={{ $('Excluir Leite (RPC)').item.json.mensagem || 'Não consegui excluir agora. Tente de novo em alguns minutos.' }}"
             }
           ]
         },
@@ -1392,39 +1154,6 @@
       ],
       "id": "953f6820-b570-45ef-bee7-96b0bd0693d3",
       "name": "Cancelar Delete"
-    },
-    {
-      "parameters": {
-        "operation": "get",
-        "tableId": "partos",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "vaca_id",
-              "keyValue": "={{ $json.id }}"
-            },
-            {
-              "keyName": "ativa",
-              "keyValue": "true"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6656,
-        11664
-      ],
-      "id": "e2ff5e89-103c-4112-840e-a251c351f706",
-      "name": "Buscar Parto Ativo (Leite)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
     },
     {
       "parameters": {
@@ -2078,161 +1807,13 @@
     },
     {
       "parameters": {
-        "operation": "get",
-        "tableId": "vacas",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "numero_identificacao",
-              "keyValue": "={{ $json.entidades.numero_vaca }}"
-            },
-            {
-              "keyName": "propriedade_id",
-              "keyValue": "={{ $json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        5968,
-        14768
-      ],
-      "id": "2af7a13d-f259-445a-95a4-9f9c18de19e4",
-      "name": "Buscar Vaca (Diagnóstico)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "coberturas",
-        "returnAll": true,
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "vaca_id",
-              "condition": "eq",
-              "keyValue": "={{ $('Buscar Vaca (Diagnóstico)').item.json.id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6400,
-        14816
-      ],
-      "id": "c97ac68d-16d9-48c3-9327-a20afd02f713",
-      "name": "Buscar Cobertura Pendente (Diagnóstico)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "85885e0d-95e5-437e-b2ec-f671751b3676",
-              "leftValue": "={{ String($json.coberturaId ?? '') }}",
-              "operator": {
-                "type": "string",
-                "operation": "isNotEmpty",
-                "name": "filter.operator.isNotEmpty"
-              },
-              "rightValue": ""
-            },
-            {
-              "id": "bf53927d-d59e-4e93-897c-257bc9c88efc",
-              "leftValue": "={{ !!$json.coberturaId }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "looseTypeValidation": true,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        7232,
-        14880
-      ],
-      "id": "6ab9d366-32ff-4415-bfe5-01df1aa8c5a7",
-      "name": "Tem Cobertura Pendente?"
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "tableId": "coberturas",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "id",
-              "condition": "eq",
-              "keyValue": "={{ $json.coberturaId }}"
-            }
-          ]
-        },
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "diagnostico_prenhez",
-              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.resultado_diagnostico }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        7712,
-        14704
-      ],
-      "id": "20bc4cc7-13dc-4282-afb7-33bbb6094cc3",
-      "name": "Atualizar Diagnóstico Cobertura",
-      "alwaysOutputData": false,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
               "id": "edb86a9a-2031-4bca-8ef1-c11102303007",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Diagnostico da vaca {{ $('Buscar Vaca (Diagnóstico)').item.json.numero_identificacao }} registrado como {{ $('Parsear Resposta IA').item.json.entidades.resultado_diagnostico }} "
+              "value": "={{ $json.mensagem || 'Não consegui registrar o diagnóstico agora. Tente de novo em alguns minutos.' }}"
             }
           ]
         },
@@ -2246,29 +1827,6 @@
       ],
       "id": "c68a56d0-49c9-49c7-9458-d3ba8b94cfb7",
       "name": "Confirmar Diagnóstico"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "462fd270-948c-4bb2-a8b2-5e86911213f9",
-              "name": "resposta_sugerida",
-              "type": "string",
-              "value": "=Não encontrei nenhuma cobertura registrada para a vaca {{ $('Buscar Vaca (Diagnóstico)').item.json.numero_identificacao }}. Registre a cobertura primeiro."
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        8016,
-        14864
-      ],
-      "id": "a23bbdcf-ad01-4a9b-9f09-e639db927e7f",
-      "name": "Sem Cobertura Pendente"
     },
     {
       "parameters": {
@@ -2330,306 +1888,13 @@
     },
     {
       "parameters": {
-        "jsCode": "const vaca = $('Buscar Vaca (Leite)').first().json;\nconst registro = $input.first().json; // saída do Inserir Controle Leite\n\nconst dataBR = registro.data_controle.split('-').reverse().join('-');\nconst texto = `Registrado ${registro.litros}L da vaca ${vaca.numero_identificacao} em ${dataBR}.`;\n\nreturn [{ json: { resposta_sugerida: texto } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7824,
-        11424
-      ],
-      "id": "5a754f9c-a05a-46ab-aac7-d606879d5857",
-      "name": "Code in JavaScript"
-    },
-    {
-      "parameters": {
-        "operation": "get",
-        "tableId": "controle_leite",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "vaca_id",
-              "keyValue": "={{ $('Buscar Vaca (Deletar)').item.json.id }}"
-            },
-            {
-              "keyName": "data_controle",
-              "keyValue": "={{ $('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd') }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6464,
-        14512
-      ],
-      "id": "750e9c63-032c-418c-81cc-4973cccfdcde",
-      "name": "Buscar Registro Leite (Deletar)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "340ba16d-a38d-4c02-91ff-b702a7c4a4c7",
-              "leftValue": "={{ $json.jaExiste }}",
-              "operator": {
-                "type": "boolean",
-                "operation": "equals",
-                "name": "filter.operator.equals"
-              },
-              "rightValue": "true"
-            }
-          ],
-          "combinator": "and"
-        },
-        "looseTypeValidation": true,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        6608,
-        13408
-      ],
-      "id": "1bb0c770-25d5-4f17-993b-adf57ab8396a",
-      "name": "Vaca Já Cadastrada?"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "63f2ee2a-6cae-447e-a02a-41a0fa349604",
-              "name": "resposta_sugerida",
-              "type": "string",
-              "value": "=A vaca {{ $('Determinar Número da Vaca').item.json.numeroVaca }} já está cadastrada nessa propriedade."
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        7504,
-        13312
-      ],
-      "id": "efa40912-0dd3-49d0-b564-773242684ea9",
-      "name": "Vaca Duplicada"
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "vacas",
-        "returnAll": true,
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "propriedade_id",
-              "condition": "eq",
-              "keyValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        7504,
-        13504
-      ],
-      "id": "db0692ba-fb4e-481e-b701-7df181706ca6",
-      "name": "Buscar Vaca Mãe (Cadastro)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "bezerros",
-        "returnAll": true,
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "propriedade_id",
-              "condition": "eq",
-              "keyValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        8032,
-        13520
-      ],
-      "id": "95e5cfd1-f07f-4f9d-a2c4-fd21b17c0a6b",
-      "name": "Buscar Bezerros da Mãe (Cadastro)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\nlet maeId = null;\nlet bezerroId = null;\n\nconst ehComprada = entidades.origem_animal === 'comprada';\n\nif (entidades.numero_mae && !ehComprada) {\n  try {\n    const vacasPropriedade = dedupeById($('Buscar Vaca Mãe (Cadastro)').all().map(i => i.json));\n    const mae = vacasPropriedade.find(v => String(v.numero_identificacao) === String(entidades.numero_mae));\n    if (mae && mae.id) {\n      maeId = mae.id;\n      let bezerrosPropriedade = [];\n      try { bezerrosPropriedade = dedupeById($('Buscar Bezerros da Mãe (Cadastro)').all().map(i => i.json)); } catch (e) {}\n      const naoVinculados = bezerrosPropriedade.filter(b => b.mae_id === maeId && !b.vaca_id_gerada);\n      naoVinculados.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));\n      if (naoVinculados.length > 0) bezerroId = naoVinculados[0].id;\n    }\n  } catch (e) {}\n}\n\nreturn [{ json: { maeId, bezerroId, ehComprada } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        8512,
-        13520
-      ],
-      "id": "6dbde206-4a5b-484a-aed2-a8ede42c5881",
-      "name": "Preparar Dados Cadastro"
-    },
-    {
-      "parameters": {
-        "tableId": "vacas",
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "propriedade_id",
-              "fieldValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}"
-            },
-            {
-              "fieldId": "numero_identificacao",
-              "fieldValue": "={{ $('Determinar Número da Vaca').item.json.numeroVaca }}"
-            },
-            {
-              "fieldId": "mae_id",
-              "fieldValue": "={{ $json.maeId }}"
-            },
-            {
-              "fieldId": "status_produtivo",
-              "fieldValue": "novilha"
-            },
-            {
-              "fieldId": "status_reprodutivo",
-              "fieldValue": "vazia"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        8896,
-        13520
-      ],
-      "id": "3f3b587a-af98-4bf3-aaa6-cb1c454f95b4",
-      "name": "Inserir Vaca",
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "e942edf5-09bf-4c69-9924-37ea9763b7e9",
-              "leftValue": "={{ String($('Preparar Dados Cadastro').item.json.bezerroId ?? '') }}",
-              "operator": {
-                "type": "string",
-                "operation": "isNotEmpty",
-                "name": "filter.operator.isNotEmpty"
-              },
-              "rightValue": ""
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        9360,
-        13520
-      ],
-      "id": "91202ac4-718d-4c2b-b80b-628291208f70",
-      "name": "Tem Bezerro Pra Vincular?"
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "tableId": "bezerros",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "id",
-              "condition": "eq",
-              "keyValue": "={{ $('Preparar Dados Cadastro').item.json.bezerroId }}"
-            }
-          ]
-        },
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "vaca_id_gerada",
-              "fieldValue": "={{ $('Inserir Vaca').item.json.id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        9696,
-        13344
-      ],
-      "id": "a1da012f-1ff5-4831-8d22-83ebab747496",
-      "name": "Vincular Bezerro",
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
               "id": "96fa7f67-fa41-4d24-99e4-357eca88a5bb",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Vaca {{ $('Determinar Número da Vaca').item.json.numeroVaca }}{{ $('Determinar Número da Vaca').item.json.autoGerado ? ' (número gerado automaticamente)' : '' }} cadastrada com sucesso{{ $('Preparar Dados Cadastro').item.json.maeId ? ' (filha da vaca ' + $('Parsear Resposta IA').item.json.entidades.numero_mae + ')' : '' }}{{ $('Preparar Dados Cadastro').item.json.bezerroId ? ', vinculada ao registro de nascimento' : '' }}."
+              "value": "={{ $json.mensagem || 'Não consegui cadastrar a vaca agora. Tente de novo em alguns minutos.' }}"
             }
           ]
         },
@@ -2646,211 +1911,13 @@
     },
     {
       "parameters": {
-        "operation": "getAll",
-        "tableId": "vacas",
-        "returnAll": true,
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "propriedade_id",
-              "condition": "eq",
-              "keyValue": "={{ $json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        5872,
-        13408
-      ],
-      "id": "c35f4919-a5a0-4caf-b0d6-4c61429ce03c",
-      "name": "Buscar Maior Número Vaca",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const entidades = $('Parsear Resposta IA').item.json.entidades;\nlet numeroVaca = entidades.numero_vaca;\nlet autoGerado = false;\n\nlet vacas = [];\ntry { vacas = $('Buscar Maior Número Vaca').all().map(i => i.json); } catch (e) {}\n\nif (!numeroVaca) {\n  const maior = vacas.reduce((max, v) => {\n    const n = Number(v.numero_identificacao) || 0;\n    return n > max ? n : max;\n  }, 0);\n  numeroVaca = maior + 1;\n  autoGerado = true;\n}\n\n// checagem de duplicidade feita aqui em codigo, sem depender do filtro multi-condicao do Supabase\nconst jaExiste = !autoGerado && vacas.some(v => String(v.numero_identificacao) === String(numeroVaca));\n\nreturn [{ json: { numeroVaca, autoGerado, jaExiste } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        6112,
-        13408
-      ],
-      "id": "c7e1818e-b803-4a7d-bcd7-8d4eac20a87b",
-      "name": "Determinar Número da Vaca"
-    },
-    {
-      "parameters": {
-        "operation": "get",
-        "tableId": "vacas",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "numero_identificacao",
-              "keyValue": "={{ $json.entidades.numero_vaca }}"
-            },
-            {
-              "keyName": "propriedade_id",
-              "keyValue": "={{ $json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        5952,
-        15248
-      ],
-      "id": "018f121b-cac8-4bba-a701-7e9e0606fca8",
-      "name": "Buscar Vaca (Atualizar Vaca)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "f2a7dc3c-0057-4000-8a7e-ef3c7ab3e66c",
-              "leftValue": "={{ String($json.id ?? '') }}",
-              "operator": {
-                "type": "string",
-                "operation": "isNotEmpty",
-                "name": "filter.operator.isNotEmpty"
-              },
-              "rightValue": ""
-            },
-            {
-              "id": "bf7e1895-cd5e-428b-9483-aec43be1f679",
-              "leftValue": "={{ !!$json.id }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        6912,
-        15280
-      ],
-      "id": "2265c75f-7019-4c5a-b08b-cfb2e5d747f2",
-      "name": "Vaca Encontrada (Atualizar Vaca)?"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "a715cd02-a4bb-4c27-87dd-c29c161e713d",
-              "name": "resposta_sugerida",
-              "type": "string",
-              "value": "=Não encontrei a vaca {{ $('Parsear Resposta IA').item.json.entidades.numero_vaca }} cadastrada. Confira o número."
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        7200,
-        15392
-      ],
-      "id": "671b1506-e465-4498-a275-f8cbb7dc3cd5",
-      "name": "Vaca Não Encontrada (Atualizar Vaca)"
-    },
-    {
-      "parameters": {
-        "jsCode": "const vaca = $input.first().json;\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\nconst statusProdutivo = entidades.status_produtivo || vaca.status_produtivo;\nconst statusReprodutivo = entidades.status_reprodutivo || vaca.status_reprodutivo;\nreturn [{ json: { statusProdutivo, statusReprodutivo } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7200,
-        15184
-      ],
-      "id": "29bd1856-c0d7-4c54-b54c-0f3fbd3983cf",
-      "name": "Preparar Atualização Vaca"
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "tableId": "vacas",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "id",
-              "condition": "eq",
-              "keyValue": "={{ $('Buscar Vaca (Atualizar Vaca)').item.json.id }}"
-            }
-          ]
-        },
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "status_produtivo",
-              "fieldValue": "={{ $json.statusProdutivo }}"
-            },
-            {
-              "fieldId": "status_reprodutivo",
-              "fieldValue": "={{ $json.statusReprodutivo }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        7488,
-        15168
-      ],
-      "id": "551da817-b5b0-4bc6-a59f-fcafcaf5c62e",
-      "name": "Atualizar Vaca (Dados)",
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
               "id": "bda023c6-0e34-440b-9a8d-f989e10c1322",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Vaca {{ $('Buscar Vaca (Atualizar Vaca)').item.json.numero_identificacao }} atualizada: status produtivo = {{ $('Preparar Atualização Vaca').item.json.statusProdutivo }}, status reprodutivo = {{ $('Preparar Atualização Vaca').item.json.statusReprodutivo }}."
+              "value": "={{ $json.mensagem || 'Não consegui atualizar a vaca agora. Tente de novo em alguns minutos.' }}"
             }
           ]
         },
@@ -2876,8 +1943,8 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        7392,
-        14432
+        7496,
+        14328
       ],
       "id": "8178076b-5acd-4925-b25b-ba2813f4f9c3",
       "name": "Salvar Pendência Delete Leite",
@@ -2890,56 +1957,13 @@
     },
     {
       "parameters": {
-        "tableId": "financeiro",
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "propriedade_id",
-              "fieldValue": "={{ $json.propriedade_id }}"
-            },
-            {
-              "fieldId": "tipo",
-              "fieldValue": "={{ $json.entidades.tipo_financeiro }}"
-            },
-            {
-              "fieldId": "categoria",
-              "fieldValue": "={{ $json.entidades.categoria || 'outros' }}"
-            },
-            {
-              "fieldId": "valor",
-              "fieldValue": "={{ $json.entidades.valor }}"
-            },
-            {
-              "fieldId": "data",
-              "fieldValue": "={{ $json.entidades.data || $now.format('yyyy-MM-dd') }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        5968,
-        15552
-      ],
-      "id": "4b573abd-5a17-43b5-89a4-f41fafb3e28a",
-      "name": "Inserir Financeiro",
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
               "id": "672f9570-b6b2-40dc-bf08-96b1875462fe",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Lançado: {{ $('Parsear Resposta IA').item.json.entidades.tipo_financeiro }} de R$ {{ $('Parsear Resposta IA').item.json.entidades.valor }} ({{ $('Parsear Resposta IA').item.json.entidades.categoria || 'outros' }}) em {{ ($('Parsear Resposta IA').item.json.entidades.data || $now.format('yyyy-MM-dd')).split('-').reverse().join('-') }}."
+              "value": "={{ $json.mensagem || 'Não consegui lançar agora. Tente de novo em alguns minutos.' }}"
             }
           ]
         },
@@ -3018,142 +2042,13 @@
     },
     {
       "parameters": {
-        "operation": "getAll",
-        "tableId": "financeiro",
-        "returnAll": true,
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "propriedade_id",
-              "condition": "eq",
-              "keyValue": "={{ $json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6000,
-        16176
-      ],
-      "id": "24e2a0ef-88f9-4295-b429-70d9a98c682c",
-      "name": "Buscar Lançamentos (Atualizar Financeiro)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\nlet lancamentos = dedupeById($input.all().map(i => i.json));\n\nif (entidades.categoria) {\n  const cat = entidades.categoria.toLowerCase();\n  lancamentos = lancamentos.filter(l => (l.categoria || '').toLowerCase() === cat);\n}\nif (entidades.tipo_financeiro) {\n  lancamentos = lancamentos.filter(l => l.tipo === entidades.tipo_financeiro);\n}\nif (entidades.data) {\n  lancamentos = lancamentos.filter(l => l.data === entidades.data);\n}\n\nlancamentos.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));\nconst alvo = lancamentos[0] || null;\n\nreturn [{ json: { alvoId: alvo ? alvo.id : null, valorAtual: alvo ? alvo.valor : null, categoriaAtual: alvo ? alvo.categoria : null } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7248,
-        16160
-      ],
-      "id": "c1becd15-c003-455d-b4d5-acd02f920ea0",
-      "name": "Selecionar Lançamento Alvo (Atualizar)"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "5a011eae-033e-4ead-a2ca-2b56237d7aa4",
-              "leftValue": "={{ String($json.alvoId ?? '') }}",
-              "operator": {
-                "type": "string",
-                "operation": "isNotEmpty",
-                "name": "filter.operator.isNotEmpty"
-              },
-              "rightValue": ""
-            },
-            {
-              "id": "467796c7-b92f-4cc4-a5c1-5ccaf9bbf651",
-              "leftValue": "={{ !!$json.alvoId }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        7536,
-        16160
-      ],
-      "id": "57bf6785-2c85-4e07-99b1-76b9e4810759",
-      "name": "Lançamento Encontrado (Atualizar)?"
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "tableId": "financeiro",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "id",
-              "condition": "eq",
-              "keyValue": "={{ $json.alvoId }}"
-            }
-          ]
-        },
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "valor",
-              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.valor || $json.valorAtual }}"
-            },
-            {
-              "fieldId": "categoria",
-              "fieldValue": "={{ $('Parsear Resposta IA').item.json.entidades.categoria || $json.categoriaAtual }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        7824,
-        16048
-      ],
-      "id": "d5275a7f-3ad7-41a7-9c0b-1d3c3be40ac2",
-      "name": "Atualizar Financeiro (Dados)",
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
               "id": "e1291a20-3f9d-4204-9e26-0bfbee8adbc3",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Lançamento atualizado para R$ {{ $json.valor }} ({{ $json.categoria }})."
+              "value": "={{ $json.mensagem || 'Não consegui corrigir o lançamento agora. Tente de novo em alguns minutos.' }}"
             }
           ]
         },
@@ -3170,119 +2065,7 @@
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "6d40419e-d785-42a9-a9f1-0d99c63a40b5",
-              "name": "resposta_sugerida",
-              "type": "string",
-              "value": "Não encontrei nenhum lançamento financeiro que bata com essa descrição. Confira a categoria e a data."
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        7824,
-        16256
-      ],
-      "id": "1c110e07-d06d-45b0-8cab-f51a7b80496d",
-      "name": "Lançamento Não Encontrado (Atualizar)"
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "financeiro",
-        "returnAll": true,
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "propriedade_id",
-              "condition": "eq",
-              "keyValue": "={{ $json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        5984,
-        16448
-      ],
-      "id": "97877cbb-cf01-4b33-93a8-5106d52655c4",
-      "name": "Buscar Lançamentos (Deletar Financeiro)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\nlet lancamentos = dedupeById($input.all().map(i => i.json));\n\nif (entidades.categoria) {\n  const cat = entidades.categoria.toLowerCase();\n  lancamentos = lancamentos.filter(l => (l.categoria || '').toLowerCase() === cat);\n}\nif (entidades.tipo_financeiro) {\n  lancamentos = lancamentos.filter(l => l.tipo === entidades.tipo_financeiro);\n}\nif (entidades.data) {\n  lancamentos = lancamentos.filter(l => l.data === entidades.data);\n}\n\nlancamentos.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));\nconst alvo = lancamentos[0] || null;\n\nreturn [{ json: { alvoId: alvo ? alvo.id : null, alvo } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7152,
-        16784
-      ],
-      "id": "a47ccfbb-d7d5-466d-b25c-43c325e9ec83",
-      "name": "Selecionar Lançamento Alvo (Deletar)"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "e085c40f-3138-4ee9-9d8a-a41113e7c353",
-              "leftValue": "={{ String($json.alvoId ?? '') }}",
-              "operator": {
-                "type": "string",
-                "operation": "isNotEmpty",
-                "name": "filter.operator.isNotEmpty"
-              },
-              "rightValue": ""
-            },
-            {
-              "id": "72946f16-999f-4f5d-83b7-a852ff738bd2",
-              "leftValue": "={{ !!$json.alvoId }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "looseTypeValidation": true,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        7792,
-        16784
-      ],
-      "id": "aef2f37e-d173-4b3b-90a2-80cc7ff52a1e",
-      "name": "Lançamento Encontrado (Deletar)?"
-    },
-    {
-      "parameters": {
-        "jsCode": "const alvo = $json.alvo;\nconst telefone = $('Parsear Resposta IA').first().json.telefone;\nconst pendencia = {\n  tipo: 'financeiro',\n  lancamento_id: alvo.id,\n  tipo_financeiro: alvo.tipo,\n  categoria: alvo.categoria,\n  valor: alvo.valor,\n  data: alvo.data\n};\nconst dataBR = alvo.data ? alvo.data.split('-').reverse().join('-') : 'data não informada';\nconst texto = `Confirma excluir o lançamento de ${alvo.tipo} (${alvo.categoria || 'outros'}, R$ ${alvo.valor}, ${dataBR})? Responda SIM para confirmar ou NAO para cancelar.`;\nreturn [{ json: { telefone, pendencia: JSON.stringify(pendencia), resposta_sugerida: texto } }];"
+        "jsCode": "const r = $input.first().json;\nconst telefone = $('Parsear Resposta IA').first().json.telefone;\nif (!r.ok) {\n  return [{ json: { telefone, salvar: false, resposta_sugerida: r.mensagem || 'Não consegui localizar o registro agora. Tente de novo em alguns minutos.' } }];\n}\nconst pendencia = { tipo: 'financeiro', lancamento_id: r.lancamento_id, descricao: r.descricao };\nreturn [{ json: { telefone, salvar: true, pendencia: JSON.stringify(pendencia), resposta_sugerida: r.mensagem } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -3304,8 +2087,8 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        9360,
-        16496
+        8888,
+        16408
       ],
       "id": "380e76a2-fe73-41fc-87ef-0818be677e73",
       "name": "Salvar Pendência Delete Financeiro",
@@ -3315,29 +2098,6 @@
           "name": "Redis account"
         }
       }
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "cecf2733-444b-4b8f-b377-1cf8d13e1b8f",
-              "name": "resposta_sugerida",
-              "type": "string",
-              "value": "Não encontrei nenhum lançamento financeiro que bata com essa descrição. Confira a categoria e a data."
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        9312,
-        16832
-      ],
-      "id": "04c2ffc2-5b9a-46df-84a0-830d9950614a",
-      "name": "Lançamento Não Encontrado (Deletar)"
     },
     {
       "parameters": {
@@ -3375,43 +2135,13 @@
     },
     {
       "parameters": {
-        "operation": "delete",
-        "tableId": "financeiro",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "id",
-              "condition": "eq",
-              "keyValue": "={{ $json.pendencia.lancamento_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6672,
-        10608
-      ],
-      "id": "e1601195-fb54-48bd-aaf9-14da3e88b790",
-      "name": "Deletar Lançamento Financeiro",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
               "id": "9bce3cc0-efda-4a59-8a00-8246eed1db1a",
               "name": "resposta_sugerida",
               "type": "string",
-              "value": "=Lançamento de {{ $('Processar Confirmação Delete').item.json.pendencia.tipo_financeiro }} ({{ $('Processar Confirmação Delete').item.json.pendencia.categoria }}, R$ {{ $('Processar Confirmação Delete').item.json.pendencia.valor }}, {{ $('Processar Confirmação Delete').item.json.pendencia.data ? $('Processar Confirmação Delete').item.json.pendencia.data.split('-').reverse().join('-') : 'data não informada' }}) excluído com sucesso."
+              "value": "={{ $('Excluir Financeiro (RPC)').item.json.mensagem || 'Não consegui excluir agora. Tente de novo em alguns minutos.' }}"
             }
           ]
         },
@@ -3459,73 +2189,6 @@
       ],
       "id": "1e4f2ed0-b1e6-4667-a694-884439e057e1",
       "name": "Tipo de Pendência (Confirmação)?"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "7f06aa9f-f4ec-41b4-8cf5-a3ceea8fdc8d",
-              "leftValue": "={{ String($json.id ?? '') }}",
-              "operator": {
-                "type": "string",
-                "operation": "isNotEmpty",
-                "name": "filter.operator.isNotEmpty"
-              },
-              "rightValue": ""
-            },
-            {
-              "id": "4c4f8fd9-103c-4d13-afaf-7c45b44e34c9",
-              "leftValue": "={{ $json.ativa }}",
-              "rightValue": false,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        7040,
-        11520
-      ],
-      "id": "4d376533-85ce-4ca3-bcc6-9b6c3a605b04",
-      "name": "Tem Lactação Ativa?"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "d46bb50a-3572-4f3e-9b49-7e223089ee2a",
-              "name": "resposta_sugerida",
-              "type": "string",
-              "value": "=A vaca {{ $('Buscar Vaca (Leite)').item.json.numero_identificacao }} não tem lactação ativa registrada, então não dá pra lançar leite dela agora. Pra resolver: registre o parto primeiro, dizendo algo como 'vaca {{ $('Buscar Vaca (Leite)').item.json.numero_identificacao }} pariu hoje'. Depois disso o lançamento de leite funciona normalmente."
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        7488,
-        11696
-      ],
-      "id": "b4a0f431-299e-411a-ae29-8b1c0a672755",
-      "name": "Sem Lactação Ativa"
     },
     {
       "parameters": {
@@ -3684,73 +2347,6 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "47afe504-8409-46a9-9e6d-57c1556adb3e",
-              "leftValue": "={{ String($json.id ?? \"\") }}",
-              "operator": {
-                "type": "string",
-                "operation": "isNotEmpty",
-                "name": "filter.operator.isNotEmpty"
-              },
-              "rightValue": ""
-            },
-            {
-              "id": "27ad3bc4-0e5f-42c1-9413-56d7104ea2ee",
-              "leftValue": "={{ !!$json.id }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        6736,
-        14080
-      ],
-      "id": "f3930a24-998d-4832-8e06-fe57cd6d9968",
-      "name": "Registro Encontrado (Atualizar)?"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "675fbeb4-6c56-4d19-9b38-0a970c60f075",
-              "name": "resposta_sugerida",
-              "type": "string",
-              "value": "=Não encontrei nenhum registro de leite da vaca {{ $('Buscar Vaca (Atualizar)').item.json.numero_identificacao }} nessa data pra corrigir. Confira o número da vaca e a data."
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        7216,
-        14144
-      ],
-      "id": "55563176-0eb0-46c1-bc57-e58e68a1a794",
-      "name": "Registro Não Encontrado (Atualizar)"
-    },
-    {
-      "parameters": {
         "jsCode": "const usuario = $json;\nlet status = 'ok';\nlet mensagem = '';\nif (!usuario.id) {\n  status = 'nao_cadastrado';\n  mensagem = 'Esse numero de WhatsApp ainda nao esta cadastrado no sistema. Entre em contato com o tecnico responsavel pela sua propriedade pra liberar o acesso.';\n} else if (usuario.ativo !== true) {\n  status = 'desativado';\n  mensagem = 'Seu acesso esta desativado no momento. Entre em contato com o tecnico responsavel pela sua propriedade.';\n}\nreturn [{ json: { ...usuario, statusAcesso: status, mensagemAcesso: mensagem } }];"
       },
       "type": "n8n-nodes-base.code",
@@ -3795,19 +2391,6 @@
       ],
       "id": "157f53c5-e02b-45eb-a165-164499cd17f5",
       "name": "Acesso Liberado?"
-    },
-    {
-      "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst coberturas = dedupeById($input.all().map(i => i.json));\ncoberturas.sort((a, b) => new Date(b.data_cobertura) - new Date(a.data_cobertura));\nconst maisRecente = coberturas[0] || null;\nreturn [{ json: { coberturaId: maisRecente ? maisRecente.id : null, dataCobertura: maisRecente ? maisRecente.data_cobertura : null } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        6832,
-        14864
-      ],
-      "id": "60ec74f5-10cf-42d7-9613-6ad6a557e12a",
-      "name": "Selecionar Cobertura Mais Recente"
     },
     {
       "parameters": {
@@ -3866,63 +2449,6 @@
       ],
       "id": "1ad26b07-cd97-4009-ba3d-9ab103183e24",
       "name": "No Operation, do nothing"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "d735f033-ed2d-4bcc-bc65-b84201b99255",
-              "leftValue": "={{ String($json.id ?? '') }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        6032,
-        11696
-      ],
-      "id": "0af2c7ab-9b90-4b47-8ecf-3fb1a5d90e2b",
-      "name": "Vaca Encontrada (Leite)?"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "6932cdcb-295f-464c-b2a5-5f5f94462f06",
-              "name": "resposta_sugerida",
-              "value": "=Não encontrei a vaca {{ $('Parsear Resposta IA').item.json.entidades.numero_vaca }} cadastrada. Confira o número.",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        6240,
-        11792
-      ],
-      "id": "0b8a2921-11c7-476a-b63a-72bc89660842",
-      "name": "Vaca Não Encontrada (Leite)"
     },
     {
       "parameters": {
@@ -4379,6 +2905,394 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_registrar_leite",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_numero_vaca: ($('Parsear Resposta IA').item.json.entidades.numero_vaca ? Number($('Parsear Resposta IA').item.json.entidades.numero_vaca) : null),\n  p_litros: ($('Parsear Resposta IA').item.json.entidades.litros ?? null),\n  p_data: ($('Parsear Resposta IA').item.json.entidades.data || null),\n  p_periodo: ($('Parsear Resposta IA').item.json.entidades.periodo || null)\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5824,
+        11696
+      ],
+      "id": "9a6ffa4f-5a9d-42aa-8976-4e519f494d82",
+      "name": "Registrar Leite (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c57ce56d-247f-4812-82cd-24536951c645",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "={{ $json.mensagem || 'Não consegui registrar o leite agora. Tente de novo em alguns minutos.' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6124,
+        11696
+      ],
+      "id": "5f1f5f98-91ed-41b2-86ab-ddf501ca8971",
+      "name": "Confirmar Leite"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_cadastrar_vaca",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_numero_vaca: ($('Parsear Resposta IA').item.json.entidades.numero_vaca ? Number($('Parsear Resposta IA').item.json.entidades.numero_vaca) : null),\n  p_numero_mae: ($('Parsear Resposta IA').item.json.entidades.numero_mae ? Number($('Parsear Resposta IA').item.json.entidades.numero_mae) : null),\n  p_origem: ($('Parsear Resposta IA').item.json.entidades.origem_animal || null),\n  p_status_produtivo: ($('Parsear Resposta IA').item.json.entidades.status_produtivo || null),\n  p_status_reprodutivo: ($('Parsear Resposta IA').item.json.entidades.status_reprodutivo || null)\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5872,
+        13408
+      ],
+      "id": "9ad6a98c-2e8e-4bda-93fa-964f4fcf217b",
+      "name": "Cadastrar Vaca (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_corrigir_leite",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_numero_vaca: ($('Parsear Resposta IA').item.json.entidades.numero_vaca ? Number($('Parsear Resposta IA').item.json.entidades.numero_vaca) : null),\n  p_data: ($('Parsear Resposta IA').item.json.entidades.data || null),\n  p_periodo: ($('Parsear Resposta IA').item.json.entidades.periodo || null),\n  p_litros: ($('Parsear Resposta IA').item.json.entidades.litros ?? null)\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5904,
+        14112
+      ],
+      "id": "17fc6772-78b1-499f-8fb9-0105f3e326c7",
+      "name": "Corrigir Leite (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_localizar_leite_exclusao",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_numero_vaca: ($('Parsear Resposta IA').item.json.entidades.numero_vaca ? Number($('Parsear Resposta IA').item.json.entidades.numero_vaca) : null),\n  p_data: ($('Parsear Resposta IA').item.json.entidades.data || null),\n  p_periodo: ($('Parsear Resposta IA').item.json.entidades.periodo || null)\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5936,
+        14448
+      ],
+      "id": "b1fbe4bc-67c2-4ec4-afcb-92f291d58f6c",
+      "name": "Localizar Leite p/ Excluir (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "841861e4-2a50-4706-8bdc-7967e4340da0",
+              "leftValue": "={{ $json.salvar === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        7276,
+        14448
+      ],
+      "id": "7547e9b6-9005-4b81-8e40-503fec9681a2",
+      "name": "Salvar Pendência Leite?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_diagnosticar_prenhez",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_numero_vaca: ($('Parsear Resposta IA').item.json.entidades.numero_vaca ? Number($('Parsear Resposta IA').item.json.entidades.numero_vaca) : null),\n  p_resultado: ($('Parsear Resposta IA').item.json.entidades.resultado_diagnostico || null)\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5968,
+        14768
+      ],
+      "id": "04950cb8-1e05-42a9-ac68-24a6ae5fc5c1",
+      "name": "Registrar Diagnóstico (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_atualizar_vaca",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_numero_vaca: ($('Parsear Resposta IA').item.json.entidades.numero_vaca ? Number($('Parsear Resposta IA').item.json.entidades.numero_vaca) : null),\n  p_status_produtivo: ($('Parsear Resposta IA').item.json.entidades.status_produtivo || null),\n  p_status_reprodutivo: ($('Parsear Resposta IA').item.json.entidades.status_reprodutivo || null)\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5952,
+        15248
+      ],
+      "id": "1827cc17-1d0f-434f-a1e2-10298b45539c",
+      "name": "Atualizar Vaca (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_registrar_financeiro",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_tipo: ($('Parsear Resposta IA').item.json.entidades.tipo_financeiro || null),\n  p_valor: ($('Parsear Resposta IA').item.json.entidades.valor ?? null),\n  p_categoria: ($('Parsear Resposta IA').item.json.entidades.categoria || null),\n  p_data: ($('Parsear Resposta IA').item.json.entidades.data || null)\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5968,
+        15552
+      ],
+      "id": "337256d7-856c-46ff-a1a7-2271926f2d75",
+      "name": "Registrar Financeiro (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_corrigir_financeiro",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_tipo: ($('Parsear Resposta IA').item.json.entidades.tipo_financeiro || null),\n  p_categoria: ($('Parsear Resposta IA').item.json.entidades.categoria || null),\n  p_data: ($('Parsear Resposta IA').item.json.entidades.data || null),\n  p_valor: ($('Parsear Resposta IA').item.json.entidades.valor ?? null)\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6000,
+        16176
+      ],
+      "id": "96910297-df25-4605-8cbf-2612fcf6c1c5",
+      "name": "Corrigir Financeiro (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_localizar_financeiro_exclusao",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_tipo: ($('Parsear Resposta IA').item.json.entidades.tipo_financeiro || null),\n  p_categoria: ($('Parsear Resposta IA').item.json.entidades.categoria || null),\n  p_data: ($('Parsear Resposta IA').item.json.entidades.data || null)\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5984,
+        16448
+      ],
+      "id": "a61b0de1-848b-417f-85af-cd89e85fc2ec",
+      "name": "Localizar Financeiro p/ Excluir (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "00a96c43-a8fd-4c59-849c-bc0582074c70",
+              "leftValue": "={{ $json.salvar === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        8668,
+        16528
+      ],
+      "id": "2c785251-e72f-4b1b-909a-a579bb0b2030",
+      "name": "Salvar Pendência Financeiro?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_excluir_leite",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_registro_id: $json.pendencia.registro_id\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6672,
+        11088
+      ],
+      "id": "679abc9f-e426-484b-b826-1d5d6361c9d7",
+      "name": "Excluir Leite (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_excluir_financeiro",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_lancamento_id: $json.pendencia.lancamento_id\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6672,
+        10608
+      ],
+      "id": "717075d8-9a00-4168-b29b-7f30b85dda89",
+      "name": "Excluir Financeiro (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
@@ -4420,7 +3334,7 @@
       "main": [
         [
           {
-            "node": "Buscar Vaca (Leite)",
+            "node": "Registrar Leite (RPC)",
             "type": "main",
             "index": 0
           }
@@ -4455,42 +3369,42 @@
         ],
         [
           {
-            "node": "Buscar Maior Número Vaca",
+            "node": "Cadastrar Vaca (RPC)",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Buscar Vaca (Atualizar)",
+            "node": "Corrigir Leite (RPC)",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Buscar Vaca (Deletar)",
+            "node": "Localizar Leite p/ Excluir (RPC)",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Buscar Vaca (Diagnóstico)",
+            "node": "Registrar Diagnóstico (RPC)",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Buscar Vaca (Atualizar Vaca)",
+            "node": "Atualizar Vaca (RPC)",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Inserir Financeiro",
+            "node": "Registrar Financeiro (RPC)",
             "type": "main",
             "index": 0
           }
@@ -4504,14 +3418,14 @@
         ],
         [
           {
-            "node": "Buscar Lançamentos (Atualizar Financeiro)",
+            "node": "Corrigir Financeiro (RPC)",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Buscar Lançamentos (Deletar Financeiro)",
+            "node": "Localizar Financeiro p/ Excluir (RPC)",
             "type": "main",
             "index": 0
           }
@@ -4519,28 +3433,6 @@
         [
           {
             "node": "Origem Áudio? (Fallback)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Vaca (Leite)": {
-      "main": [
-        [
-          {
-            "node": "Vaca Encontrada (Leite)?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Inserir Controle Leite": {
-      "main": [
-        [
-          {
-            "node": "Code in JavaScript",
             "type": "main",
             "index": 0
           }
@@ -4777,39 +3669,6 @@
         ]
       ]
     },
-    "Buscar Vaca (Atualizar)": {
-      "main": [
-        [
-          {
-            "node": "Buscar Registro Leite (Atualizar)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Registro Leite (Atualizar)": {
-      "main": [
-        [
-          {
-            "node": "Registro Encontrado (Atualizar)?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Atualizar Registro Leite": {
-      "main": [
-        [
-          {
-            "node": "Confirmar Atualização",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Confirmar Atualização": {
       "main": [
         [
@@ -4826,22 +3685,11 @@
         ]
       ]
     },
-    "Buscar Vaca (Deletar)": {
-      "main": [
-        [
-          {
-            "node": "Buscar Registro Leite (Deletar)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Preparar Pendência Delete": {
       "main": [
         [
           {
-            "node": "Salvar Pendência Delete Leite",
+            "node": "Salvar Pendência Leite?",
             "type": "main",
             "index": 0
           }
@@ -4906,17 +3754,6 @@
         ]
       ]
     },
-    "Deletar Registro Leite": {
-      "main": [
-        [
-          {
-            "node": "Limpar Pendência (Excluído)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Limpar Pendência (Excluído)": {
       "main": [
         [
@@ -4965,17 +3802,6 @@
           },
           {
             "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Parto Ativo (Leite)": {
-      "main": [
-        [
-          {
-            "node": "Tem Lactação Ativa?",
             "type": "main",
             "index": 0
           }
@@ -5295,74 +4121,7 @@
         ]
       ]
     },
-    "Buscar Vaca (Diagnóstico)": {
-      "main": [
-        [
-          {
-            "node": "Buscar Cobertura Pendente (Diagnóstico)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Cobertura Pendente (Diagnóstico)": {
-      "main": [
-        [
-          {
-            "node": "Selecionar Cobertura Mais Recente",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Tem Cobertura Pendente?": {
-      "main": [
-        [
-          {
-            "node": "Atualizar Diagnóstico Cobertura",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Sem Cobertura Pendente",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Atualizar Diagnóstico Cobertura": {
-      "main": [
-        [
-          {
-            "node": "Confirmar Diagnóstico",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Confirmar Diagnóstico": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Sem Cobertura Pendente": {
       "main": [
         [
           {
@@ -5400,140 +4159,6 @@
         ]
       ]
     },
-    "Code in JavaScript": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Registro Leite (Deletar)": {
-      "main": [
-        [
-          {
-            "node": "Preparar Pendência Delete",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Vaca Já Cadastrada?": {
-      "main": [
-        [
-          {
-            "node": "Vaca Duplicada",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Buscar Vaca Mãe (Cadastro)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Vaca Duplicada": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Vaca Mãe (Cadastro)": {
-      "main": [
-        [
-          {
-            "node": "Buscar Bezerros da Mãe (Cadastro)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Bezerros da Mãe (Cadastro)": {
-      "main": [
-        [
-          {
-            "node": "Preparar Dados Cadastro",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Preparar Dados Cadastro": {
-      "main": [
-        [
-          {
-            "node": "Inserir Vaca",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Inserir Vaca": {
-      "main": [
-        [
-          {
-            "node": "Tem Bezerro Pra Vincular?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Tem Bezerro Pra Vincular?": {
-      "main": [
-        [
-          {
-            "node": "Vincular Bezerro",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Confirmar Cadastro",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Vincular Bezerro": {
-      "main": [
-        [
-          {
-            "node": "Confirmar Cadastro",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Confirmar Cadastro": {
       "main": [
         [
@@ -5544,95 +4169,6 @@
           },
           {
             "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Maior Número Vaca": {
-      "main": [
-        [
-          {
-            "node": "Determinar Número da Vaca",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Determinar Número da Vaca": {
-      "main": [
-        [
-          {
-            "node": "Vaca Já Cadastrada?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Vaca (Atualizar Vaca)": {
-      "main": [
-        [
-          {
-            "node": "Vaca Encontrada (Atualizar Vaca)?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Vaca Encontrada (Atualizar Vaca)?": {
-      "main": [
-        [
-          {
-            "node": "Preparar Atualização Vaca",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Vaca Não Encontrada (Atualizar Vaca)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Vaca Não Encontrada (Atualizar Vaca)": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Preparar Atualização Vaca": {
-      "main": [
-        [
-          {
-            "node": "Atualizar Vaca (Dados)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Atualizar Vaca (Dados)": {
-      "main": [
-        [
-          {
-            "node": "Confirmar Atualização Vaca",
             "type": "main",
             "index": 0
           }
@@ -5665,17 +4201,6 @@
           },
           {
             "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Inserir Financeiro": {
-      "main": [
-        [
-          {
-            "node": "Confirmar Financeiro",
             "type": "main",
             "index": 0
           }
@@ -5736,57 +4261,6 @@
         ]
       ]
     },
-    "Buscar Lançamentos (Atualizar Financeiro)": {
-      "main": [
-        [
-          {
-            "node": "Selecionar Lançamento Alvo (Atualizar)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Selecionar Lançamento Alvo (Atualizar)": {
-      "main": [
-        [
-          {
-            "node": "Lançamento Encontrado (Atualizar)?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Lançamento Encontrado (Atualizar)?": {
-      "main": [
-        [
-          {
-            "node": "Atualizar Financeiro (Dados)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Lançamento Não Encontrado (Atualizar)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Atualizar Financeiro (Dados)": {
-      "main": [
-        [
-          {
-            "node": "Confirmar Atualização Financeiro",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Confirmar Atualização Financeiro": {
       "main": [
         [
@@ -5803,67 +4277,11 @@
         ]
       ]
     },
-    "Lançamento Não Encontrado (Atualizar)": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Lançamentos (Deletar Financeiro)": {
-      "main": [
-        [
-          {
-            "node": "Selecionar Lançamento Alvo (Deletar)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Selecionar Lançamento Alvo (Deletar)": {
-      "main": [
-        [
-          {
-            "node": "Lançamento Encontrado (Deletar)?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Lançamento Encontrado (Deletar)?": {
-      "main": [
-        [
-          {
-            "node": "Preparar Pendência Delete Financeiro",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Lançamento Não Encontrado (Deletar)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Preparar Pendência Delete Financeiro": {
       "main": [
         [
           {
-            "node": "Salvar Pendência Delete Financeiro",
+            "node": "Salvar Pendência Financeiro?",
             "type": "main",
             "index": 0
           }
@@ -5886,45 +4304,18 @@
         ]
       ]
     },
-    "Lançamento Não Encontrado (Deletar)": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Tipo de Pendência (Delete)?": {
       "main": [
         [
           {
-            "node": "Deletar Lançamento Financeiro",
+            "node": "Excluir Financeiro (RPC)",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Deletar Registro Leite",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Deletar Lançamento Financeiro": {
-      "main": [
-        [
-          {
-            "node": "Limpar Pendência (Excluído)",
+            "node": "Excluir Leite (RPC)",
             "type": "main",
             "index": 0
           }
@@ -5950,40 +4341,6 @@
       ]
     },
     "Confirmar Delete Financeiro": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Tem Lactação Ativa?": {
-      "main": [
-        [
-          {
-            "node": "Inserir Controle Leite",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Sem Lactação Ativa",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Sem Lactação Ativa": {
       "main": [
         [
           {
@@ -6066,40 +4423,6 @@
         ]
       ]
     },
-    "Registro Encontrado (Atualizar)?": {
-      "main": [
-        [
-          {
-            "node": "Atualizar Registro Leite",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Registro Não Encontrado (Atualizar)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Registro Não Encontrado (Atualizar)": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Verificar Status Usuário": {
       "main": [
         [
@@ -6134,17 +4457,6 @@
         ]
       ]
     },
-    "Selecionar Cobertura Mais Recente": {
-      "main": [
-        [
-          {
-            "node": "Tem Cobertura Pendente?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "If1": {
       "main": [
         [
@@ -6164,40 +4476,6 @@
       ]
     },
     "Code in JavaScript1": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Vaca Encontrada (Leite)?": {
-      "main": [
-        [
-          {
-            "node": "Buscar Parto Ativo (Leite)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Vaca Não Encontrada (Leite)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Vaca Não Encontrada (Leite)": {
       "main": [
         [
           {
@@ -6383,6 +4661,189 @@
         [
           {
             "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Leite (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Leite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Leite": {
+      "main": [
+        [
+          {
+            "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cadastrar Vaca (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Cadastro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Corrigir Leite (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Atualização",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Localizar Leite p/ Excluir (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Preparar Pendência Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Pendência Leite?": {
+      "main": [
+        [
+          {
+            "node": "Salvar Pendência Delete Leite",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Diagnóstico (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Diagnóstico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Vaca (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Atualização Vaca",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Financeiro (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Corrigir Financeiro (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Atualização Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Localizar Financeiro p/ Excluir (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Preparar Pendência Delete Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Pendência Financeiro?": {
+      "main": [
+        [
+          {
+            "node": "Salvar Pendência Delete Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Excluir Financeiro (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Limpar Pendência (Excluído)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Excluir Leite (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Limpar Pendência (Excluído)",
             "type": "main",
             "index": 0
           }
