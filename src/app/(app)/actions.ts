@@ -15,5 +15,8 @@ export async function trocarPropriedade(formData: FormData) {
   const propriedadeId = formData.get("propriedade_id") as string;
   const cookieStore = await cookies();
   cookieStore.set(PROPRIEDADE_COOKIE, propriedadeId, { path: "/" });
-  redirect("/");
+
+  // só caminho interno de um nível ("/leite"), nunca URL de fora
+  const voltar = String(formData.get("voltar") ?? "/");
+  redirect(/^\/[a-z-]*$/.test(voltar) ? voltar : "/");
 }

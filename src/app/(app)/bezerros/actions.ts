@@ -38,6 +38,28 @@ export async function cadastrarBezerro(
   return { success: true };
 }
 
+export type PromoverBezerroState = { error?: string; success?: boolean; vacaId?: string } | undefined;
+
+export async function promoverBezerro(
+  _state: PromoverBezerroState,
+  formData: FormData,
+): Promise<PromoverBezerroState> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("promover_bezerro", {
+    p_bezerro_id: formData.get("bezerro_id") as string,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/bezerros");
+  revalidatePath("/vacas");
+  updateTag("bezerros");
+  updateTag("vacas");
+  return { success: true, vacaId: (data as { id: string }).id };
+}
+
 export type DeletarBezerroState = { error?: string; success?: boolean } | undefined;
 
 export async function deletarBezerro(

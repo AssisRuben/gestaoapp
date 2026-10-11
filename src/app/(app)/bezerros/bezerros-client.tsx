@@ -6,6 +6,8 @@ import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../m
 import { useSuccessToast, SuccessToast } from "../toast";
 import { formatarDataBR } from "../format";
 import type { Bezerro, VacaOpcao } from "./types";
+import { VirouVaca, idadeTexto } from "./virou-vaca";
+import { hojeBrasil } from "@/lib/datas";
 
 const SEXO_LABEL: Record<string, string> = {
   macho: "Macho",
@@ -92,6 +94,7 @@ function CamposBezerro({
 }
 
 export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas: VacaOpcao[] }) {
+  const hoje = hojeBrasil();
   const [busca, setBusca] = useState("");
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [bezerroEmEdicao, setBezerroEmEdicao] = useState<Bezerro | null>(null);
@@ -190,11 +193,12 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
                 </td>
                 <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
                   {bezerro.data_nascimento ? formatarDataBR(bezerro.data_nascimento) : "—"}
+                  {idadeTexto(bezerro.data_nascimento, hoje) && (
+                    <span className="text-sm"> ({idadeTexto(bezerro.data_nascimento, hoje)})</span>
+                  )}
                 </td>
                 <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
-                  {bezerro.vaca_gerada
-                    ? `Vaca ${bezerro.vaca_gerada.numero_identificacao}`
-                    : "Ainda bezerro"}
+                  <VirouVaca bezerro={bezerro} onSucesso={mostrarToast} />
                 </td>
               </tr>
             ))}
@@ -224,16 +228,13 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
             <CardRow label="Mãe" value={bezerro.mae ? bezerro.mae.numero_identificacao : "—"} />
             <CardRow
               label="Nascimento"
-              value={bezerro.data_nascimento ? formatarDataBR(bezerro.data_nascimento) : "—"}
-            />
-            <CardRow
-              label="Virou vaca?"
               value={
-                bezerro.vaca_gerada
-                  ? `Vaca ${bezerro.vaca_gerada.numero_identificacao}`
-                  : "Ainda bezerro"
+                bezerro.data_nascimento
+                  ? `${formatarDataBR(bezerro.data_nascimento)}${idadeTexto(bezerro.data_nascimento, hoje) ? ` (${idadeTexto(bezerro.data_nascimento, hoje)})` : ""}`
+                  : "—"
               }
             />
+            <CardRow label="Virou vaca?" value={<VirouVaca bezerro={bezerro} onSucesso={mostrarToast} />} />
           </MobileCard>
         ))}
         {bezerrosFiltrados.length === 0 && <EmptyCard>Nenhum bezerro cadastrado ainda.</EmptyCard>}

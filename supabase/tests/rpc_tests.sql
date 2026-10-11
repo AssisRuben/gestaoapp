@@ -1032,6 +1032,43 @@ begin
     raise exception 'FALHOU [alertas_reprodutivos]: vaca 90002 (prenhe há 3 dias) não deveria alertar';
   end if;
 
+  -- ============================================================
+  -- bezerra vira vaca (0029)
+  -- ============================================================
+
+  insert into bezerros (propriedade_id, mae_id, numero_identificacao, sexo, data_nascimento)
+  values (v_propriedade_id, v_vaca_bot, 90030, 'femea', _hoje_fazenda() - 400)
+  returning id into v_cob_status;
+
+  perform promover_bezerro(v_cob_status);
+  if not exists (
+    select 1 from vacas v join bezerros b on b.vaca_id_gerada = v.id
+    where b.id = v_cob_status and v.numero_identificacao = 90030 and v.mae_id = v_vaca_bot and v.status_produtivo = 'novilha'
+  ) then
+    raise exception 'FALHOU [promover_bezerro]: deveria criar a novilha 90030 ligada à bezerra e à mãe';
+  end if;
+
+  begin
+    perform promover_bezerro(v_cob_status);
+    raise exception 'FALHOU [promover_bezerro]: promover de novo deveria ser recusado';
+  exception when others then
+    if sqlerrm not ilike '%já foi cadastrado como vaca%' then
+      raise exception 'FALHOU [promover_bezerro]: erro inesperado ao repetir: %', sqlerrm;
+    end if;
+  end;
+
+  insert into bezerros (propriedade_id, mae_id, numero_identificacao, sexo, data_nascimento)
+  values (v_propriedade_id, v_vaca_bot, 90031, 'macho', _hoje_fazenda() - 400)
+  returning id into v_cob_status;
+  begin
+    perform promover_bezerro(v_cob_status);
+    raise exception 'FALHOU [promover_bezerro]: macho não deveria virar vaca';
+  exception when others then
+    if sqlerrm not ilike '%só bezerras%' then
+      raise exception 'FALHOU [promover_bezerro]: erro inesperado com macho: %', sqlerrm;
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 
