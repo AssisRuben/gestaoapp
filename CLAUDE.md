@@ -386,6 +386,16 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - Corrigir/apagar financeiro exige categoria ou data (antes pegava o lançamento mais recente da
   fazenda). Categoria gravada pelo bot é normalizada no banco (`_categoria_normalizada`).
 
+## Testes automáticos
+
+- `npm test`: `tests/indicadores.test.mjs`, `tests/offline.test.mjs` (filas do celular + service
+  worker, com rede simulada) e `tests/banco.test.mjs` (banco montado do zero num Postgres em
+  memória — PGlite — + `supabase/tests/rpc_tests.sql` inteiro + dados de exemplo). Não toca na
+  produção. `npm run typecheck` = tsc.
+- GitHub Actions (`.github/workflows/verificacao.yml`) roda lint, tipos, testes e build a cada push.
+  Migration nova ou regra nova: acrescente o teste em `rpc_tests.sql` (ou num `tests/*.test.mjs`)
+  no mesmo commit.
+
 ## Homologação e banco do zero
 
 - As tabelas originais (propriedades, vacas, partos...) NÃO são criadas por nenhuma migration — o
