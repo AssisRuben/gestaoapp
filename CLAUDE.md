@@ -332,6 +332,9 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   central. Até 0022 o bot gravava o texto num campo `touro`; coberturas antigas do bot podem ter o
   touro só ali (ou em lugar nenhum, se essa coluna não existir no banco)
 - `patrimonio` não tem nenhuma integração com o bot ainda
+- **Decisão (2026-10-11): custo por litro usa só as despesas correntes** (lançamentos de despesa do
+  `financeiro`, em `calcular_indicadores`). Patrimônio/depreciação NÃO entra nessa conta — não
+  acrescentar.
 
 ## Telefone e status reprodutivo (0024_telefone_status_reprodutivo.sql)
 
