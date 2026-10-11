@@ -10,6 +10,7 @@ import {
 } from "@/lib/cached-data";
 import { DashboardClient } from "./dashboard-client";
 import { hojeBrasil, somarDias } from "@/lib/datas";
+import { coberturaAtualPorVaca } from "@/lib/indicadores";
 
 export default async function DashboardPage() {
   const propriedadeAtual = await getPropriedadeAtual();
@@ -67,34 +68,16 @@ export default async function DashboardPage() {
     ativa: boolean;
   }[];
 
-  // Só contam as coberturas da lactação atual: a positiva que gerou o parto continua na tabela
-  // (o parto aponta pra ela) e não pode virar "pra secar" de novo; cobertura anterior ao parto
-  // ativo é de uma gestação que já terminou. Mesma ideia do "not exists partos" do banco.
-  const coberturasComParto = new Set(partos.map((p) => p.cobertura_id).filter(Boolean));
-  const partoAtivoPorVaca = new Map<string, string>();
-  for (const p of partos) {
-    if (!p.ativa) continue;
-    const atual = partoAtivoPorVaca.get(p.vaca_id);
-    if (!atual || p.data_parto > atual) partoAtivoPorVaca.set(p.vaca_id, p.data_parto);
-  }
-  const daLactacaoAtual = (c: { id: string; vaca_id: string; data_cobertura: string }) => {
-    if (coberturasComParto.has(c.id)) return false;
-    const parto = partoAtivoPorVaca.get(c.vaca_id);
-    return !parto || c.data_cobertura >= parto;
-  };
+  // Cobertura que vale hoje pra cada vaca (lactação atual, sem a que já virou parto) — mesma regra
+  // do resumo da fazenda.
+  const coberturaAtual = [...coberturaAtualPorVaca(coberturas, partos).values()];
 
-  // Vacas pra secar: cobertura confirmada mais recente por vaca (regra 7 do CLAUDE.md)
-  const ultimaPositivaPorVaca = new Map<string, { data_cobertura: string; numero: number }>();
-  for (const c of coberturas) {
-    if (c.diagnostico_prenhez !== "positivo" || !daLactacaoAtual(c)) continue;
-    const atual = ultimaPositivaPorVaca.get(c.vaca_id);
-    if (!atual || c.data_cobertura > atual.data_cobertura) {
-      ultimaPositivaPorVaca.set(c.vaca_id, {
-        data_cobertura: c.data_cobertura,
-        numero: c.vaca.numero_identificacao,
-      });
-    }
-  }
+  // Vacas pra secar: cobertura atual confirmada (regra 7 do CLAUDE.md)
+  const ultimaPositivaPorVaca = new Map(
+    coberturaAtual
+      .filter((c) => c.diagnostico_prenhez === "positivo")
+      .map((c) => [c.vaca_id, { data_cobertura: c.data_cobertura, numero: c.vaca.numero_identificacao }]),
+  );
   // Janela pelo parto previsto, não pela secagem: a vaca deve ser seca 60 dias
   // antes do parto, então avisar com 90 dias de antecedência do parto dá 30
   // dias de folga antes do prazo real de secagem. Mantém 5 dias de tolerância
@@ -111,15 +94,9 @@ export default async function DashboardPage() {
     .filter((v) => v.partoPrevisto >= inicioJanelaParto && v.partoPrevisto <= fimJanelaParto)
     .sort((a, b) => a.secagemPrevista.localeCompare(b.secagemPrevista));
 
-  // Diagnósticos pendentes: só a cobertura mais recente de cada vaca (é nela que o diagnóstico
-  // vale — regra 3); pendente antiga, já seguida de outra cobertura, não aparece de novo.
-  const ultimaCoberturaPorVaca = new Map<string, (typeof coberturas)[number]>();
-  for (const c of coberturas) {
-    if (!daLactacaoAtual(c)) continue;
-    const atual = ultimaCoberturaPorVaca.get(c.vaca_id);
-    if (!atual || c.data_cobertura > atual.data_cobertura) ultimaCoberturaPorVaca.set(c.vaca_id, c);
-  }
-  const diagnosticosPendentes = [...ultimaCoberturaPorVaca.values()]
+  // Diagnósticos pendentes: só a cobertura atual de cada vaca (é nela que o diagnóstico vale —
+  // regra 3); pendente antiga, já seguida de outra cobertura, não aparece de novo.
+  const diagnosticosPendentes = coberturaAtual
     .filter((c) => c.diagnostico_prenhez === "pendente")
     .map((c) => ({ coberturaId: c.id, vacaId: c.vaca_id, numero: c.vaca.numero_identificacao, data_cobertura: c.data_cobertura }))
     .sort((a, b) => a.data_cobertura.localeCompare(b.data_cobertura));

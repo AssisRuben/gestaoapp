@@ -117,7 +117,7 @@ export function ResumoFazendaView({
       </section>
 
       {(resumo.visitas.length > 0 || resumo.recomendacoesAbertas.length > 0) && (
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 print:grid-cols-2">
+        <section className="flex flex-col gap-4">
           <div className={`p-4 ${CARTAO}`}>
             <Titulo>Recomendações em aberto ({resumo.recomendacoesAbertas.length})</Titulo>
             {resumo.recomendacoesAbertas.length === 0 ? (
@@ -140,24 +140,39 @@ export function ResumoFazendaView({
               </ul>
             )}
           </div>
-          {resumo.visitas[0] && (
+          {resumo.visitas.length > 0 && (
             <div className={`p-4 ${CARTAO}`}>
               <Titulo>
-                Última visita: {formatarDataBR(resumo.visitas[0].data)}
-                {resumo.visitas[0].autorNome && ` (${resumo.visitas[0].autorNome})`}
+                {resumo.visitas.length === 1 ? "Visita técnica" : `Visitas técnicas (${resumo.visitas.length} mais recentes)`}
               </Titulo>
-              {resumo.visitas[0].observacoes && (
-                <p className="mt-2 whitespace-pre-line text-sm text-black dark:text-zinc-50">{resumo.visitas[0].observacoes}</p>
-              )}
-              {resumo.visitas[0].recomendacoes.length > 0 && (
-                <ul className="mt-2 flex flex-col gap-1 text-sm">
-                  {resumo.visitas[0].recomendacoes.map((r) => (
-                    <li key={r.id} className={r.concluidaEm ? "text-zinc-500 line-through" : "text-black dark:text-zinc-50"}>
-                      {r.concluidaEm ? "✓" : "○"} {r.texto}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              {/* Todas as visitas carregadas (até 10), da mais recente pra mais antiga. */}
+              <ol className="mt-2 flex flex-col divide-y divide-black/[.06] dark:divide-white/[.08]">
+                {resumo.visitas.map((v) => (
+                  <li key={v.id} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0 print:break-inside-avoid">
+                    <p className="text-sm font-semibold text-black dark:text-zinc-50">
+                      {formatarDataBR(v.data)}
+                      {v.autorNome && <span className="font-normal text-zinc-600 dark:text-zinc-400"> · {v.autorNome}</span>}
+                    </p>
+                    {v.observacoes && (
+                      <p className="whitespace-pre-line text-sm text-black dark:text-zinc-50">{v.observacoes}</p>
+                    )}
+                    {v.recomendacoes.length > 0 && (
+                      <ul className="flex flex-col gap-0.5 text-sm">
+                        {v.recomendacoes.map((r) => (
+                          <li key={r.id} className={r.concluidaEm ? "text-zinc-500 line-through" : "text-black dark:text-zinc-50"}>
+                            {r.concluidaEm ? "✓" : "○"} {r.texto}
+                            {r.concluidaEm ? (
+                              <span className="no-underline"> — feita em {formatarDataBR(r.concluidaEm.slice(0, 10))}</span>
+                            ) : (
+                              r.prazo && <span className="text-zinc-600 dark:text-zinc-400"> — prazo {formatarDataBR(r.prazo)}</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ol>
             </div>
           )}
         </section>

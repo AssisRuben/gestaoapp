@@ -40,4 +40,23 @@ ok(contando.dias === 100 && !contando.fechado, "sem prenhez confirmada, dias em 
 ok(ind.situacaoReprodutiva([{ data_cobertura: "2026-10-01", diagnostico_prenhez: "pendente" }], parto, hoje).tipo === "em_servico", "cobertura pendente = em serviço");
 ok(ind.situacaoReprodutiva([], parto, hoje).tipo === "vazia", "sem cobertura = vazia");
 
+// Cobertura atual por vaca (Início e resumo da fazenda): só a lactação atual, sem a que virou parto
+const cobs = [
+  { id: "c1", vaca_id: "A", data_cobertura: "2025-09-20", diagnostico_prenhez: "positivo" }, // gerou o parto ativo
+  { id: "c2", vaca_id: "B", data_cobertura: "2026-03-01", diagnostico_prenhez: "positivo" }, // antes do parto ativo, solta
+  { id: "c3", vaca_id: "C", data_cobertura: "2026-07-23", diagnostico_prenhez: "pendente" }, // pendente antiga
+  { id: "c4", vaca_id: "C", data_cobertura: "2026-07-24", diagnostico_prenhez: "pendente" }, // a que vale
+  { id: "c5", vaca_id: "D", data_cobertura: "2026-05-01", diagnostico_prenhez: "positivo" }, // novilha: sem parto
+];
+const partosAtivos = [
+  { vaca_id: "A", data_parto: "2026-07-01", ativa: true, cobertura_id: "c1" },
+  { vaca_id: "B", data_parto: "2026-07-23", ativa: true, cobertura_id: null },
+  { vaca_id: "C", data_parto: "2026-06-01", ativa: true, cobertura_id: null },
+];
+const atual = ind.coberturaAtualPorVaca(cobs, partosAtivos);
+ok(!atual.has("A"), "cobertura que já virou parto não conta (vaca não aparece pra secar de novo)");
+ok(!atual.has("B"), "positiva de antes do parto ativo não conta");
+ok(atual.get("C")?.id === "c4" && atual.size === 2, "só a cobertura mais recente de cada vaca (sem pendente repetida)");
+ok(atual.get("D")?.id === "c5", "vaca sem parto: vale a cobertura mais recente");
+
 terminar("indicadores");

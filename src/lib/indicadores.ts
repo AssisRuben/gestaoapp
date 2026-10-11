@@ -80,6 +80,33 @@ export function coberturasDaLactacao<T extends CoberturaInd>(coberturas: T[], da
     .sort((a, b) => b.data_cobertura.localeCompare(a.data_cobertura));
 }
 
+// Cobertura que vale hoje pra cada vaca: a mais recente da lactação atual (a partir do parto
+// ativo), ignorando a que já virou parto (o parto aponta pra ela e ela continua na tabela). É a
+// base de "pra secar", "partos previstos" e "aguardando diagnóstico" no Início e no resumo da
+// fazenda — cobertura de antes do parto ativo é de uma gestação que já terminou (regra 3: o
+// diagnóstico vale na mais recente).
+export function coberturaAtualPorVaca<T extends CoberturaInd & { id: string; vaca_id: string }>(
+  coberturas: T[],
+  partos: { vaca_id: string; data_parto: string; ativa: boolean; cobertura_id: string | null }[],
+): Map<string, T> {
+  const comParto = new Set(partos.map((p) => p.cobertura_id).filter(Boolean));
+  const partoAtivo = new Map<string, string>();
+  for (const p of partos) {
+    if (!p.ativa) continue;
+    const atual = partoAtivo.get(p.vaca_id);
+    if (!atual || p.data_parto > atual) partoAtivo.set(p.vaca_id, p.data_parto);
+  }
+  const resultado = new Map<string, T>();
+  for (const c of coberturas) {
+    if (comParto.has(c.id)) continue;
+    const parto = partoAtivo.get(c.vaca_id);
+    if (parto && c.data_cobertura < parto) continue;
+    const atual = resultado.get(c.vaca_id);
+    if (!atual || c.data_cobertura > atual.data_cobertura) resultado.set(c.vaca_id, c);
+  }
+  return resultado;
+}
+
 export function situacaoReprodutiva(
   coberturasLactacao: CoberturaInd[],
   dataParto: string | null,

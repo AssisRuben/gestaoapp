@@ -14,6 +14,7 @@ import { hojeBrasil, somarDias } from "@/lib/datas";
 import {
   indicadoresLactacao,
   coberturasDaLactacao,
+  coberturaAtualPorVaca,
   situacaoReprodutiva,
   diasEmAberto,
   diasEntre,
@@ -231,10 +232,13 @@ export async function carregarResumoFazenda(propriedadeId: string): Promise<Resu
     })
     .sort((a, b) => a.numero - b.numero);
 
+  // Cobertura que vale hoje pra cada vaca (lactação atual, sem a que já virou parto) — mesma regra
+  // do Início. Antes, positiva de antes do parto atual aparecia como "pra secar"/"parto previsto".
+  const coberturaAtual = [...coberturaAtualPorVaca(coberturas, partos).values()].filter((c) => numeroPorId.has(c.vaca_id));
+
   // prenhezes confirmadas que ainda não viraram parto
-  const coberturasComParto = new Set(partos.map((p) => p.cobertura_id).filter(Boolean));
-  const prenhes = coberturas
-    .filter((c) => c.diagnostico_prenhez === "positivo" && !coberturasComParto.has(c.id) && numeroPorId.has(c.vaca_id))
+  const prenhes = coberturaAtual
+    .filter((c) => c.diagnostico_prenhez === "positivo")
     .map((c) => {
       const partoPrevisto = somarDias(c.data_cobertura, GESTACAO_DIAS);
       return { vacaId: c.vaca_id, numero: numeroPorId.get(c.vaca_id)!, partoPrevisto, secarEm: somarDias(partoPrevisto, -SECAGEM_ANTES_DO_PARTO) };
@@ -245,8 +249,8 @@ export async function carregarResumoFazenda(propriedadeId: string): Promise<Resu
     .filter((p) => vacaPorId.get(p.vacaId)?.status_produtivo === "lactacao" && p.secarEm <= somarDias(hoje, 30))
     .map((p) => ({ ...p, atrasada: p.secarEm < hoje }));
 
-  const diagnosticos = coberturas
-    .filter((c) => c.diagnostico_prenhez === "pendente" && numeroPorId.has(c.vaca_id))
+  const diagnosticos = coberturaAtual
+    .filter((c) => c.diagnostico_prenhez === "pendente")
     .map((c) => ({ vacaId: c.vaca_id, numero: numeroPorId.get(c.vaca_id)!, dataCobertura: c.data_cobertura, dias: diasEntre(c.data_cobertura, hoje) }))
     .sort((a, b) => a.dataCobertura.localeCompare(b.dataCobertura));
 
