@@ -18,6 +18,14 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/financeiro", label: "Financeiro", icon: MoneyIcon, accent: "financeiro" },
 ];
 
+// Aba ativa: a de href mais longo que bate com o caminho (exato ou como prefixo de uma subpágina,
+// ex.: /leite/pesagem acende "Leite"; /gestor/ranking acende só "Ranking", não "Visão Geral").
+export function hrefAtivo(items: NavItem[], pathname: string) {
+  return items
+    .filter((i) => pathname === i.href || pathname.startsWith(i.href.endsWith("/") ? i.href : i.href + "/"))
+    .reduce<string | null>((maior, i) => (maior === null || i.href.length > maior.length ? i.href : maior), null);
+}
+
 export const ACCENT_ACTIVE_CLASSES: Record<string, string> = {
   inicio: "bg-brand-green/10 text-brand-green",
   leite: "bg-leite-tint text-leite-ink",

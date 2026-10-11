@@ -188,6 +188,11 @@ o ideal é portar isso pra funções RPC no Postgres — assim bot e site chamam
      só calculável com pelo menos 60 dias de lactação
    - `iep`, esse sim, é gravado corretamente no momento do parto (ver regra 1) e pode ser lido
      direto do banco.
+   - **No site** (`src/lib/indicadores.ts`, ficha da vaca em `/vacas/[id]`) a média diária é a
+     média dos DIAS PESADOS (soma das ordenhas do dia ÷ nº de dias com pesagem), e projeção 305 e
+     persistência usam essa média. Com pesagem diária dá o mesmo que a conta do bot; com controle
+     leiteiro semanal/mensal a conta do bot (acumulado ÷ dias em lactação) subestima. Os
+     relatórios do bot ainda usam a conta antiga.
 
 6. **Deletar qualquer coisa** (registro de leite, lançamento financeiro) deve pedir confirmação
    antes de executar — nunca apagar direto na primeira mensagem/ação. **O bot atual viola essa
@@ -380,6 +385,13 @@ explicam dados antigos. Os bugs 2 e 8 (relatórios) continuam.
   registro é da fazenda do telefone.
 - Corrigir/apagar financeiro exige categoria ou data (antes pegava o lançamento mais recente da
   fazenda). Categoria gravada pelo bot é normalizada no banco (`_categoria_normalizada`).
+
+## Pesagem do dia (0026_pesagem.sql)
+
+- `/leite/pesagem`: todas as vacas com parto ativo numa lista, por data + ordenha (obrigatória).
+  `registrar_pesagem` grava em lote com a regra de `_registrar_leite`; vaca que já tem lançamento
+  na mesma data/ordenha tem o valor corrigido (não duplica); item vazio é ignorado (nunca apaga);
+  erro numa vaca volta na lista de erros sem impedir as outras.
 
 ## Bot usando as funções do banco (0022_bot_registro.sql)
 

@@ -2,17 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS, ACCENT_ACTIVE_CLASSES, type NavItem } from "./nav-items";
+import { NAV_ITEMS, ACCENT_ACTIVE_CLASSES, hrefAtivo, type NavItem } from "./nav-items";
 
 export function TopNav({ items = NAV_ITEMS }: { items?: NavItem[] }) {
   const pathname = usePathname();
 
   if (items.length === 0) return null;
+  const ativoHref = hrefAtivo(items, pathname);
 
   return (
     <nav className="hidden items-center gap-1 sm:flex">
       {items.map((item) => {
-        const ativo = pathname === item.href;
+        const ativo = item.href === ativoHref;
         return (
           <Link
             key={item.href}

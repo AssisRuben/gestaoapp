@@ -89,7 +89,7 @@ export default async function DashboardPage() {
   // Diagnósticos pendentes
   const diagnosticosPendentes = coberturas
     .filter((c) => c.diagnostico_prenhez === "pendente")
-    .map((c) => ({ coberturaId: c.id, numero: c.vaca.numero_identificacao, data_cobertura: c.data_cobertura }))
+    .map((c) => ({ coberturaId: c.id, vacaId: c.vaca_id, numero: c.vaca.numero_identificacao, data_cobertura: c.data_cobertura }))
     .sort((a, b) => a.data_cobertura.localeCompare(b.data_cobertura));
 
   return (

@@ -138,13 +138,21 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
             />
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setDrawerAberto(true)}
-          className="hidden whitespace-nowrap rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark sm:inline-flex"
-        >
-          Novo registro
-        </button>
+        <div className="flex gap-2">
+          <Link
+            href="/leite/pesagem"
+            className="flex-1 whitespace-nowrap rounded-full bg-brand-green px-4 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-brand-green-dark sm:flex-none"
+          >
+            Pesagem do dia (todas as vacas)
+          </Link>
+          <button
+            type="button"
+            onClick={() => setDrawerAberto(true)}
+            className="hidden whitespace-nowrap rounded-full border border-black/[.08] px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-black/[.04] sm:inline-flex dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
+          >
+            Lançar uma vaca
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-3 rounded-2xl border bg-surface border-black/[.08] p-4 dark:border-white/[.145]">
@@ -237,7 +245,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
         onClick={() => setDrawerAberto(true)}
         className="fixed bottom-20 right-4 z-30 rounded-full bg-brand-green px-5 py-3 text-sm font-medium text-white shadow-lg transition-colors hover:bg-brand-green-dark sm:hidden"
       >
-        + Novo registro
+        + Uma vaca
       </button>
 
       {drawerAberto && (

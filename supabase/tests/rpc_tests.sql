@@ -920,6 +920,41 @@ begin
     raise exception 'FALHOU [bot_excluir_financeiro]: deveria apagar depois da confirmação (veio %)', v_bot;
   end if;
 
+  -- ============================================================
+  -- pesagem do dia (0026)
+  -- ============================================================
+
+  v_bot := registrar_pesagem(v_propriedade_id, _hoje_fazenda() - 2, 'manha', jsonb_build_array(
+    jsonb_build_object('vaca_id', v_vaca_bot, 'litros', 11),
+    jsonb_build_object('vaca_id', gen_random_uuid(), 'litros', 5),
+    jsonb_build_object('vaca_id', v_vaca_bot, 'litros', '')
+  ));
+  if (v_bot->>'salvos')::integer <> 1 or jsonb_array_length(v_bot->'erros') <> 1 then
+    raise exception 'FALHOU [registrar_pesagem]: deveria salvar 1 e acusar a vaca de fora (veio %)', v_bot;
+  end if;
+
+  v_bot := registrar_pesagem(v_propriedade_id, _hoje_fazenda() - 2, 'manha',
+    jsonb_build_array(jsonb_build_object('vaca_id', v_vaca_bot, 'litros', 13)));
+  if (v_bot->>'corrigidos')::integer <> 1
+     or (select litros from controle_leite where vaca_id = v_vaca_bot and data_controle = _hoje_fazenda() - 2 and periodo = 'manha') <> 13 then
+    raise exception 'FALHOU [registrar_pesagem]: mesma ordenha deveria corrigir o valor (veio %)', v_bot;
+  end if;
+
+  v_bot := registrar_pesagem(v_propriedade_id, _hoje_fazenda() - 2, 'tarde',
+    jsonb_build_array(jsonb_build_object('vaca_id', v_vaca_bot, 'litros', 500)));
+  if jsonb_array_length(v_bot->'erros') <> 1 or (v_bot->'erros'->0->>'numero')::integer <> 90002 then
+    raise exception 'FALHOU [registrar_pesagem]: litros absurdos deveriam voltar como erro da vaca (veio %)', v_bot;
+  end if;
+
+  begin
+    perform registrar_pesagem(v_propriedade_id, _hoje_fazenda(), null, '[]'::jsonb);
+    raise exception 'FALHOU [registrar_pesagem]: sem ordenha deveria ser recusada';
+  exception when others then
+    if sqlerrm not ilike '%escolha a ordenha%' then
+      raise exception 'FALHOU [registrar_pesagem]: erro inesperado sem ordenha: %', sqlerrm;
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

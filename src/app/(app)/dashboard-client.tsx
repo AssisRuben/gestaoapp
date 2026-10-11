@@ -193,7 +193,7 @@ export function DashboardClient({
   registrosLeite: { litros: number; data_controle: string }[];
   lancamentos: { tipo: string; valor: number; data: string; categoria: string | null }[];
   vacasPraSecar: { vacaId: string; numero: number; secagemPrevista: string }[];
-  diagnosticosPendentes: { coberturaId: string; numero: number; data_cobertura: string }[];
+  diagnosticosPendentes: { coberturaId: string; vacaId: string; numero: number; data_cobertura: string }[];
 }) {
   const hoje = hojeBrasil();
   const [inicio, setInicio] = useState(`${hoje.slice(0, 7)}-01`);
@@ -318,7 +318,7 @@ export function DashboardClient({
       </div>
 
       <Link
-        href="/reproducao"
+        href="/vacas"
         className="flex flex-col gap-4 rounded-2xl border bg-surface border-black/[.08] p-4 transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.06]"
       >
         <p className="flex items-center gap-2 text-base font-semibold text-black dark:text-zinc-50">
@@ -365,7 +365,11 @@ export function DashboardClient({
                     i % 2 === 1 ? "bg-black/[.02] dark:bg-white/[.03]" : ""
                   }`}
                 >
-                  <td className="px-4 py-2 text-black dark:text-zinc-50">Vaca {v.numero}</td>
+                  <td className="px-4 py-2 text-black dark:text-zinc-50">
+                    <Link href={`/vacas/${v.vacaId}`} className="hover:underline">
+                      Vaca {v.numero}
+                    </Link>
+                  </td>
                   <td className={`px-4 py-2 ${URGENCIA_CLASSES[urgenciaSecagem(v.secagemPrevista, hojeBrasil())]}`}>
                     {formatarDataBR(v.secagemPrevista)}
                   </td>
@@ -410,7 +414,11 @@ export function DashboardClient({
                     i % 2 === 1 ? "bg-black/[.02] dark:bg-white/[.03]" : ""
                   }`}
                 >
-                  <td className="px-4 py-2 text-black dark:text-zinc-50">Vaca {d.numero}</td>
+                  <td className="px-4 py-2 text-black dark:text-zinc-50">
+                    <Link href={`/vacas/${d.vacaId}`} className="hover:underline">
+                      Vaca {d.numero}
+                    </Link>
+                  </td>
                   <td
                     className={`px-4 py-2 ${URGENCIA_CLASSES[urgenciaDiagnostico(d.data_cobertura, hojeBrasil())]}`}
                   >

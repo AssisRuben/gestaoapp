@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { cadastrarVaca, atualizarVaca, deletarVaca } from "./actions";
 import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../mobile-list";
 import { useSuccessToast, SuccessToast } from "../toast";
@@ -120,10 +121,14 @@ function CamposVaca({
   );
 }
 
-export function VacasClient({ vacas }: { vacas: Vaca[] }) {
+export function VacasClient({ vacas, editarId }: { vacas: Vaca[]; editarId?: string }) {
+  const router = useRouter();
   const [busca, setBusca] = useState("");
   const [drawerAberto, setDrawerAberto] = useState(false);
-  const [vacaEmEdicao, setVacaEmEdicao] = useState<Vaca | null>(null);
+  // "Editar cadastro" na ficha da vaca abre esta tela com ?editar=<id>
+  const [vacaEmEdicao, setVacaEmEdicao] = useState<Vaca | null>(
+    () => vacas.find((v) => v.id === editarId) ?? null,
+  );
   const [vacaParaExcluir, setVacaParaExcluir] = useState<Vaca | null>(null);
 
   const [criarState, criarAction, criarPending] = useActionState(cadastrarVaca, undefined);
@@ -229,7 +234,7 @@ export function VacasClient({ vacas }: { vacas: Vaca[] }) {
             {vacasFiltradas.map((vaca, i) => (
               <tr
                 key={vaca.id}
-                onClick={() => setVacaEmEdicao(vaca)}
+                onClick={() => router.push(`/vacas/${vaca.id}`)}
                 className={`cursor-pointer hover:bg-black/[.04] dark:hover:bg-white/[.06] ${
                   i % 2 === 1 ? "bg-black/[.02] dark:bg-white/[.03]" : ""
                 }`}
@@ -261,7 +266,7 @@ export function VacasClient({ vacas }: { vacas: Vaca[] }) {
 
       <MobileCardList>
         {vacasFiltradas.map((vaca) => (
-          <MobileCard key={vaca.id} onClick={() => setVacaEmEdicao(vaca)}>
+          <MobileCard key={vaca.id} onClick={() => router.push(`/vacas/${vaca.id}`)}>
             <CardHeader
               title={`Vaca ${vaca.numero_identificacao}`}
               accentClassName="bg-vacas"
