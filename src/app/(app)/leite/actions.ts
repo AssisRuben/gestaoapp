@@ -2,7 +2,6 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getPropriedadeAtual } from "@/lib/propriedade";
 
 export type RegistrarLeiteState = { error?: string; success?: boolean } | undefined;
 
@@ -56,36 +55,6 @@ export async function atualizarLeite(
   revalidatePath("/leite");
   updateTag("leite");
   return { success: true };
-}
-
-export type ResultadoPesagem = {
-  error?: string;
-  salvos?: number;
-  corrigidos?: number;
-  erros?: { vaca_id: string; numero: number | null; mensagem: string }[];
-};
-
-export async function salvarPesagem(
-  dataControle: string,
-  periodo: string,
-  itens: { vaca_id: string; litros: number }[],
-): Promise<ResultadoPesagem> {
-  const propriedadeAtual = await getPropriedadeAtual();
-  if (!propriedadeAtual) return { error: "Nenhuma propriedade vinculada à sua conta." };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("registrar_pesagem", {
-    p_propriedade_id: propriedadeAtual.id,
-    p_data_controle: dataControle,
-    p_periodo: periodo,
-    p_itens: itens,
-  });
-
-  if (error) return { error: error.message };
-
-  revalidatePath("/leite");
-  updateTag("leite");
-  return data as ResultadoPesagem;
 }
 
 export type DeletarLeiteState = { error?: string; success?: boolean } | undefined;

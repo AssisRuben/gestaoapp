@@ -6,6 +6,7 @@ import { BottomNav } from "./bottom-nav";
 import { TopNav } from "./top-nav";
 import { FazendaTrigger } from "./fazenda-trigger";
 import { logout } from "./actions";
+import { RegistrarOffline } from "./registrar-offline";
 
 export default async function AppLayout({
   children,
@@ -61,6 +62,7 @@ export default async function AppLayout({
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col pb-16 sm:pb-0">{children}</main>
 
       <BottomNav />
+      <RegistrarOffline />
     </div>
   );
 }

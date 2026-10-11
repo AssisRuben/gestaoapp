@@ -464,6 +464,21 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   `geral` (produção + reprodução) ou produção. Período: "hoje", "mês" (financeiro),
   `periodo_dias`, senão mês atual + passado (`_periodo_consulta`).
 
+## Uso sem internet (pesagem do dia)
+
+- `public/sw.js` (service worker, registrado por `RegistrarOffline` no layout do app): guarda os
+  arquivos do site e a tela `/leite/pesagem` (busca na rede quando dá; sem rede, a última cópia).
+  Ao abrir o site com internet, pede pra guardar a pesagem (no máx. a cada 10 min). Outras telas
+  sem rede mostram uma página com atalho pra pesagem. Nunca guarda o redirecionamento pro /login;
+  a tela de login manda "limpar" (as cópias têm dados da fazenda).
+- Sem sinal, a pesagem vai pra fila do celular (`src/lib/fila-offline.ts`, localStorage) e é
+  enviada sozinha quando a internet volta (ou no botão "Enviar agora"). O envio — com ou sem
+  internet — é pelo endereço fixo `POST /api/pesagem` (não por Server Action, cujo id muda a cada
+  deploy). Reenviar é seguro: `registrar_pesagem` corrige a mesma ordenha. 401 = sessão expirada →
+  fica na fila; recusada pelo servidor → sai da fila mostrando o erro.
+- O proxy de autenticação não intercepta `sw.js` nem `manifest.json`.
+- Mudou o comportamento do service worker? Troque o sufixo `-v1` dos nomes de cache em `sw.js`.
+
 ## Pesagem do dia (0026_pesagem.sql)
 
 - `/leite/pesagem`: todas as vacas com parto ativo numa lista, por data + ordenha (obrigatória).

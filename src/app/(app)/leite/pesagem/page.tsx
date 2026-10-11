@@ -39,7 +39,7 @@ export default async function PesagemPage() {
 
   return (
     <div className="flex flex-1 flex-col p-4 sm:p-6">
-      <PesagemClient vacas={vacas} registros={registros} semParto={semParto} />
+      <PesagemClient propriedadeId={propriedadeAtual.id} vacas={vacas} registros={registros} semParto={semParto} />
     </div>
   );
 }

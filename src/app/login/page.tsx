@@ -7,6 +7,7 @@ import { login } from "./actions";
 import { CadastroModal } from "./cadastro-modal";
 import { GoogleIcon } from "./google-icon";
 import { createClient } from "@/lib/supabase/client";
+import { LimparOffline } from "../(app)/registrar-offline";
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, undefined);
@@ -117,6 +118,7 @@ export default function LoginPage() {
       </form>
 
       {cadastroAberto && <CadastroModal onClose={() => setCadastroAberto(false)} />}
+      <LimparOffline />
     </div>
   );
 }

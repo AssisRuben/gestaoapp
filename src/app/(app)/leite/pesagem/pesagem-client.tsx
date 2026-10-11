@@ -1,15 +1,29 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { salvarPesagem, type ResultadoPesagem } from "../actions";
+import {
+  aoMudarFila,
+  enviarFila,
+  enviarPesagem,
+  filaPesagens,
+  guardarPesagem,
+  type PesagemGuardada,
+} from "@/lib/fila-offline";
 import { useSuccessToast, SuccessToast } from "../../toast";
 import { formatarDataBR } from "../../format";
 import { hojeBrasil } from "@/lib/datas";
 
 export type VacaPesagem = { id: string; numero: number; dataParto: string };
 export type RegistroPesagem = { vacaId: string; data: string; periodo: string | null; litros: number };
+
+type ResultadoPesagem = {
+  error?: string;
+  salvos?: number;
+  corrigidos?: number;
+  erros?: { vaca_id: string; numero: number | null; mensagem: string }[];
+};
 
 type Periodo = "manha" | "tarde" | "dia_inteiro";
 
@@ -39,13 +53,17 @@ function lerLitros(texto: string): number | null {
 const fmt = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
 
 function ListaPesagem({
+  propriedadeId,
   vacas,
   registros,
+  guardadas,
   data,
   periodo,
 }: {
+  propriedadeId: string;
   vacas: VacaPesagem[];
   registros: RegistroPesagem[];
+  guardadas: PesagemGuardada[];
   data: string;
   periodo: Periodo;
 }) {
@@ -70,18 +88,33 @@ function ListaPesagem({
     return m;
   }, [registros, data, periodo]);
 
+  // guardadas no celular (sem internet) pra esta data/ordenha: valem por cima do que veio do servidor
+  const noCelular = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const g of guardadas) {
+      if (g.propriedadeId !== propriedadeId || g.data !== data || g.periodo !== periodo) continue;
+      for (const i of g.itens) m.set(i.vaca_id, i.litros);
+    }
+    return m;
+  }, [guardadas, propriedadeId, data, periodo]);
+
   // Estado inicial = o que já está lançado nesta data/ordenha (o componente é remontado ao trocar).
   const [valores, setValores] = useState<Record<string, string>>(() =>
-    Object.fromEntries(vacas.map((v) => [v.id, lancados.has(v.id) ? String(lancados.get(v.id)).replace(".", ",") : ""])),
+    Object.fromEntries(
+      vacas.map((v) => {
+        const atual = noCelular.get(v.id) ?? lancados.get(v.id);
+        return [v.id, atual !== undefined ? String(atual).replace(".", ",") : ""];
+      }),
+    ),
   );
 
   const linhas = vacas.map((v) => {
     const litros = lerLitros(valores[v.id] ?? "");
     const antes = v.dataParto > data;
     const invalido = litros !== null && (Number.isNaN(litros) || litros <= 0 || litros > 100);
-    const lancado = lancados.get(v.id);
+    const lancado = noCelular.get(v.id) ?? lancados.get(v.id);
     const alterado = litros !== null && !invalido && litros !== lancado;
-    return { vaca: v, litros, antes, invalido, lancado, alterado };
+    return { vaca: v, litros, antes, invalido, lancado, alterado, guardada: noCelular.has(v.id) };
   });
 
   const pendentes = linhas.filter((l) => l.alterado && !l.antes);
@@ -96,12 +129,33 @@ function ListaPesagem({
   }
 
   function salvar() {
-    const itens = pendentes.map((l) => ({ vaca_id: l.vaca.id, litros: l.litros as number }));
+    const pesagem = {
+      propriedadeId,
+      data,
+      periodo,
+      itens: pendentes.map((l) => ({ vaca_id: l.vaca.id, litros: l.litros as number })),
+    };
+    const guardarNoCelular = (motivo: string) => {
+      guardarPesagem(pesagem);
+      setResultado(null);
+      mostrarToast(`${motivo}: pesagem guardada no celular`);
+    };
     startSalvar(async () => {
-      const r = await salvarPesagem(data, periodo, itens);
-      setResultado(r);
-      if (!r.error) {
-        const feitos = (r.salvos ?? 0) + (r.corrigidos ?? 0);
+      if (!navigator.onLine) return guardarNoCelular("Sem internet");
+      let envio;
+      try {
+        envio = await enviarPesagem(pesagem);
+      } catch {
+        return guardarNoCelular("Sem sinal");
+      }
+      if (envio.status === 401) {
+        guardarPesagem(pesagem);
+        setResultado({ error: `${envio.corpo.error} A pesagem ficou guardada no celular.` });
+        return;
+      }
+      setResultado(envio.corpo);
+      if (envio.status === 200) {
+        const feitos = (envio.corpo.salvos ?? 0) + (envio.corpo.corrigidos ?? 0);
         if (feitos > 0) mostrarToast(`Pesagem salva: ${feitos} ${feitos === 1 ? "vaca" : "vacas"}`);
         router.refresh();
       }
@@ -129,7 +183,7 @@ function ListaPesagem({
         </p>
       ) : (
         <ul className="flex flex-col divide-y divide-black/[.06] rounded-2xl border bg-surface border-black/[.08] dark:divide-white/[.08] dark:border-white/[.145]">
-          {linhas.map(({ vaca, antes, invalido, lancado, alterado }) => {
+          {linhas.map(({ vaca, antes, invalido, lancado, alterado, guardada }) => {
             const ultimo = ultimos.get(vaca.id);
             return (
               <li key={vaca.id} className="flex items-center gap-3 px-4 py-2.5">
@@ -144,7 +198,13 @@ function ListaPesagem({
                   </span>
                 </div>
                 {lancado !== undefined && !alterado && !invalido && (
-                  <span className="rounded-full bg-brand-green/10 px-2 py-0.5 text-xs font-medium text-brand-green">salvo</span>
+                  guardada ? (
+                    <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                      no celular
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-brand-green/10 px-2 py-0.5 text-xs font-medium text-brand-green">salvo</span>
+                  )
                 )}
                 {alterado && <span className="rounded-full bg-leite-tint px-2 py-0.5 text-xs font-medium text-leite-ink">novo</span>}
                 <label className="sr-only" htmlFor={`litros_${vaca.id}`}>
@@ -213,18 +273,83 @@ function ListaPesagem({
   );
 }
 
+// Faixa das pesagens guardadas no celular: envia sozinha quando a internet volta (e ao abrir a tela
+// com internet); o botão força uma tentativa.
+function FilaOffline({
+  guardadas,
+  onEnviadas,
+}: {
+  guardadas: PesagemGuardada[];
+  onEnviadas: (msg: string) => void;
+}) {
+  const [enviando, startEnviar] = useTransition();
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  function tentar() {
+    startEnviar(async () => {
+      const r = await enviarFila();
+      if (r.enviadas > 0) onEnviadas(`${r.enviadas} ${r.enviadas === 1 ? "pesagem enviada" : "pesagens enviadas"}`);
+      const problemas = r.erros.map((e) => (e.numero !== null ? `vaca ${e.numero}: ${e.mensagem}` : e.mensagem));
+      setAviso([r.falha, ...problemas].filter(Boolean).join(" · ") || null);
+    });
+  }
+
+  useEffect(() => {
+    if (navigator.onLine && filaPesagens().length > 0) tentar();
+    window.addEventListener("online", tentar);
+    return () => window.removeEventListener("online", tentar);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (guardadas.length === 0 && !aviso) return null;
+
+  return (
+    <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-900 dark:text-amber-200">
+      {guardadas.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span>
+            {guardadas.length === 1 ? "1 pesagem guardada" : `${guardadas.length} pesagens guardadas`} no celular,
+            esperando internet pra enviar ({guardadas.map((g) => `${formatarDataBR(g.data).slice(0, 5)} ${PERIODOS.find(([v]) => v === g.periodo)?.[1].toLowerCase() ?? g.periodo}`).join(", ")}).
+          </span>
+          <button
+            type="button"
+            onClick={tentar}
+            disabled={enviando}
+            className="rounded-full border border-amber-600/40 px-3 py-1 font-medium disabled:opacity-50"
+          >
+            {enviando ? "Enviando..." : "Enviar agora"}
+          </button>
+        </div>
+      )}
+      {aviso && <p className="text-amber-800 dark:text-amber-300">{aviso}</p>}
+    </div>
+  );
+}
+
 export function PesagemClient({
+  propriedadeId,
   vacas,
   registros,
   semParto = [],
 }: {
+  propriedadeId: string;
   vacas: VacaPesagem[];
   registros: RegistroPesagem[];
   semParto?: { id: string; numero: number }[];
 }) {
+  const router = useRouter();
   const hoje = hojeBrasil();
   const [data, setData] = useState(hoje);
   const [periodo, setPeriodo] = useState<Periodo>(periodoPelaHora);
+  // fila do celular só existe no navegador: lida depois de montar (null = ainda não lida)
+  const [guardadas, setGuardadas] = useState<PesagemGuardada[] | null>(null);
+  const { mensagemToast, mostrarToast } = useSuccessToast();
+
+  useEffect(() => {
+    const ler = () => setGuardadas(filaPesagens());
+    ler();
+    return aoMudarFila(ler);
+  }, []);
 
   return (
     <div className="flex flex-1 flex-col gap-4 pb-20 sm:pb-0">
@@ -292,7 +417,26 @@ export function PesagemClient({
         </p>
       )}
 
-      <ListaPesagem key={`${data}|${periodo}`} vacas={vacas} registros={registros} data={data} periodo={periodo} />
+      <SuccessToast mensagem={mensagemToast} />
+      <FilaOffline
+        guardadas={guardadas ?? []}
+        onEnviadas={(msg) => {
+          mostrarToast(msg);
+          router.refresh();
+        }}
+      />
+
+      {guardadas !== null && (
+        <ListaPesagem
+          key={`${data}|${periodo}`}
+          propriedadeId={propriedadeId}
+          vacas={vacas}
+          registros={registros}
+          guardadas={guardadas}
+          data={data}
+          periodo={periodo}
+        />
+      )}
     </div>
   );
 }
