@@ -73,14 +73,17 @@ orfas as (
 ),
 -- partos da mesma vaca a menos de 240 dias um do outro (a 0039 passou a recusar; os antigos ficam)
 todos_partos as (
-  select vaca_id, data_parto from partos
+  select id, vaca_id, data_parto from partos
   union all
-  select vaca_id, data_parto from partos_historico
+  select id, vaca_id, data_parto from partos_historico
 ),
 parto_dup as (
+  -- inclui dois partos no MESMO dia (o "id < id" evita contar o par duas vezes)
   select pr.nome_propriedade, v.numero_identificacao numero, a.data_parto d1, b.data_parto d2
   from todos_partos a
-  join todos_partos b on b.vaca_id = a.vaca_id and b.data_parto > a.data_parto and b.data_parto - a.data_parto < 240
+  join todos_partos b on b.vaca_id = a.vaca_id and b.id <> a.id
+    and (b.data_parto > a.data_parto or (b.data_parto = a.data_parto and b.id > a.id))
+    and b.data_parto - a.data_parto < 240
   join vacas v on v.id = a.vaca_id
   join propriedades pr on pr.id = v.propriedade_id
 ),
