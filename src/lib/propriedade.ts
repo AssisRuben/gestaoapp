@@ -52,6 +52,16 @@ export const isGestor = cache(async (): Promise<boolean> => {
   return !!data;
 });
 
+// Mensagem pra ação de gestor recusada. Caso comum: a tela foi aberta como gestor, mas depois
+// alguém entrou com outra conta no mesmo navegador (a sessão é uma só pra todas as abas) — dizer
+// com qual conta o clique chegou evita achar que é erro do sistema.
+export async function semAcessoGestor(): Promise<string> {
+  const user = await getUser();
+  return user?.email
+    ? `Só o gestor do programa pode fazer isso, e este navegador está conectado como ${user.email}, que não é gestor. Se você entrou com outra conta em outra aba, recarregue a página.`
+    : "Sua sessão terminou. Entre de novo como gestor.";
+}
+
 // id → nome (ou e-mail) de quem tem/teve acesso à fazenda, pra mostrar quem lançou cada registro.
 // Usa listar_acessos_propriedade (0023), que só responde pra quem tem vínculo com a fazenda.
 export const getNomesUsuarios = cache(async (propriedadeId: string): Promise<Record<string, string>> => {

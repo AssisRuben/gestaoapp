@@ -2,7 +2,7 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { isGestor } from "@/lib/propriedade";
+import { isGestor, semAcessoGestor } from "@/lib/propriedade";
 import { CAMPOS_INDICADORES } from "@/lib/programa";
 
 // Escritas do gestor no programa de sêmen. Usa o cliente autenticado (não o service role): quem
@@ -10,8 +10,6 @@ import { CAMPOS_INDICADORES } from "@/lib/programa";
 // aqui é só pra devolver uma mensagem clara em vez do erro genérico de RLS.
 
 export type ProgramaActionState = { error?: string; success?: boolean } | undefined;
-
-const SEM_ACESSO = "Só o gestor do programa pode fazer isso.";
 
 function revalidar() {
   revalidatePath("/gestor/programa");
@@ -27,7 +25,7 @@ export async function salvarTouro(
   _state: ProgramaActionState,
   formData: FormData,
 ): Promise<ProgramaActionState> {
-  if (!(await isGestor())) return { error: SEM_ACESSO };
+  if (!(await isGestor())) return { error: await semAcessoGestor() };
 
   const id = textoOuNull(formData.get("touro_id"));
   const nome = textoOuNull(formData.get("nome"));
@@ -66,7 +64,7 @@ export async function excluirTouro(
   _state: ProgramaActionState,
   formData: FormData,
 ): Promise<ProgramaActionState> {
-  if (!(await isGestor())) return { error: SEM_ACESSO };
+  if (!(await isGestor())) return { error: await semAcessoGestor() };
 
   const id = formData.get("touro_id") as string;
 
@@ -92,7 +90,7 @@ export async function salvarEntrega(
   _state: ProgramaActionState,
   formData: FormData,
 ): Promise<ProgramaActionState> {
-  if (!(await isGestor())) return { error: SEM_ACESSO };
+  if (!(await isGestor())) return { error: await semAcessoGestor() };
 
   const id = textoOuNull(formData.get("entrega_id"));
   const quantidade = Number(formData.get("quantidade"));
@@ -136,7 +134,7 @@ export async function excluirEntrega(
   _state: ProgramaActionState,
   formData: FormData,
 ): Promise<ProgramaActionState> {
-  if (!(await isGestor())) return { error: SEM_ACESSO };
+  if (!(await isGestor())) return { error: await semAcessoGestor() };
 
   const id = formData.get("entrega_id") as string;
 
@@ -162,7 +160,7 @@ export async function sugerirLinhaBase(
   propriedadeId: string,
   dataAdesao: string,
 ): Promise<{ valores?: Record<string, number | null>; error?: string }> {
-  if (!(await isGestor())) return { error: SEM_ACESSO };
+  if (!(await isGestor())) return { error: await semAcessoGestor() };
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -177,7 +175,7 @@ export async function salvarAdesao(
   _state: ProgramaActionState,
   formData: FormData,
 ): Promise<ProgramaActionState> {
-  if (!(await isGestor())) return { error: SEM_ACESSO };
+  if (!(await isGestor())) return { error: await semAcessoGestor() };
 
   const propriedadeId = formData.get("propriedade_id") as string;
   const dados: Record<string, string | number | null> = {
@@ -217,7 +215,7 @@ export async function excluirAdesao(
   _state: ProgramaActionState,
   formData: FormData,
 ): Promise<ProgramaActionState> {
-  if (!(await isGestor())) return { error: SEM_ACESSO };
+  if (!(await isGestor())) return { error: await semAcessoGestor() };
 
   const supabase = await createClient();
   const { error } = await supabase
