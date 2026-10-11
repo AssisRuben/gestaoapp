@@ -4,6 +4,25 @@ import { createClient } from "@/lib/supabase/server";
 
 export type CadastroState = { error?: string; success?: boolean } | undefined;
 
+const JA_CADASTRADO =
+  "Esse e-mail já tem conta no Gestão Pec. Entre com ele na tela de login (ou use \"Esqueci minha senha\"). Pra uma conta nova, use outro e-mail.";
+
+// E-mail que já tem conta: com confirmação de e-mail ligada, o Supabase NÃO devolve erro (pra não
+// revelar quais e-mails existem) — devolve um usuário sem nenhuma identidade. Sem confirmação, vem
+// o erro "User already registered". Nos dois casos o cadastro não criou nada, então avisamos.
+function resultadoCadastro(
+  data: { user: { identities?: unknown[] | null } | null },
+  error: { message: string } | null,
+): CadastroState {
+  if (error) {
+    return { error: /already registered|already exists/i.test(error.message) ? JA_CADASTRADO : error.message };
+  }
+  if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+    return { error: JA_CADASTRADO };
+  }
+  return { success: true };
+}
+
 export async function cadastrarNovaFazenda(
   _state: CadastroState,
   formData: FormData,
@@ -18,7 +37,7 @@ export async function cadastrarNovaFazenda(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -33,11 +52,7 @@ export async function cadastrarNovaFazenda(
     },
   });
 
-  if (error) {
-    return { error: error.message };
-  }
-
-  return { success: true };
+  return resultadoCadastro(data, error);
 }
 
 // Conta sem fazenda: sem nome_propriedade no metadata o trigger de 0013 não cria propriedade. O
@@ -50,15 +65,11 @@ export async function cadastrarTecnico(
   if (!nome) return { error: "Informe seu nome." };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: formData.get("email") as string,
     password: formData.get("password") as string,
     options: { data: { nome, perfil: "tecnico" } },
   });
 
-  if (error) {
-    return { error: error.message };
-  }
-
-  return { success: true };
+  return resultadoCadastro(data, error);
 }
