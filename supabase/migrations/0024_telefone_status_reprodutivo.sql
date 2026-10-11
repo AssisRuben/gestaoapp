@@ -35,6 +35,8 @@ as $$
 $$;
 
 -- Chave de comparação: normalizado e sem o nono dígito do celular brasileiro (55 + DDD + 9 + 8 dígitos).
+-- Chama com "public." porque é usada no índice abaixo: o Postgres 17+ roda expressão de índice
+-- com search_path só de pg_catalog, e sem o schema a função interna não é achada.
 create or replace function _telefone_chave(p_telefone text) returns text
 language sql
 immutable
@@ -43,7 +45,7 @@ as $$
     when length(n) = 13 and n like '55%' and substr(n, 5, 1) = '9' then substr(n, 1, 4) || substr(n, 6)
     else n
   end
-  from (select _telefone_normalizado(p_telefone) as n) x;
+  from (select public._telefone_normalizado(p_telefone) as n) x;
 $$;
 
 create or replace function _usuarios_whatsapp_normalizar() returns trigger
@@ -85,8 +87,8 @@ begin
       else
         begin
           update usuarios_whatsapp set telefone = _telefone_normalizado(r.telefone) where id = r.id;
-        exception when unique_violation then
-          raise notice 'telefone % (usuarios_whatsapp.id %) colide com outro — não normalizado', r.telefone, r.id;
+        exception when others then
+          raise notice 'telefone % (usuarios_whatsapp.id %) não normalizado: %', r.telefone, r.id, sqlerrm;
         end;
       end if;
     end if;
@@ -98,7 +100,7 @@ create trigger usuarios_whatsapp_normalizar
   before insert or update of telefone on usuarios_whatsapp
   for each row execute function _usuarios_whatsapp_normalizar();
 
-create index if not exists idx_usuarios_whatsapp_chave on usuarios_whatsapp (_telefone_chave(telefone));
+create index if not exists idx_usuarios_whatsapp_chave on usuarios_whatsapp (public._telefone_chave(telefone));
 
 -- Igual a 0013, mas WhatsApp inválido ou já usado não derruba mais o cadastro inteiro (o erro do
 -- trigger acima, dentro do trigger de auth.users, virava um "Database error saving new user"
