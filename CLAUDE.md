@@ -386,6 +386,16 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - Corrigir/apagar financeiro exige categoria ou data (antes pegava o lançamento mais recente da
   fazenda). Categoria gravada pelo bot é normalizada no banco (`_categoria_normalizada`).
 
+## Lembretes diários pelo WhatsApp (0031_lembretes.sql)
+
+- Workflow separado `fazenda-leite-lembretes.json` (6h, fuso de Fortaleza; tem também "Testar
+  agora"): `lembretes_do_dia()` devolve uma linha por fazenda com lembrete LIGADO e pendência no
+  dia (secar ≤7 dias/atrasada, diagnóstico com cobertura de 30+ dias, parto ≤7 dias ou atrasado até
+  15, leite sem lançamento há 3+ dias); envia pelo Evolution; `marcar_lembrete_enviado` evita
+  repetir no mesmo dia; grava `intencao_detectada='lembrete'` em interacoes_log.
+- `propriedades.lembretes_whatsapp` vem DESLIGADO; o produtor liga no modal da fazenda (Dados
+  gerais). O workflow vem despublicado — nada sai até publicar no n8n.
+
 ## Autoria (0030_autoria.sql)
 
 - `controle_leite`, `coberturas`, `partos`, `financeiro`, `vacas`, `bezerros` têm `criado_por`,

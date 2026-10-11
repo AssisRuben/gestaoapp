@@ -13,17 +13,18 @@ export async function getFazendaData(): Promise<{
   patrimonios: PatrimonioItem[];
   acessos: Acesso[];
   podeGerenciarAcessos: boolean;
+  lembretes: boolean | null;
 }> {
   const propriedadeAtual = await getPropriedadeAtual();
   if (!propriedadeAtual) {
-    return { usuarioWhatsapp: null, patrimonios: [], acessos: [], podeGerenciarAcessos: false };
+    return { usuarioWhatsapp: null, patrimonios: [], acessos: [], podeGerenciarAcessos: false, lembretes: null };
   }
 
   const vinculos = await getPropriedadesDoUsuario();
   const papel = vinculos.find((v) => v.propriedade.id === propriedadeAtual.id)?.papel;
 
   const supabase = await createClient();
-  const [{ data: whatsappData }, { data: patrimonioData }, { data: acessosData }] = await Promise.all([
+  const [{ data: whatsappData }, { data: patrimonioData }, { data: acessosData }, { data: lembretesData }] = await Promise.all([
     supabase
       .from("usuarios_whatsapp")
       .select("id, propriedade_id, telefone, papel, ativo, created_at")
@@ -35,6 +36,8 @@ export async function getFazendaData(): Promise<{
       .eq("propriedade_id", propriedadeAtual.id)
       .order("created_at"),
     supabase.rpc("listar_acessos_propriedade", { p_propriedade_id: propriedadeAtual.id }),
+    // coluna de 0031; se ainda não existir, a chave de lembretes some em vez de quebrar o modal
+    supabase.from("propriedades").select("lembretes_whatsapp").eq("id", propriedadeAtual.id).maybeSingle(),
   ]);
 
   return {
@@ -42,6 +45,7 @@ export async function getFazendaData(): Promise<{
     patrimonios: patrimonioData ?? [],
     acessos: (acessosData ?? []) as Acesso[],
     podeGerenciarAcessos: papel === "produtor",
+    lembretes: (lembretesData as { lembretes_whatsapp?: boolean } | null)?.lembretes_whatsapp ?? null,
   };
 }
 
@@ -135,6 +139,14 @@ export async function atualizarPropriedade(
     if (whatsappError) {
       return { error: whatsappError.message };
     }
+  }
+
+  if (formData.has("lembretes_presente")) {
+    const { error: lembretesError } = await supabase
+      .from("propriedades")
+      .update({ lembretes_whatsapp: formData.get("lembretes_whatsapp") === "on" })
+      .eq("id", propriedadeAtual.id);
+    if (lembretesError) return { error: lembretesError.message };
   }
 
   revalidatePath("/");

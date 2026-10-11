@@ -1,0 +1,250 @@
+{
+  "name": "AgenteGestãoPec - Lembretes",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b2750311-b7a5-4c44-83b2-b633f5f13798",
+      "name": "Todo dia às 6h"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ],
+      "id": "4ed42cfc-d8cb-4646-a5b6-bdee915a7fda",
+      "name": "Testar agora"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/lembretes_do_dia",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        100
+      ],
+      "id": "e281048c-e23f-4bbe-bc47-b2115bbe784b",
+      "name": "Buscar Lembretes (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "Gabriel Bandeira",
+        "remoteJid": "={{ $json.telefone }}",
+        "messageText": "={{ $json.mensagem }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        520,
+        100
+      ],
+      "id": "af0f013a-1980-4670-bf3d-55e7a3934bd3",
+      "name": "Enviar Lembrete",
+      "credentials": {
+        "evolutionApi": {
+          "id": "gtlPdveg89MKtmGW",
+          "name": "Evolution Gabriel"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d7dcaeae-17df-4f96-b6e8-fb2dc043583a",
+              "leftValue": "={{ !$json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        780,
+        100
+      ],
+      "id": "cd943fd8-5080-4e9c-8e41-e2abe94dcedf",
+      "name": "Enviou?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/marcar_lembrete_enviado",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_propriedade_id: $('Buscar Lembretes (RPC)').item.json.propriedade_id }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "bb4ddeb0-8d24-4b5c-b399-89a4c4251fc7",
+      "name": "Marcar Enviado (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/interacoes_log",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ propriedade_id: $('Buscar Lembretes (RPC)').item.json.propriedade_id, intencao_detectada: 'lembrete', mensagem_recebida: null, resposta_enviada: $('Buscar Lembretes (RPC)').item.json.mensagem }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        200
+      ],
+      "id": "4b3e005e-b8a1-4962-98d0-c6f7b1454a49",
+      "name": "Registrar Lembrete (Log)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Todo dia às 6h": {
+      "main": [
+        [
+          {
+            "node": "Buscar Lembretes (RPC)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Testar agora": {
+      "main": [
+        [
+          {
+            "node": "Buscar Lembretes (RPC)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Lembretes (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Enviar Lembrete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Lembrete": {
+      "main": [
+        [
+          {
+            "node": "Enviou?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviou?": {
+      "main": [
+        [
+          {
+            "node": "Marcar Enviado (RPC)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Lembrete (Log)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Fortaleza"
+  }
+}

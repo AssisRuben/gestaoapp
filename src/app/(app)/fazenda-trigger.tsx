@@ -58,8 +58,12 @@ export function FazendaTrigger({
           patrimonios={dados.patrimonios}
           acessos={dados.acessos}
           podeGerenciarAcessos={dados.podeGerenciarAcessos}
+          lembretes={dados.lembretes}
           onAcessosChange={(acessos) => setDados({ ...dados, acessos })}
-          onClose={() => setAberto(false)}
+          onClose={() => {
+            setAberto(false);
+            setDados(null);
+          }}
         />
       )}
     </>

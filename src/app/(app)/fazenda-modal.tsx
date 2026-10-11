@@ -37,10 +37,12 @@ function SecaoHeader({ titulo, onNovo, rotuloNovo }: { titulo: string; onNovo: (
 function DadosGeraisForm({
   propriedade,
   usuarioWhatsapp,
+  lembretes,
   onSuccess,
 }: {
   propriedade: Propriedade;
   usuarioWhatsapp: UsuarioWhatsapp | null;
+  lembretes: boolean | null;
   onSuccess: (mensagem: string) => void;
 }) {
   const [state, action, pending] = useActionState(atualizarPropriedade, undefined);
@@ -162,6 +164,25 @@ function DadosGeraisForm({
           />
         </div>
       </div>
+
+      {lembretes !== null && (
+        <label className="flex items-start gap-3 rounded-xl border border-black/[.08] p-3 dark:border-white/[.145]">
+          <input type="hidden" name="lembretes_presente" value="1" />
+          <input
+            type="checkbox"
+            name="lembretes_whatsapp"
+            defaultChecked={lembretes}
+            className="mt-1 h-5 w-5 accent-brand-green"
+          />
+          <span className="flex flex-col gap-0.5">
+            <span className="text-base font-medium text-black dark:text-zinc-50">Lembretes diários no WhatsApp</span>
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+              Às 6h, só nos dias com pendência: vacas pra secar, diagnóstico de prenhez a fazer, partos
+              previstos e dias sem lançar leite. Vai pro WhatsApp acima.
+            </span>
+          </span>
+        </label>
+      )}
 
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         Latitude/longitude posicionam a fazenda no mapa do gestor. Pra pegar as coordenadas, abra o
@@ -623,6 +644,7 @@ export function FazendaModal({
   patrimonios,
   acessos,
   podeGerenciarAcessos,
+  lembretes,
   onAcessosChange,
   onClose,
 }: {
@@ -631,6 +653,7 @@ export function FazendaModal({
   patrimonios: PatrimonioItem[];
   acessos: Acesso[];
   podeGerenciarAcessos: boolean;
+  lembretes: boolean | null;
   onAcessosChange: (acessos: Acesso[]) => void;
   onClose: () => void;
 }) {
@@ -653,7 +676,12 @@ export function FazendaModal({
           </button>
         </div>
 
-        <DadosGeraisForm propriedade={propriedade} usuarioWhatsapp={usuarioWhatsapp} onSuccess={mostrarToast} />
+        <DadosGeraisForm
+          propriedade={propriedade}
+          usuarioWhatsapp={usuarioWhatsapp}
+          lembretes={lembretes}
+          onSuccess={mostrarToast}
+        />
         <PatrimonioSecao itens={patrimonios} onSuccess={mostrarToast} />
         <AcessosSecao
           acessos={acessos}

@@ -1113,6 +1113,29 @@ begin
     raise exception 'FALHOU [autoria]: histórico deveria receber período e autoria do lançamento';
   end if;
 
+  -- ============================================================
+  -- lembretes diários (0031) — a vaca 90001 tem cobertura pendente há 50 dias (teste de 0028)
+  -- ============================================================
+
+  if exists (select 1 from lembretes_do_dia() where propriedade_id = v_propriedade_id) then
+    raise exception 'FALHOU [lembretes_do_dia]: fazenda com lembrete desligado não deveria receber';
+  end if;
+
+  update propriedades set lembretes_whatsapp = true where id = v_propriedade_id;
+  if not exists (
+    select 1 from lembretes_do_dia()
+    where propriedade_id = v_propriedade_id
+      and mensagem ilike '%Diagnóstico de prenhez: vaca 90001 (coberta há 50 dias)%'
+  ) then
+    raise exception 'FALHOU [lembretes_do_dia]: deveria lembrar do diagnóstico pendente (veio %)',
+      (select mensagem from lembretes_do_dia() where propriedade_id = v_propriedade_id);
+  end if;
+
+  perform marcar_lembrete_enviado(v_propriedade_id);
+  if exists (select 1 from lembretes_do_dia() where propriedade_id = v_propriedade_id) then
+    raise exception 'FALHOU [lembretes_do_dia]: não deveria mandar duas vezes no mesmo dia';
+  end if;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

@@ -30,6 +30,8 @@ const INTENCAO_LABEL: Record<string, string> = {
   // gravada pelo workflow de erro (fazenda-leite-erros.json) quando uma execução falha; a
   // "mensagem" é o nó que falhou e o erro
   erro: "Erro no sistema",
+  // gravada pelo workflow de lembretes diários (fazenda-leite-lembretes.json)
+  lembrete: "Lembrete enviado",
 };
 
 // "outro" é o que o classificador devolve quando não reconhece o pedido
