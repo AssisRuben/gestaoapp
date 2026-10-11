@@ -472,6 +472,14 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   `coberturaAtualPorVaca` em `src/lib/indicadores.ts` (Início e resumo da fazenda). Positiva de
   antes do parto atual, sem vínculo, é gestação que já terminou — não vira "secagem atrasada".
 
+## Leite da lactação e parto duplicado (0039)
+
+- Indicadores (site e bot) contam o leite DA VACA com data entre o parto ativo e hoje — não pelo
+  `controle_leite.parto_id`, que em dado antigo aponta pro parto anterior (o bot antes da 0022
+  fechava a lactação só com ativa=false, sem arquivar; esses partos inativos continuam em `partos`).
+- Trigger `partos_recusar_duplicado`: parto a menos de 240 dias de outro da mesma vaca (partos ou
+  partos_historico) é recusado — vale pra site, bot e campo.
+
 ## Gestor: gestores, planilhas e fazenda própria (0037_gestores.sql)
 
 - Aba "Acessos" (`/gestor/tecnicos`): seção "Gestores do programa" — `listar_gestores`,

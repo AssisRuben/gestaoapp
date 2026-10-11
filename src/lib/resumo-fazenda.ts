@@ -115,7 +115,7 @@ type LinhaRecomendacao = {
   created_at: string;
 };
 
-// Visitas (0032): as 10 mais recentes, com as recomendações; e todas as recomendações ainda em
+// Visitas (0032): as 10 mais recentes, em ordem de data, com as recomendações; e todas as recomendações ainda em
 // aberto (podem ser de visitas mais antigas). Sem as tabelas (migration não rodada), volta vazio.
 async function carregarVisitas(supabase: ReturnType<typeof createServiceClient>, propriedadeId: string) {
   const [{ data: visitas, error: e1 }, { data: recs, error: e2 }] = await Promise.all([
@@ -153,7 +153,9 @@ async function carregarVisitas(supabase: ReturnType<typeof createServiceClient>,
   const linhas = (recs ?? []) as LinhaRecomendacao[];
 
   return {
-    visitas: todas.map((v) => ({
+    // busca as 10 mais recentes, mas mostra em ordem cronológica (a mais antiga primeiro), no
+    // relatório e no histórico de /relatorio
+    visitas: [...todas].reverse().map((v) => ({
       id: v.id,
       data: v.data_visita,
       observacoes: v.observacoes,

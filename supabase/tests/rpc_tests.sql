@@ -127,11 +127,12 @@ begin
 
   -- cobertura que resultou no primeiro parto — fica fora de qualquer janela de arquivamento
   -- (a janela só cobre o período ENTRE dois partos), deve continuar viva pra sempre
-  perform registrar_cobertura(v_vaca_filha_id, current_date - 300, 'touro-teste-1');
+  perform registrar_cobertura(v_vaca_filha_id, current_date - 400, 'touro-teste-1');
   select id into v_cobertura_a from coberturas where vaca_id = v_vaca_filha_id order by data_cobertura desc limit 1;
   perform confirmar_diagnostico(v_cobertura_a, 'positivo');
 
-  v_parto_1 := registrar_parto(v_vaca_filha_id, current_date - 210, 101, 'femea');
+  -- 300 dias antes do segundo parto: menos de 240 é recusado como parto duplicado (0039)
+  v_parto_1 := registrar_parto(v_vaca_filha_id, current_date - 300, 101, 'femea');
   if v_parto_1.iep is not null then
     raise exception 'FALHOU [registrar_parto]: primeiro parto da vaca deveria ter iep null';
   end if;
@@ -161,8 +162,8 @@ begin
 
   v_parto_2 := registrar_parto(v_vaca_filha_id, current_date, 102, 'macho');
 
-  if v_parto_2.iep is distinct from 210 then
-    raise exception 'FALHOU [registrar_parto]: iep do segundo parto calculado errado (esperado 210, veio %)', v_parto_2.iep;
+  if v_parto_2.iep is distinct from 300 then
+    raise exception 'FALHOU [registrar_parto]: iep do segundo parto calculado errado (esperado 300, veio %)', v_parto_2.iep;
   end if;
   if v_parto_2.cobertura_id is distinct from v_cobertura_b then
     raise exception 'FALHOU [registrar_parto]: cobertura_id do parto novo deveria ser a confirmada mais recente';
@@ -282,12 +283,12 @@ begin
     end if;
   end;
 
-  v_cob_prog_1 := (registrar_cobertura(v_vaca_prog_id, current_date - 300, null, v_touro_id, true)).id;
+  v_cob_prog_1 := (registrar_cobertura(v_vaca_prog_id, current_date - 400, null, v_touro_id, true)).id;
   if (select touro_semen from coberturas where id = v_cob_prog_1) is distinct from '__touro_teste__' then
     raise exception 'FALHOU [programa]: touro_semen deveria receber o nome do touro do catálogo';
   end if;
   perform confirmar_diagnostico(v_cob_prog_1, 'positivo');
-  perform registrar_parto(v_vaca_prog_id, current_date - 210, null, 'femea');
+  perform registrar_parto(v_vaca_prog_id, current_date - 300, null, 'femea');
 
   if not exists (
     select 1 from bezerros where mae_id = v_vaca_prog_id and touro_id = v_touro_id
@@ -454,7 +455,9 @@ begin
     raise exception 'FALHOU [bot_registrar_parto]: deveria criar a bezerra e pôr a vaca em lactação';
   end if;
 
-  v_bot := bot_registrar_parto('5500000000001', 1, current_date, 1, null);
+  -- numa vaca sem parto (na vaca 1, um segundo parto no mesmo dia já cai na trava de duplicado, 0039)
+  insert into vacas (propriedade_id, numero_identificacao, status_produtivo) values (v_propriedade_id, 90960, 'novilha');
+  v_bot := bot_registrar_parto('5500000000001', 90960, current_date, 1, null);
   if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%já existe um animal%' then
     raise exception 'FALHOU [bot_registrar_parto]: número de bezerro repetido deveria virar mensagem (veio %)', v_bot;
   end if;
@@ -1359,6 +1362,46 @@ begin
     end if;
     if (select count(*) from alertas_reprodutivos() where vaca_id = v_vaca_dupla and tipo = 'diagnostico_atrasado') <> 1 then
       raise exception 'FALHOU [alertas_reprodutivos]: diagnóstico atrasado deveria aparecer uma vez por vaca';
+    end if;
+  end;
+
+  -- ============================================================
+  -- leite da lactação pela vaca/data e parto duplicado (0039)
+  -- ============================================================
+
+  declare
+    v_vaca_lig uuid;
+    v_parto_velho uuid;
+    v_parto_novo uuid;
+  begin
+    insert into vacas (propriedade_id, numero_identificacao, status_produtivo)
+    values (v_propriedade_id, 90903, 'lactacao') returning id into v_vaca_lig;
+    -- dado antigo: parto anterior só desativado (sem arquivar) e o leite novo ligado a ele
+    insert into partos (vaca_id, data_parto, ativa) values (v_vaca_lig, _hoje_fazenda() - 400, false)
+      returning id into v_parto_velho;
+    insert into partos (vaca_id, data_parto, ativa) values (v_vaca_lig, _hoje_fazenda() - 30, true)
+      returning id into v_parto_novo;
+    insert into controle_leite (vaca_id, parto_id, litros, data_controle) values
+      (v_vaca_lig, v_parto_velho, 99, _hoje_fazenda() - 50),  -- lactação anterior: não conta
+      (v_vaca_lig, v_parto_velho, 20, _hoje_fazenda() - 10),  -- ligado ao parto velho, mas é desta lactação
+      (v_vaca_lig, v_parto_novo, 10, _hoje_fazenda() - 5);
+    v_alvo_bot := _indicadores_lactacao(v_parto_novo);
+    if (v_alvo_bot->>'dias_pesados')::integer <> 2 or (v_alvo_bot->>'media')::numeric <> 15 then
+      raise exception 'FALHOU [_indicadores_lactacao]: deveria contar o leite da vaca desde o parto (veio %)', v_alvo_bot;
+    end if;
+
+    begin
+      insert into partos (vaca_id, data_parto, ativa) values (v_vaca_lig, _hoje_fazenda() - 20, true);
+      raise exception 'FALHOU [parto duplicado]: parto 10 dias depois de outro deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%já tem parto registrado em%' then
+        raise exception 'FALHOU [parto duplicado]: erro inesperado: %', sqlerrm;
+      end if;
+    end;
+
+    v_bot := bot_registrar_parto('5500000000001', 90903, _hoje_fazenda(), null, 'femea');
+    if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%já tem parto registrado em%' then
+      raise exception 'FALHOU [parto duplicado]: o bot deveria recusar com a mensagem (veio %)', v_bot;
     end if;
   end;
 

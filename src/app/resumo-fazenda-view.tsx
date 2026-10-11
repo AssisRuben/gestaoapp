@@ -143,9 +143,9 @@ export function ResumoFazendaView({
           {resumo.visitas.length > 0 && (
             <div className={`p-4 ${CARTAO}`}>
               <Titulo>
-                {resumo.visitas.length === 1 ? "Visita técnica" : `Visitas técnicas (${resumo.visitas.length} mais recentes)`}
+                {resumo.visitas.length === 1 ? "Visita técnica" : `Visitas técnicas (${resumo.visitas.length})`}
               </Titulo>
-              {/* Todas as visitas carregadas (até 10), da mais recente pra mais antiga. */}
+              {/* Todas as visitas carregadas (até 10), em ordem de data (a mais antiga primeiro). */}
               <ol className="mt-2 flex flex-col divide-y divide-black/[.06] dark:divide-white/[.08]">
                 {resumo.visitas.map((v) => (
                   <li key={v.id} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0 print:break-inside-avoid">
