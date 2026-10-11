@@ -240,12 +240,18 @@ export function DashboardClient({
     <div className="flex flex-1 flex-col gap-4 p-4 sm:p-6">
       <SuccessToast mensagem={mensagemToast} />
 
-      <div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-zinc-600 dark:text-zinc-400">
           Produtor: {propriedadeAtual.nome_produtor}
           {propriedadeAtual.municipio && ` · ${propriedadeAtual.municipio}`}
           {propriedadeAtual.estado && `/${propriedadeAtual.estado}`}
         </p>
+        <Link
+          href="/relatorio"
+          className="rounded-full border border-black/[.08] px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
+        >
+          Relatório da visita
+        </Link>
       </div>
 
       <div className="flex flex-row items-end gap-3">

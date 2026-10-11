@@ -11,7 +11,7 @@ export function BottomNav({ items = NAV_ITEMS }: { items?: NavItem[] }) {
   const ativoHref = hrefAtivo(items, pathname);
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex gap-1 border-t border-black/[.08] bg-white px-2 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] sm:hidden dark:border-white/[.145] dark:bg-zinc-950">
+    <nav className="fixed inset-x-0 bottom-0 z-40 flex gap-1 print:hidden border-t border-black/[.08] bg-white px-2 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] sm:hidden dark:border-white/[.145] dark:bg-zinc-950">
       {items.map((item) => {
         const ativo = item.href === ativoHref;
         const Icon = item.icon;

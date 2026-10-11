@@ -270,6 +270,24 @@ export const getFinanceiroDiarioTodasCache = unstable_cache(
   { revalidate: REVALIDATE_SEGUNDOS, tags: ["financeiro"] },
 );
 
+// Alertas reprodutivos de todas as fazendas (0028). Só o painel do gestor usa.
+export const getAlertasReprodutivosCache = unstable_cache(
+  async () => {
+    const supabase = createServiceClient();
+    return buscarTodasPaginas((de, ate) =>
+      supabase
+        .rpc("alertas_reprodutivos")
+        .order("propriedade_id")
+        .order("tipo")
+        .order("dias", { ascending: false })
+        .order("vaca_id")
+        .range(de, ate),
+    );
+  },
+  ["alertas-reprodutivos-cache"],
+  { revalidate: REVALIDATE_SEGUNDOS, tags: ["coberturas", "partos", "vacas", "entregas_doses"] },
+);
+
 export const getIndicadoresTodasCache = unstable_cache(
   async () => {
     const supabase = createServiceClient();

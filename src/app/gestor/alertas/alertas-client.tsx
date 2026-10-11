@@ -2,10 +2,10 @@
 
 // Exibição dos alertas — o cálculo é feito no servidor (./page.tsx), com dados reais. O botão
 // de WhatsApp abre conversa (wa.me) com o primeiro número ativo da fazenda em usuarios_whatsapp;
-// o de relatório em PDF só mostra um aviso por enquanto — a geração fica pra depois.
+// o de documento abre o resumo da fazenda (/gestor/fazendas/[id]), que imprime ou salva em PDF.
 
 import type { ReactNode } from "react";
-import { useSuccessToast, SuccessToast } from "../../(app)/toast";
+import Link from "next/link";
 
 export type NivelAlerta = "critico" | "atencao";
 
@@ -26,6 +26,32 @@ export type AlertaSemLancamento = {
   dias: number | null;
   nivel: NivelAlerta;
 };
+
+export type AlertaReprodutivo = {
+  id: string;
+  nome: string;
+  telefone: string | null;
+  nivel: NivelAlerta;
+  itens: { tipo: string; numero: number | null; dataRef: string; dias: number }[];
+};
+
+function textoItemReprodutivo(i: AlertaReprodutivo["itens"][number]) {
+  const vaca = i.numero !== null ? `Vaca ${i.numero}` : "";
+  switch (i.tipo) {
+    case "diagnostico_atrasado":
+      return `${vaca}: coberta há ${i.dias} dias, sem diagnóstico`;
+    case "secagem_atrasada":
+      return `${vaca}: secagem atrasada ${i.dias} dias`;
+    case "parto_atrasado":
+      return `${vaca}: parto previsto há ${i.dias} dias e não registrado`;
+    case "vazia_muito_tempo":
+      return `${vaca}: ${i.dias} dias desde o parto sem prenhez confirmada`;
+    case "doses_nao_confirmadas":
+      return `Doses entregues há ${i.dias} dias sem confirmação de recebimento`;
+    default:
+      return `${vaca} ${i.tipo}`;
+  }
+}
 
 const BADGE_CLASSES: Record<NivelAlerta, string> = {
   critico: "bg-alerta-tint text-alerta-ink",
@@ -123,13 +149,11 @@ function IconButton({
 function AcoesAlerta({
   telefone,
   mensagem,
-  onPdf,
-  onPdfWhatsApp,
+  fazendaId,
 }: {
   telefone: string | null;
   mensagem: string;
-  onPdf: () => void;
-  onPdfWhatsApp: () => void;
+  fazendaId: string;
 }) {
   return (
     <div className="flex shrink-0 gap-1.5">
@@ -145,17 +169,14 @@ function AcoesAlerta({
           <WhatsAppIcon className="h-4 w-4" />
         </span>
       )}
-      <IconButton title="Relatório em PDF" onClick={onPdf}>
+      <Link
+        href={`/gestor/fazendas/${fazendaId}`}
+        title="Abrir fazenda (resumo pra imprimir ou salvar em PDF)"
+        aria-label="Abrir fazenda"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/[.08] text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
+      >
         <DocumentIcon className="h-4 w-4" />
-      </IconButton>
-      <IconButton title="Enviar relatório em PDF pelo WhatsApp" onClick={onPdfWhatsApp}>
-        <span className="relative flex h-4 w-4 items-center justify-center">
-          <DocumentIcon className="h-4 w-4" />
-          <span className="absolute -bottom-1 -right-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-brand-green text-white">
-            <WhatsAppIcon className="h-2 w-2" />
-          </span>
-        </span>
-      </IconButton>
+      </Link>
     </div>
   );
 }
@@ -172,31 +193,32 @@ function Vazio() {
 }
 
 export function AlertasClient({
+  reprodutivos,
   quedaMargem,
   semLancamentoLeite,
   semLancamentoFinanceiro,
   rotuloMeses,
 }: {
+  reprodutivos: AlertaReprodutivo[];
   quedaMargem: AlertaMargem[];
   semLancamentoLeite: AlertaSemLancamento[];
   semLancamentoFinanceiro: AlertaSemLancamento[];
   rotuloMeses: string;
 }) {
-  const totalAlertas = quedaMargem.length + semLancamentoLeite.length + semLancamentoFinanceiro.length;
+  const totalAlertas =
+    reprodutivos.reduce((s, a) => s + a.itens.length, 0) +
+    quedaMargem.length +
+    semLancamentoLeite.length +
+    semLancamentoFinanceiro.length;
   const fazendasAfetadas = new Set([
+    ...reprodutivos.map((a) => a.id),
     ...quedaMargem.map((a) => a.id),
     ...semLancamentoLeite.map((a) => a.id),
     ...semLancamentoFinanceiro.map((a) => a.id),
   ]).size;
 
-  const { mensagemToast, mostrarToast } = useSuccessToast();
-  const onPdf = () => mostrarToast("Relatório em PDF — em breve");
-  const onPdfWhatsApp = () => mostrarToast("Envio do relatório em PDF pelo WhatsApp — em breve");
-
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 sm:p-6">
-      <SuccessToast mensagem={mensagemToast} />
-
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-black sm:text-3xl dark:text-zinc-50">
           Alertas
@@ -216,6 +238,42 @@ export function AlertasClient({
           </p>
           <p className="text-base text-zinc-600 dark:text-zinc-400">Fazendas afetadas</p>
         </div>
+      </div>
+
+      <div className="rounded-2xl border bg-surface border-black/[.08] p-4 dark:border-white/[.145]">
+        <p className="mb-1 flex items-center gap-2 text-base font-semibold text-black dark:text-zinc-50">
+          <span className="h-2.5 w-2.5 rounded-full bg-reproducao" aria-hidden="true" />
+          Reprodução
+        </p>
+        <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">
+          Diagnóstico atrasado (+45 dias), secagem ou parto atrasados, vaca vazia há mais de 120 dias
+          e doses do programa sem confirmação (+7 dias).
+        </p>
+        {reprodutivos.length === 0 && <Vazio />}
+        <ul className="flex flex-col gap-3">
+          {reprodutivos.map((a) => {
+            const mensagem = `Olá! Aqui é da equipe Gestão Pec. Vimos ${a.itens.length} pendência(s) na reprodução da ${a.nome} (como diagnóstico de prenhez ou secagem). Podemos ajudar a colocar em dia?`;
+            return (
+              <li key={a.id} className="flex flex-col gap-3 rounded-xl border border-black/[.08] p-3 dark:border-white/[.145]">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-black dark:text-zinc-50">{a.nome}</p>
+                    <ul className="mt-1 flex flex-col gap-0.5 text-sm text-zinc-600 dark:text-zinc-400">
+                      {a.itens.slice(0, 6).map((i, idx) => (
+                        <li key={idx}>{textoItemReprodutivo(i)}</li>
+                      ))}
+                      {a.itens.length > 6 && <li>e mais {a.itens.length - 6}…</li>}
+                    </ul>
+                    <div className="mt-2">
+                      <Badge nivel={a.nivel} />
+                    </div>
+                  </div>
+                  <AcoesAlerta telefone={a.telefone} mensagem={mensagem} fazendaId={a.id} />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </div>
 
       <div className="rounded-2xl border bg-surface border-black/[.08] p-4 dark:border-white/[.145]">
@@ -249,7 +307,7 @@ export function AlertasClient({
                       <Badge nivel={a.nivel} />
                     </div>
                   </div>
-                  <AcoesAlerta telefone={a.telefone} mensagem={mensagem} onPdf={onPdf} onPdfWhatsApp={onPdfWhatsApp} />
+                  <AcoesAlerta telefone={a.telefone} mensagem={mensagem} fazendaId={a.id} />
                 </div>
               </li>
             );
@@ -283,7 +341,7 @@ export function AlertasClient({
                       <Badge nivel={a.nivel} />
                     </div>
                   </div>
-                  <AcoesAlerta telefone={a.telefone} mensagem={mensagem} onPdf={onPdf} onPdfWhatsApp={onPdfWhatsApp} />
+                  <AcoesAlerta telefone={a.telefone} mensagem={mensagem} fazendaId={a.id} />
                 </div>
               </li>
             );
@@ -317,7 +375,7 @@ export function AlertasClient({
                       <Badge nivel={a.nivel} />
                     </div>
                   </div>
-                  <AcoesAlerta telefone={a.telefone} mensagem={mensagem} onPdf={onPdf} onPdfWhatsApp={onPdfWhatsApp} />
+                  <AcoesAlerta telefone={a.telefone} mensagem={mensagem} fazendaId={a.id} />
                 </div>
               </li>
             );

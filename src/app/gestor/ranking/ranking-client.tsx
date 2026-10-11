@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { BarRanking } from "../bar-ranking";
 import { TrendChart } from "../trend-chart";
 
@@ -158,6 +159,12 @@ export function RankingClient({
 
         {fazendaSelecionada && (
           <div className="flex flex-col items-center gap-8 pt-5">
+            <Link
+              href={`/gestor/fazendas/${fazendaSelecionada.id}`}
+              className="rounded-full border border-black/[.08] px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
+            >
+              Abrir {fazendaSelecionada.nome} →
+            </Link>
             <div className="flex w-full flex-col items-center gap-3">
               <p className="text-center text-lg font-semibold text-black dark:text-zinc-50">
                 Litros lançados por mês

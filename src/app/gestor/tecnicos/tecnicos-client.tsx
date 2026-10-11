@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { vincularTecnicoGestor, desvincularTecnicoGestor } from "./actions";
 import { useSuccessToast, SuccessToast } from "../../(app)/toast";
 import { CAMPO_CLASSES, BOTAO_PRIMARIO, Campo } from "../programa/ui";
@@ -204,7 +205,11 @@ export function TecnicosClient({
                 key={f.id}
                 className="flex flex-col gap-2 rounded-2xl border border-black/[.08] bg-surface p-4 dark:border-white/[.145]"
               >
-                <h3 className="font-semibold text-black dark:text-zinc-50">{f.nome}</h3>
+                <h3 className="font-semibold text-black dark:text-zinc-50">
+                  <Link href={`/gestor/fazendas/${f.id}`} className="hover:underline">
+                    {f.nome}
+                  </Link>
+                </h3>
                 {lista.length === 0 ? (
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">
                     Nenhuma conta do site (só WhatsApp, ou ainda sem cadastro).

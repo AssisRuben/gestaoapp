@@ -20,7 +20,7 @@ export default async function GestorLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-black/[.08] px-3 py-2.5 sm:px-6 sm:py-3 dark:border-white/[.145]">
+      <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b print:hidden border-black/[.08] px-3 py-2.5 sm:px-6 sm:py-3 dark:border-white/[.145]">
         <Image
           src="/gestao-pec-logo.png"
           alt="Gestão Pec"

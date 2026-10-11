@@ -386,6 +386,20 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - Corrigir/apagar financeiro exige categoria ou data (antes pegava o lançamento mais recente da
   fazenda). Categoria gravada pelo bot é normalizada no banco (`_categoria_normalizada`).
 
+## Resumo da fazenda (gestor e relatório de visita)
+
+- `carregarResumoFazenda` (`src/lib/resumo-fazenda.ts`) + `ResumoFazendaView`
+  (`src/app/resumo-fazenda-view.tsx`): rebanho, médias (produção/dia, L/vaca/dia, projeção 305,
+  IEP, dias em aberto), pendências (secar, diagnóstico, partos previstos), tabela das lactações
+  com os indicadores da ficha, produção 60 dias e financeiro 6 meses. Usa service role: quem chama
+  valida o acesso.
+- `/relatorio` (produtor/técnico, fazenda atual) e `/gestor/fazendas/[id]` (gestor, só leitura)
+  usam o mesmo resumo; "Imprimir / salvar PDF" usa o print do navegador (cabeçalho e navegação
+  somem na impressão).
+- Aba Alertas do gestor: seção Reprodução lê `alertas_reprodutivos()` (0028) — diagnóstico +45
+  dias, secagem/parto atrasados, vazia +120 dias em lactação, doses sem confirmação +7 dias. O
+  botão de documento de cada alerta abre o resumo da fazenda.
+
 ## Relatórios do bot (0027_bot_relatorios.sql)
 
 - Consultas do WhatsApp (`consultar_vaca`, `consultar_relatorio`, `consultar_financeiro`) vão

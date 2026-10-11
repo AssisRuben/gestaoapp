@@ -1,11 +1,20 @@
-import { getResumoFazendasCache, getFinanceiroDiarioTodasCache } from "@/lib/cached-data";
+import { getResumoFazendasCache, getFinanceiroDiarioTodasCache, getAlertasReprodutivosCache } from "@/lib/cached-data";
 import { normalizarResumo, normalizarFinanceiro, hojeBrasil, diasEntre } from "@/lib/gestor";
 import {
   AlertasClient,
   type AlertaMargem,
+  type AlertaReprodutivo,
   type AlertaSemLancamento,
   type NivelAlerta,
 } from "./alertas-client";
+
+type LinhaReprodutiva = {
+  propriedade_id: string;
+  tipo: string;
+  numero: number | null;
+  data_ref: string;
+  dias: number;
+};
 
 // Regras dos alertas (dados reais, 0020_gestor_dados_reais.sql):
 //   - Queda de margem: saldo do último mês FECHADO pelo menos 20% abaixo do mês anterior (crítico
@@ -34,9 +43,10 @@ function nivelPorDias(dias: number | null): NivelAlerta {
 }
 
 export default async function GestorAlertasPage() {
-  const [resumoData, financeiroData] = await Promise.all([
+  const [resumoData, financeiroData, reprodutivosData] = await Promise.all([
     getResumoFazendasCache(),
     getFinanceiroDiarioTodasCache(),
+    getAlertasReprodutivosCache(),
   ]);
 
   const hoje = hojeBrasil();
@@ -85,8 +95,32 @@ export default async function GestorAlertasPage() {
       // nunca lançou primeiro, depois quem está há mais tempo sem lançar
       .sort((a, b) => (b.dias ?? Infinity) - (a.dias ?? Infinity));
 
+  // reprodução (0028): agrupa por fazenda; crítico quando há secagem/parto atrasado ou diagnóstico
+  // esquecido há mais de 90 dias
+  const porFazenda = new Map<string, AlertaReprodutivo>();
+  for (const l of reprodutivosData as unknown as LinhaReprodutiva[]) {
+    const fazenda = resumo.find((r) => r.propriedade_id === l.propriedade_id);
+    if (!fazenda) continue;
+    const atual = porFazenda.get(l.propriedade_id) ?? {
+      id: fazenda.propriedade_id,
+      nome: fazenda.nome_propriedade,
+      telefone: fazenda.telefone,
+      itens: [],
+      nivel: "atencao" as NivelAlerta,
+    };
+    atual.itens.push({ tipo: l.tipo, numero: l.numero, dataRef: l.data_ref, dias: l.dias });
+    if (l.tipo === "secagem_atrasada" || l.tipo === "parto_atrasado" || (l.tipo === "diagnostico_atrasado" && l.dias > 90)) {
+      atual.nivel = "critico";
+    }
+    porFazenda.set(l.propriedade_id, atual);
+  }
+  const reprodutivos = [...porFazenda.values()].sort(
+    (a, b) => (a.nivel === b.nivel ? b.itens.length - a.itens.length : a.nivel === "critico" ? -1 : 1),
+  );
+
   return (
     <AlertasClient
+      reprodutivos={reprodutivos}
       quedaMargem={quedaMargem}
       semLancamentoLeite={semLancamento((r) => r.ultimo_leite, (r) => r.vacas_lactacao > 0)}
       semLancamentoFinanceiro={semLancamento((r) => r.ultimo_financeiro)}

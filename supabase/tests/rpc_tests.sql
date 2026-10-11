@@ -1015,6 +1015,23 @@ begin
     raise exception 'FALHOU [bot_consultar]: financeiro (veio %)', v_bot;
   end if;
 
+  -- ============================================================
+  -- alertas reprodutivos do gestor (0028)
+  -- ============================================================
+
+  insert into coberturas (vaca_id, data_cobertura) values (v_vaca_status, _hoje_fazenda() - 50);
+  if not exists (
+    select 1 from alertas_reprodutivos()
+    where propriedade_id = v_propriedade_id and tipo = 'diagnostico_atrasado' and numero = 90001 and dias = 50
+  ) then
+    raise exception 'FALHOU [alertas_reprodutivos]: cobertura pendente há 50 dias deveria alertar';
+  end if;
+  if exists (
+    select 1 from alertas_reprodutivos() where propriedade_id = v_propriedade_id and numero = 90002
+  ) then
+    raise exception 'FALHOU [alertas_reprodutivos]: vaca 90002 (prenhe há 3 dias) não deveria alertar';
+  end if;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 
