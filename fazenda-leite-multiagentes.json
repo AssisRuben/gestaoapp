@@ -453,7 +453,7 @@
     {
       "parameters": {
         "resource": "messages-api",
-        "instanceName": "Gabriel Bandeira",
+        "instanceName": "Assis Rubens",
         "remoteJid": "={{ $('Webhook').first().json.body.data.key.remoteJid }}",
         "messageText": "={{ $json.resposta_sugerida }}",
         "options_message": {}
@@ -468,8 +468,7 @@
       "name": "Enviar texto",
       "credentials": {
         "evolutionApi": {
-          "id": "gtlPdveg89MKtmGW",
-          "name": "Evolution Gabriel"
+          "name": "Evolution Assis"
         }
       }
     },
@@ -1555,7 +1554,7 @@
     {
       "parameters": {
         "resource": "messages-api",
-        "instanceName": "Gabriel Bandeira",
+        "instanceName": "Assis Rubens",
         "remoteJid": "={{ $('Webhook').first().json.body.data.key.remoteJid }}",
         "messageText": "={{ $json.resposta_sugerida }}",
         "options_message": {}
@@ -1570,8 +1569,7 @@
       "name": "Enviar texto1",
       "credentials": {
         "evolutionApi": {
-          "id": "gtlPdveg89MKtmGW",
-          "name": "Evolution Gabriel"
+          "name": "Evolution Assis"
         }
       }
     },
@@ -1975,7 +1973,7 @@
       "parameters": {
         "resource": "messages-api",
         "operation": "send-audio",
-        "instanceName": "Gabriel Bandeira",
+        "instanceName": "Assis Rubens",
         "remoteJid": "={{ $('Webhook').first().json.body.data.key.remoteJid }}",
         "media": "={{ $json.audioBase64 }}",
         "options_message": {}
@@ -1990,8 +1988,7 @@
       "name": "Enviar Áudio",
       "credentials": {
         "evolutionApi": {
-          "id": "gtlPdveg89MKtmGW",
-          "name": "Evolution Gabriel"
+          "name": "Evolution Assis"
         }
       },
       "notes": "AJUSTAR: escolher a operation certa de enviar audio/voice, e apontar o campo de midia para o binario gerado no node anterior."

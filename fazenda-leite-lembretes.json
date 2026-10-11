@@ -61,7 +61,7 @@
     {
       "parameters": {
         "resource": "messages-api",
-        "instanceName": "Gabriel Bandeira",
+        "instanceName": "Assis Rubens",
         "remoteJid": "={{ $json.telefone }}",
         "messageText": "={{ $json.mensagem }}",
         "options_message": {}
@@ -76,8 +76,7 @@
       "name": "Enviar Lembrete",
       "credentials": {
         "evolutionApi": {
-          "id": "gtlPdveg89MKtmGW",
-          "name": "Evolution Gabriel"
+          "name": "Evolution Assis"
         }
       },
       "onError": "continueRegularOutput"
