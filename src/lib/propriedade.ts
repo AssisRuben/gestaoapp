@@ -56,7 +56,10 @@ export const isGestor = cache(async (): Promise<boolean> => {
 // alguém entrou com outra conta no mesmo navegador (a sessão é uma só pra todas as abas) — dizer
 // com qual conta o clique chegou evita achar que é erro do sistema.
 export async function semAcessoGestor(): Promise<string> {
-  const user = await getUser();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   return user?.email
     ? `Só o gestor do programa pode fazer isso, e este navegador está conectado como ${user.email}, que não é gestor. Se você entrou com outra conta em outra aba, recarregue a página.`
     : "Sua sessão terminou. Entre de novo como gestor.";
