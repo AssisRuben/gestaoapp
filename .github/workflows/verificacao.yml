@@ -1,0 +1,40 @@
+# Roda a cada push e pull request: lint, tipos, testes (lógica + banco montado do zero) e o build
+# de produção. Não usa nenhuma chave nem toca no Supabase de produção — o banco dos testes é um
+# Postgres em memória (PGlite). Se algo quebrar, o GitHub marca o commit com ✗ antes do deploy.
+name: Verificação
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tipos
+        run: npm run typecheck
+
+      - name: Testes (indicadores, offline e banco do zero)
+        run: npm test
+
+      - name: Build de produção
+        run: npm run build
+        env:
+          # o build não acessa o Supabase; valores de mentira só pra as variáveis existirem
+          NEXT_PUBLIC_SUPABASE_URL: https://exemplo.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: chave-de-exemplo
+          NEXT_TELEMETRY_DISABLED: "1"
