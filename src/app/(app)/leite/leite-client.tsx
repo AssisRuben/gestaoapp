@@ -14,6 +14,8 @@ import { hojeBrasil, primeiroDiaMesBrasil } from "@/lib/datas";
 const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
 const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
+// Mesma chave em leite/pesagem/pesagem-client.tsx (não importa daqui pra não puxar esta tela).
+const AVISO_PESAGEM = "aviso-pesagem";
 
 const PERIODO_LABEL: Record<string, string> = {
   manha: "Manhã",
@@ -72,6 +74,19 @@ export function LeiteClient({
   const [excluirState, excluirAction, excluirPending] = useActionState(deletarLeite, undefined);
 
   const { mensagemToast, mostrarToast } = useSuccessToast();
+
+  // Aviso deixado pela Pesagem do dia, que volta pra cá depois de salvar.
+  useEffect(() => {
+    try {
+      const aviso = sessionStorage.getItem(AVISO_PESAGEM);
+      if (aviso) {
+        sessionStorage.removeItem(AVISO_PESAGEM);
+        queueMicrotask(() => mostrarToast(aviso));
+      }
+    } catch {
+      // sem sessionStorage: só não mostra o aviso
+    }
+  }, [mostrarToast]);
 
   useEffect(() => {
     if (criarState?.success) {

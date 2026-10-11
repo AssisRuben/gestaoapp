@@ -27,6 +27,9 @@ type ResultadoPesagem = {
 
 type Periodo = "manha" | "tarde" | "dia_inteiro";
 
+// Aviso mostrado pela tela Leite ao voltar (mesma chave em leite/leite-client.tsx).
+const AVISO_PESAGEM = "aviso-pesagem";
+
 const PERIODOS: [Periodo, string][] = [
   ["manha", "Manhã"],
   ["tarde", "Tarde"],
@@ -156,7 +159,20 @@ function ListaPesagem({
       setResultado(envio.corpo);
       if (envio.status === 200) {
         const feitos = (envio.corpo.salvos ?? 0) + (envio.corpo.corrigidos ?? 0);
-        if (feitos > 0) mostrarToast(`Pesagem salva: ${feitos} ${feitos === 1 ? "vaca" : "vacas"}`);
+        const aviso = `Pesagem salva: ${feitos} ${feitos === 1 ? "vaca" : "vacas"}`;
+        // Tudo certo: volta pro Leite (o aviso aparece lá). Com erro em alguma vaca, fica aqui
+        // pra mostrar quais não foram salvas.
+        if (feitos > 0 && !(envio.corpo.erros?.length)) {
+          try {
+            sessionStorage.setItem(AVISO_PESAGEM, aviso);
+          } catch {
+            // sem sessionStorage: volta sem o aviso
+          }
+          router.push("/leite");
+          router.refresh();
+          return;
+        }
+        if (feitos > 0) mostrarToast(aviso);
         router.refresh();
       }
     });
