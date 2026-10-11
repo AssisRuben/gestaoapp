@@ -411,6 +411,9 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - Migration nova precisa continuar funcionando nos dois caminhos: em cima da produção e no banco
   montado do zero. Ao acrescentar coluna em tabela original, use `add column if not exists`.
 - Passo a passo do ambiente (Supabase, Easypanel, n8n): `deploy/HOMOLOGACAO.md`.
+- E-mail do Auth (confirmação, senha) por SMTP próprio no Brevo: `deploy/SMTP_BREVO.md`. O e-mail
+  padrão do Supabase só manda poucos por hora — trava cadastro em grupo. Links dos modelos passam
+  por `/auth/confirm` (token_hash).
   `scripts/workflow-homologacao.js` gera as cópias dos workflows sem as credenciais de produção.
 
 ## Visitas técnicas (0032_visitas.sql)
