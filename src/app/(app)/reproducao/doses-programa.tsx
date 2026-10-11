@@ -5,14 +5,11 @@ import { confirmarRecebimentoDoses, registrarBaixaDoses, deletarBaixaDoses } fro
 import { formatarDataBR } from "../format";
 import { rotuloTouro, MOTIVOS_BAIXA } from "@/lib/programa";
 import type { Touro, EntregaDoses, SaldoDoses, BaixaDoses } from "./types";
+import { hojeBrasil } from "@/lib/datas";
 
 const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
 const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
-
-function hoje() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 // Bloco "Doses do programa" no topo da aba: entregas aguardando confirmação, saldo por touro e
 // baixas (doses perdidas). Só aparece pra fazenda que já recebeu (ou tem a receber) alguma
@@ -313,7 +310,7 @@ function BaixaModal({
             name="data_baixa"
             type="date"
             required
-            defaultValue={hoje()}
+            defaultValue={hojeBrasil()}
             className={CAMPO_CLASSES}
           />
         </div>

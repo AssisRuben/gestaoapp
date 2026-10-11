@@ -26,12 +26,9 @@ import {
   Campo,
   BotaoExcluir,
 } from "./ui";
+import { hojeBrasil } from "@/lib/datas";
 
 type Propriedade = { id: string; nome_propriedade: string };
-
-function hoje() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function Indicador({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
   return (
@@ -469,7 +466,7 @@ function EntregaModal({
             name="data_entrega"
             type="date"
             required
-            defaultValue={entrega.data_entrega ?? hoje()}
+            defaultValue={entrega.data_entrega ?? hojeBrasil()}
             className={CAMPO_CLASSES}
           />
         </Campo>

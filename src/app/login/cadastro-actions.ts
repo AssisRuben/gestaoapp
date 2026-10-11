@@ -11,6 +11,12 @@ export async function cadastrarNovaFazenda(
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
+  const whatsapp = String(formData.get("whatsapp") ?? "").trim();
+  const digitos = whatsapp.replace(/\D/g, "");
+  if (whatsapp && (digitos.length < 10 || digitos.length > 13)) {
+    return { error: "WhatsApp inválido. Informe com DDD, por exemplo (85) 99999-9999." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
     email,
@@ -22,7 +28,7 @@ export async function cadastrarNovaFazenda(
         municipio: (formData.get("municipio") as string) || null,
         estado: (formData.get("estado") as string) || null,
         tecnico_responsavel: (formData.get("tecnico_responsavel") as string) || null,
-        whatsapp: (formData.get("whatsapp") as string) || null,
+        whatsapp: whatsapp || null,
       },
     },
   });

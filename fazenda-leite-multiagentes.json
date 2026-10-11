@@ -19,20 +19,17 @@
     },
     {
       "parameters": {
-        "useCustomSchema": true,
-        "operation": "get",
-        "tableId": "usuarios_whatsapp",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "telefone",
-              "keyValue": "={{ $json.body.data.key.remoteJid.split('@')[0] }}"
-            }
-          ]
-        }
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_identificar_usuario",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_remote_jid: $json.body.data.key.remoteJid }) }}",
+        "options": {}
       },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         -7936,
         14032
@@ -3777,21 +3774,12 @@
           "conditions": [
             {
               "id": "11b6b8d2-974e-43ed-8ddc-2e629f3d7c4b",
-              "leftValue": "={{ $('Webhook').item.json.body.data.key.fromMe }}",
-              "rightValue": "true",
+              "leftValue": "={{ !String($('Webhook').item.json.body.data.key.remoteJid).endsWith('@g.us') && ($('Webhook').item.json.body.data.key.fromMe !== true || $('Webhook').item.json.body.data.key.remoteJid === $('Webhook').item.json.body.sender) && $json.statusAcesso === 'ok' }}",
+              "rightValue": "",
               "operator": {
                 "type": "boolean",
                 "operation": "true",
                 "singleValue": true
-              }
-            },
-            {
-              "id": "cc362061-bc29-47d5-8e15-b51dc64bef0a",
-              "leftValue": "={{ $('Webhook').item.json.body.data.key.remoteJid }}",
-              "rightValue": "={{ $('Webhook').item.json.body.sender }}",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
               }
             }
           ],
@@ -3873,8 +3861,8 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        -6912,
-        14176
+        -6696,
+        14432
       ],
       "id": "1ad26b07-cd97-4009-ba3d-9ab103183e24",
       "name": "No Operation, do nothing"
@@ -4307,6 +4295,87 @@
         "supabaseApi": {
           "id": "n5A2qlsmhmmPqxSz",
           "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fbf85285-d73c-43c9-acd8-128cfd7e1ee8",
+              "leftValue": "={{ $('Verificar Status Usuário').item.json.statusAcesso === 'desativado' && $('Webhook').item.json.body.data.key.fromMe !== true && !String($('Webhook').item.json.body.data.key.remoteJid).endsWith('@g.us') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -6996,
+        14332
+      ],
+      "id": "0d609ae2-01e9-4bed-87ef-bb6a8bca21f9",
+      "name": "Avisar Acesso Bloqueado?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bd554273-1586-4d56-b88a-1d7022f9927c",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "={{ $('Verificar Status Usuário').item.json.mensagemAcesso }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -6696,
+        14232
+      ],
+      "id": "4cfa7b1a-7263-41d3-9a4e-a21f56e4df80",
+      "name": "Mensagem Acesso Bloqueado"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=exec_remetente:{{ $execution.id }}",
+        "value": "={{ JSON.stringify({ remoteJid: $('Webhook').item.json.body.data.key.remoteJid, propriedade_id: $('Identificar Usuario').item.json.propriedade_id || null }) }}",
+        "expire": true,
+        "ttl": 900
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -6996,
+        13732
+      ],
+      "id": "332d4858-6878-4db4-8d8f-9d173d326e72",
+      "name": "Guardar Remetente (Erro)",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
         }
       },
       "onError": "continueRegularOutput"
@@ -6049,11 +6118,16 @@
             "node": "É Áudio?",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Guardar Remetente (Erro)",
+            "type": "main",
+            "index": 0
           }
         ],
         [
           {
-            "node": "No Operation, do nothing",
+            "node": "Avisar Acesso Bloqueado?",
             "type": "main",
             "index": 0
           }
@@ -6280,6 +6354,35 @@
         [
           {
             "node": "Confirmar Parto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisar Acesso Bloqueado?": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Acesso Bloqueado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem Acesso Bloqueado": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
             "type": "main",
             "index": 0
           }

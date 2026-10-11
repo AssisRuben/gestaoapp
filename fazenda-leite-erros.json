@@ -1,0 +1,157 @@
+{
+  "name": "AgenteGestãoPec - Erros",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "80312109-338e-473c-90a9-1ffa101c2ab6",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "remetente",
+        "key": "=exec_remetente:{{ $json.execution.id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        260,
+        0
+      ],
+      "id": "878a6b2f-056e-4000-ad4a-901805f73920",
+      "name": "Buscar Remetente",
+      "credentials": {
+        "redis": {
+          "id": "rl12YNNWDYwqFciD",
+          "name": "Redis account"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const erro = $('Error Trigger').first().json;\nlet remetente = null;\ntry { remetente = JSON.parse($input.first().json.remetente || 'null'); } catch (e) {}\nif (!remetente || !remetente.remoteJid) return [];\nconst execucao = erro.execution || {};\nreturn [{ json: {\n  remoteJid: remetente.remoteJid,\n  propriedade_id: remetente.propriedade_id || null,\n  resposta: \"Desculpe, tive um problema no sistema ao processar sua mensagem e ela pode não ter sido registrada. Confira e, se precisar, mande de novo daqui a pouco.\",\n  detalhe: `Falha no nó \"${execucao.lastNodeExecuted || '?'}\": ${(execucao.error && execucao.error.message) || 'erro desconhecido'} (execução ${execucao.id || '?'})`,\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ],
+      "id": "8b8b2d38-0483-4a9e-bccd-a35d822331d2",
+      "name": "Montar Aviso"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "Gabriel Bandeira",
+        "remoteJid": "={{ $json.remoteJid }}",
+        "messageText": "={{ $json.resposta }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        780,
+        -100
+      ],
+      "id": "8de62a48-dde8-4455-b195-8eb7c395fc63",
+      "name": "Avisar Produtor",
+      "credentials": {
+        "evolutionApi": {
+          "id": "gtlPdveg89MKtmGW",
+          "name": "Evolution Gabriel"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/interacoes_log",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ propriedade_id: $('Montar Aviso').first().json.propriedade_id, intencao_detectada: 'erro', mensagem_recebida: $('Montar Aviso').first().json.detalhe, resposta_enviada: $('Montar Aviso').first().json.resposta }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        100
+      ],
+      "id": "e4e99d64-f6ce-4854-8b13-cca94cb642ba",
+      "name": "Registrar Erro (Log)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Buscar Remetente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Remetente": {
+      "main": [
+        [
+          {
+            "node": "Montar Aviso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Aviso": {
+      "main": [
+        [
+          {
+            "node": "Avisar Produtor",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Erro (Log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

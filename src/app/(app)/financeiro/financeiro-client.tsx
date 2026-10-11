@@ -6,6 +6,7 @@ import { MobileCardList, MobileCard, CardHeader, CardRow } from "../mobile-list"
 import { useSuccessToast, SuccessToast } from "../toast";
 import { formatarDataBR } from "../format";
 import type { Lancamento } from "./types";
+import { hojeBrasil, primeiroDiaMesBrasil } from "@/lib/datas";
 
 const TIPO_LABEL: Record<string, string> = {
   receita: "Receita",
@@ -23,16 +24,6 @@ const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
 
 const formatarMoeda = (valor: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor);
-
-function hojeStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function primeiroDiaMesAtualStr() {
-  const hoje = new Date();
-  const d = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-  return d.toISOString().slice(0, 10);
-}
 
 // Mesmas categorias e mesmo formato (minúsculo, sem acento) que o prompt do agente de IA do
 // bot de WhatsApp usa/normaliza — assim os dados batem independente de quem lançou.
@@ -106,7 +97,14 @@ function CamposLancamento({
   defaultData?: string;
 }) {
   const [tipo, setTipo] = useState(defaultTipo ?? "despesa");
-  const categorias = tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA;
+  const padrao = tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA;
+  // Categoria fora da lista (o bot grava o que o produtor falou, ex.: "sal mineral") entra como
+  // opção própria — senão o select caía na primeira opção e salvar trocava a categoria sem aviso.
+  const categoriaForaDaLista =
+    defaultCategoria && tipo === (defaultTipo ?? "despesa") && !padrao.includes(defaultCategoria)
+      ? defaultCategoria
+      : null;
+  const categorias = categoriaForaDaLista ? [categoriaForaDaLista, ...padrao] : padrao;
   const categoriaInicial =
     defaultCategoria && categorias.includes(defaultCategoria) ? defaultCategoria : categorias[0];
 
@@ -163,7 +161,7 @@ function CamposLancamento({
           name="data"
           type="date"
           required
-          defaultValue={defaultData ?? hojeStr()}
+          defaultValue={defaultData ?? hojeBrasil()}
           className={CAMPO_CLASSES}
         />
       </div>
@@ -172,8 +170,8 @@ function CamposLancamento({
 }
 
 export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] }) {
-  const [inicio, setInicio] = useState(primeiroDiaMesAtualStr());
-  const [fim, setFim] = useState(hojeStr());
+  const [inicio, setInicio] = useState(primeiroDiaMesBrasil());
+  const [fim, setFim] = useState(hojeBrasil());
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [lancamentoEmEdicao, setLancamentoEmEdicao] = useState<Lancamento | null>(null);
   const [lancamentoParaExcluir, setLancamentoParaExcluir] = useState<Lancamento | null>(null);

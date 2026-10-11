@@ -52,6 +52,8 @@ declare
   v_tecnico_id uuid;
   v_prop_sem uuid;
   v_qtd integer;
+  v_vaca_status uuid;
+  v_cob_status uuid;
 begin
   select id into v_usuario_id from auth.users limit 1;
   if v_usuario_id is null then
@@ -660,6 +662,89 @@ begin
   end;
   if not exists (select 1 from usuarios_propriedades where usuario_id = v_usuario_id and propriedade_id = v_propriedade_id) then
     raise exception 'FALHOU [desvincular_tecnico]: vínculo de produtor foi apagado';
+  end if;
+
+  -- ============================================================
+  -- telefone normalizado e identificação pelo bot (0024)
+  -- ============================================================
+
+  if _telefone_normalizado('(85) 99814-9317') <> '5585998149317'
+     or _telefone_normalizado('558598149317@s.whatsapp.net') <> '558598149317' then
+    raise exception 'FALHOU [_telefone_normalizado]: deveria deixar só dígitos com 55';
+  end if;
+  if _telefone_chave('(85) 99814-9317') <> _telefone_chave('558598149317@s.whatsapp.net') then
+    raise exception 'FALHOU [_telefone_chave]: com e sem o nono dígito deveriam ser o mesmo número';
+  end if;
+
+  insert into usuarios_whatsapp (propriedade_id, telefone) values (v_propriedade_id, '(99) 9 0000-0001');
+  if not exists (select 1 from usuarios_whatsapp where telefone = '5599900000001') then
+    raise exception 'FALHOU [usuarios_whatsapp]: telefone deveria ser gravado normalizado';
+  end if;
+
+  if (bot_identificar_usuario('559900000001@s.whatsapp.net')->>'propriedade_id')::uuid is distinct from v_propriedade_id then
+    raise exception 'FALHOU [bot_identificar_usuario]: deveria achar o número sem o nono dígito do WhatsApp';
+  end if;
+  if _propriedade_do_telefone('559900000001@s.whatsapp.net') is distinct from v_propriedade_id then
+    raise exception 'FALHOU [_propriedade_do_telefone]: deveria achar o número sem o nono dígito do WhatsApp';
+  end if;
+  if bot_identificar_usuario('550000000000@s.whatsapp.net') <> '{}'::jsonb then
+    raise exception 'FALHOU [bot_identificar_usuario]: número desconhecido deveria devolver {}';
+  end if;
+
+  begin
+    insert into usuarios_whatsapp (propriedade_id, telefone) values (v_prop_ind, '99 90000-0001');
+    raise exception 'FALHOU [usuarios_whatsapp]: o mesmo número escrito de outro jeito deveria ser recusado';
+  exception when others then
+    if sqlerrm not ilike '%já está cadastrado%' then
+      raise exception 'FALHOU [usuarios_whatsapp]: erro inesperado no duplicado: %', sqlerrm;
+    end if;
+  end;
+
+  begin
+    insert into usuarios_whatsapp (propriedade_id, telefone) values (v_prop_ind, '9999-0001');
+    raise exception 'FALHOU [usuarios_whatsapp]: número sem DDD deveria ser recusado';
+  exception when others then
+    if sqlerrm not ilike '%inválido%' then
+      raise exception 'FALHOU [usuarios_whatsapp]: erro inesperado no número sem DDD: %', sqlerrm;
+    end if;
+  end;
+
+  -- ============================================================
+  -- status reprodutivo derivado das coberturas (0024)
+  -- ============================================================
+
+  insert into vacas (propriedade_id, numero_identificacao, status_produtivo, status_reprodutivo)
+  values (v_propriedade_id, 90001, 'novilha', 'vazia')
+  returning id into v_vaca_status;
+
+  insert into coberturas (vaca_id, data_cobertura) values (v_vaca_status, current_date - 40)
+  returning id into v_cob_status;
+  if (select status_reprodutivo from vacas where id = v_vaca_status) <> 'vazia_em_servico' then
+    raise exception 'FALHOU [status_reprodutivo]: cobertura pendente deveria deixar a vaca em serviço';
+  end if;
+
+  update coberturas set diagnostico_prenhez = 'positivo' where id = v_cob_status;
+  if (select status_reprodutivo from vacas where id = v_vaca_status) <> 'prenhe' then
+    raise exception 'FALHOU [status_reprodutivo]: diagnóstico positivo deveria deixar a vaca prenhe';
+  end if;
+
+  -- parto ativo depois da cobertura: a cobertura antiga não conta mais
+  insert into partos (vaca_id, data_parto, ativa) values (v_vaca_status, current_date - 5, true);
+  insert into coberturas (vaca_id, data_cobertura) values (v_vaca_status, current_date - 1)
+  returning id into v_cob_status;
+  if (select status_reprodutivo from vacas where id = v_vaca_status) <> 'vazia_em_servico' then
+    raise exception 'FALHOU [status_reprodutivo]: cobertura nova depois do parto deveria deixar em serviço';
+  end if;
+
+  update coberturas set diagnostico_prenhez = 'negativo' where id = v_cob_status;
+  if (select status_reprodutivo from vacas where id = v_vaca_status) <> 'vazia' then
+    raise exception 'FALHOU [status_reprodutivo]: diagnóstico negativo deveria deixar a vaca vazia';
+  end if;
+
+  update coberturas set diagnostico_prenhez = 'positivo' where id = v_cob_status;
+  delete from coberturas where id = v_cob_status;
+  if (select status_reprodutivo from vacas where id = v_vaca_status) <> 'vazia' then
+    raise exception 'FALHOU [status_reprodutivo]: sem cobertura na lactação atual deveria voltar pra vazia (a anterior ao parto não conta)';
   end if;
 
   raise notice 'TODOS OS TESTES PASSARAM';

@@ -56,11 +56,7 @@ export function normalizarFinanceiro(linhas: Linha[]): FinanceiroDiario[] {
   }));
 }
 
-// "YYYY-MM-DD" de hoje no fuso do Brasil (o servidor roda em UTC; depois das 21h o dia em UTC
-// já virou e "hoje" sairia um dia adiantado).
-export function hojeBrasil() {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Fortaleza" }).format(new Date());
-}
+export { hojeBrasil } from "./datas";
 
 export function diasEntre(de: string, ate: string) {
   return Math.round(

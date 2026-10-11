@@ -1,8 +1,7 @@
 "use client";
 
 // Exibição — os dados vêm de `interacoes_log` (./page.tsx). Quem grava essa tabela é o bot do
-// WhatsApp; o workflow exportado no repositório (fazenda-leite-multiagentes.json) ainda NÃO grava,
-// por isso a tela mostra um aviso quando não há nenhuma interação.
+// WhatsApp (nó "Registrar Interação (Log)") e o workflow de erro.
 // Todos os números da tela (totais, ranking de intenções, tabela recente) são derivados de uma
 // única lista de interações — filtrando por fazenda ela recalcula tudo, em vez de manter dois
 // conjuntos de números que podem ficar inconsistentes entre si.
@@ -28,6 +27,9 @@ const INTENCAO_LABEL: Record<string, string> = {
   outro: "Não entendida",
   // gravada pelo nó "Registrar Interação (Log)" quando a mensagem é o SIM/NÃO de uma exclusão
   confirmacao_exclusao: "Confirmação de exclusão",
+  // gravada pelo workflow de erro (fazenda-leite-erros.json) quando uma execução falha; a
+  // "mensagem" é o nó que falhou e o erro
+  erro: "Erro no sistema",
 };
 
 // "outro" é o que o classificador devolve quando não reconhece o pedido

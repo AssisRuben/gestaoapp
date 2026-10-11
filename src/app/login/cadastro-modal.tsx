@@ -175,7 +175,14 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
                 <label htmlFor="whatsapp" className={LABEL_CLASSES}>
                   WhatsApp
                 </label>
-                <input id="whatsapp" name="whatsapp" type="text" className={CAMPO_CLASSES} />
+                <input
+                  id="whatsapp"
+                  name="whatsapp"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="(85) 99999-9999"
+                  className={CAMPO_CLASSES}
+                />
               </div>
             </div>
           </>

@@ -265,8 +265,9 @@ devem ser reintroduzidos ao portar lógica pro site/RPC.
    artefato de ambiente de teste (só um produtor testando hoje), mas bloqueante pra uso
    multi-fazenda real caso ainda esteja assim quando o site for ao ar. **Corrigido no JSON do repo
    (0022)**: os 3 nós de envio usam o remoteJid do webhook — vale só depois de reimportar no n8n.
-7. **`usuarios_whatsapp.ativo` nunca é checado** — `Identificar Usuario` filtra só por
-   `telefone`. Desativar um usuário no banco não impede que ele continue interagindo com o bot.
+7. **`usuarios_whatsapp.ativo` nunca é checado** — corrigido no JSON do repo (0024): "Acesso
+   Liberado?" exige usuário ativo. Antes disso o nó só aceitava a conversa do número consigo mesmo,
+   então produtores de outros números eram ignorados.
 8. **`tipo_relatorio='geral'` não tem branch próprio** — o switch só trata explicitamente
    `reprodutivo` e `cadastro`; qualquer outro valor (incluindo `geral` e `leite`) cai no relatório
    de produção de leite.
@@ -324,6 +325,25 @@ devem ser reintroduzidos ao portar lógica pro site/RPC.
   central. Até 0022 o bot gravava o texto num campo `touro`; coberturas antigas do bot podem ter o
   touro só ali (ou em lugar nenhum, se essa coluna não existir no banco)
 - `patrimonio` não tem nenhuma integração com o bot ainda
+
+## Telefone e status reprodutivo (0024_telefone_status_reprodutivo.sql)
+
+- `usuarios_whatsapp.telefone` é gravado só com dígitos e com 55 (trigger). A comparação com o
+  número do WhatsApp usa `_telefone_chave`, que ignora o nono dígito (o JID do WhatsApp de muitos
+  celulares brasileiros vem sem ele). O bot identifica o usuário por `bot_identificar_usuario`
+  (nó "Identificar Usuario"); nunca comparar telefone com `=` direto.
+- `vacas.status_reprodutivo` é recalculado por trigger em `coberturas` (site e bot), a partir da
+  cobertura mais recente da lactação atual: nenhuma → vazia, pendente → vazia_em_servico,
+  positivo → prenhe, negativo → vazia. Edição manual vale até a próxima mudança de cobertura.
+- Bot, nó "Acesso Liberado?": processa mensagem de usuário cadastrado e ativo (não grupo) ou a
+  conversa do número consigo mesmo (teste). Desativado recebe aviso; número não cadastrado é
+  ignorado em silêncio (a instância pode ser um número pessoal).
+- Falha no bot: o nó "Guardar Remetente (Erro)" grava no Redis (`exec_remetente:<execução>`, 15
+  min) quem mandou a mensagem; o workflow `fazenda-leite-erros.json` (Error Trigger) lê isso,
+  avisa o produtor que a mensagem pode não ter sido registrada e grava `intencao_detectada='erro'`
+  em interacoes_log. Precisa estar selecionado em Settings → Error workflow do workflow principal.
+- Datas de "hoje" no site: sempre `hojeBrasil()` de `src/lib/datas.ts` (fuso de Fortaleza), nunca
+  `new Date().toISOString()`.
 
 ## Acesso de técnicos (0023_acesso_tecnicos.sql)
 

@@ -22,6 +22,7 @@ import type {
   SaldoDoses,
   BaixaDoses,
 } from "./types";
+import { hojeBrasil, somarDias } from "@/lib/datas";
 
 const SEXO_BEZERRO_LABEL: Record<string, string> = {
   macho: "Macho",
@@ -51,16 +52,6 @@ function SeloPrograma() {
       Programa
     </span>
   );
-}
-
-function hoje() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function somarDias(data: string, dias: number) {
-  const d = new Date(`${data}T00:00:00`);
-  d.setDate(d.getDate() + dias);
-  return d.toISOString().slice(0, 10);
 }
 
 export function ReproducaoClient({
@@ -444,7 +435,7 @@ export function ReproducaoClient({
                 name="data_parto"
                 type="date"
                 required
-                defaultValue={hoje()}
+                defaultValue={hojeBrasil()}
                 className={CAMPO_CLASSES}
               />
             </div>
@@ -604,7 +595,7 @@ export function ReproducaoClient({
                 name="data_cobertura"
                 type="date"
                 required
-                defaultValue={hoje()}
+                defaultValue={hojeBrasil()}
                 className={CAMPO_CLASSES}
               />
             </div>

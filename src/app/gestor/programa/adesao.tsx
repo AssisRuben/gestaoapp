@@ -18,13 +18,10 @@ import {
   Campo,
   BotaoExcluir,
 } from "./ui";
+import { hojeBrasil } from "@/lib/datas";
 
 type Propriedade = { id: string; nome_propriedade: string };
 type Tipo = (typeof CAMPOS_INDICADORES)[number]["tipo"];
-
-function hoje() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function formatar(valor: number | null, tipo: Tipo) {
   if (valor === null || valor === undefined) return "—";
@@ -202,7 +199,7 @@ function AdesaoModal({
   const edicao = !!adesao.propriedade_id;
 
   const [propriedadeId, setPropriedadeId] = useState(adesao.propriedade_id ?? "");
-  const [dataAdesao, setDataAdesao] = useState(adesao.data_adesao ?? hoje());
+  const [dataAdesao, setDataAdesao] = useState(adesao.data_adesao ?? hojeBrasil());
   const [valores, setValores] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       CAMPOS_INDICADORES.map(({ campo }) => [campo, adesao[campo]?.toString() ?? ""]),

@@ -10,14 +10,11 @@ import { useSuccessToast, SuccessToast } from "./toast";
 import { Meter } from "./meter";
 import { formatarDataBR } from "./format";
 import type { Propriedade } from "@/lib/propriedade";
+import { hojeBrasil } from "@/lib/datas";
 
 const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
 const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
-
-function hojeStr() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 // Sem centavos aqui de propósito — é o card de resumo compacto do Dashboard,
 // e "R$ 2.145,87" estourava a largura do card num celular estreito.
@@ -198,7 +195,7 @@ export function DashboardClient({
   vacasPraSecar: { vacaId: string; numero: number; secagemPrevista: string }[];
   diagnosticosPendentes: { coberturaId: string; numero: number; data_cobertura: string }[];
 }) {
-  const hoje = hojeStr();
+  const hoje = hojeBrasil();
   const [inicio, setInicio] = useState(`${hoje.slice(0, 7)}-01`);
   const [fim, setFim] = useState(hoje);
   const [vacaParaSecar, setVacaParaSecar] = useState<{ vacaId: string; numero: number } | null>(
@@ -369,7 +366,7 @@ export function DashboardClient({
                   }`}
                 >
                   <td className="px-4 py-2 text-black dark:text-zinc-50">Vaca {v.numero}</td>
-                  <td className={`px-4 py-2 ${URGENCIA_CLASSES[urgenciaSecagem(v.secagemPrevista, hojeStr())]}`}>
+                  <td className={`px-4 py-2 ${URGENCIA_CLASSES[urgenciaSecagem(v.secagemPrevista, hojeBrasil())]}`}>
                     {formatarDataBR(v.secagemPrevista)}
                   </td>
                   <td className="px-4 py-2 text-right">
@@ -415,7 +412,7 @@ export function DashboardClient({
                 >
                   <td className="px-4 py-2 text-black dark:text-zinc-50">Vaca {d.numero}</td>
                   <td
-                    className={`px-4 py-2 ${URGENCIA_CLASSES[urgenciaDiagnostico(d.data_cobertura, hojeStr())]}`}
+                    className={`px-4 py-2 ${URGENCIA_CLASSES[urgenciaDiagnostico(d.data_cobertura, hojeBrasil())]}`}
                   >
                     {formatarDataBR(d.data_cobertura)}
                   </td>

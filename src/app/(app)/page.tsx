@@ -8,16 +8,7 @@ import {
   getBezerrosCache,
 } from "@/lib/cached-data";
 import { DashboardClient } from "./dashboard-client";
-
-function hojeStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function somarDias(data: string, dias: number) {
-  const d = new Date(`${data}T00:00:00`);
-  d.setDate(d.getDate() + dias);
-  return d.toISOString().slice(0, 10);
-}
+import { hojeBrasil, somarDias } from "@/lib/datas";
 
 export default async function DashboardPage() {
   const propriedadeAtual = await getPropriedadeAtual();
@@ -26,7 +17,7 @@ export default async function DashboardPage() {
     return <SemPropriedade />;
   }
 
-  const hoje = hojeStr();
+  const hoje = hojeBrasil();
 
   const [vacasData, leiteData, financeiroData, coberturasData, bezerrosData] = await Promise.all([
     getVacasCache(propriedadeAtual.id),

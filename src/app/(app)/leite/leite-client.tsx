@@ -7,20 +7,12 @@ import { MobileCardList, MobileCard, CardHeader, CardRow } from "../mobile-list"
 import { useSuccessToast, SuccessToast } from "../toast";
 import { ProducaoLeiteChart } from "../producao-leite-chart";
 import type { RegistroLeite, VacaOpcao } from "./types";
+import { formatarDataBR } from "../format";
+import { hojeBrasil, primeiroDiaMesBrasil } from "@/lib/datas";
 
 const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
 const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
-
-function hojeStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function primeiroDiaMesAtualStr() {
-  const hoje = new Date();
-  const d = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-  return d.toISOString().slice(0, 10);
-}
 
 function formatarLitros(litros: number) {
   return `${litros.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} L`;
@@ -31,8 +23,8 @@ function formatarLitrosInteiro(litros: number) {
 }
 
 export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; vacas: VacaOpcao[] }) {
-  const [inicio, setInicio] = useState(primeiroDiaMesAtualStr());
-  const [fim, setFim] = useState(hojeStr());
+  const [inicio, setInicio] = useState(primeiroDiaMesBrasil());
+  const [fim, setFim] = useState(hojeBrasil());
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [registroEmEdicao, setRegistroEmEdicao] = useState<RegistroLeite | null>(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState<RegistroLeite | null>(null);
@@ -174,7 +166,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
                 <td className="px-4 py-2 text-black dark:text-zinc-50">
                   {registro.vaca.numero_identificacao}
                 </td>
-                <td className="px-4 py-2 text-black dark:text-zinc-50">{registro.data_controle}</td>
+                <td className="px-4 py-2 text-black dark:text-zinc-50">{formatarDataBR(registro.data_controle)}</td>
                 <td className="px-4 py-2 text-black dark:text-zinc-50">
                   {formatarLitros(Number(registro.litros))}
                 </td>
@@ -203,7 +195,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
                 </span>
               }
             />
-            <CardRow label="Data" value={registro.data_controle} />
+            <CardRow label="Data" value={formatarDataBR(registro.data_controle)} />
           </MobileCard>
         ))}
         {registrosFiltrados.length === 0 && (
@@ -271,7 +263,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
                 name="data_controle"
                 type="date"
                 required
-                defaultValue={hojeStr()}
+                defaultValue={hojeBrasil()}
                 className={CAMPO_CLASSES}
               />
             </div>
@@ -405,7 +397,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Excluir registro?</h2>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Vaca {registroParaExcluir.vaca.numero_identificacao} — {formatarLitros(Number(registroParaExcluir.litros))} em{" "}
-              {registroParaExcluir.data_controle}. Essa ação não pode ser desfeita.
+              {formatarDataBR(registroParaExcluir.data_controle)}. Essa ação não pode ser desfeita.
             </p>
 
             {excluirState?.error && (
