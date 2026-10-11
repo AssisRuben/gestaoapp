@@ -795,130 +795,6 @@
     },
     {
       "parameters": {
-        "operation": "get",
-        "tableId": "vacas",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "propriedade_id",
-              "keyValue": "={{ $json.propriedade_id }}"
-            },
-            {
-              "keyName": "numero_identificacao",
-              "keyValue": "={{ $json.entidades.numero_vaca }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        7456,
-        12896
-      ],
-      "id": "dd2cf2b0-da73-436d-951f-c67e6a4093e3",
-      "name": "Buscar Vaca (Relatório)",
-      "alwaysOutputData": true,
-      "retryOnFail": false,
-      "executeOnce": false,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "controle_leite",
-        "returnAll": true,
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "vaca_id",
-              "condition": "eq",
-              "keyValue": "={{ $('Buscar Vaca (Relatório)').item.json.id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        8016,
-        12896
-      ],
-      "id": "80b828e2-d116-4ae4-a9b1-8278e77c6324",
-      "name": "Buscar Histórico Leite",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst vaca = $('Buscar Vaca (Relatório)').first().json;\nlet registros = dedupeById($input.all().map(i => i.json));\nregistros.sort((a, b) => new Date(b.data_controle) - new Date(a.data_controle));\nregistros = registros.slice(0, 10);\n\nconst origemAudio = $('Preparar Entrada Agente').item.json.origem_audio;\nconst meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];\nconst porExtenso = (d) => { const [y, m, dd] = d.split('-'); return `${Number(dd)} de ${meses[Number(m) - 1]}`; };\nconst paraBR = (d) => d ? d.split('-').reverse().join('-') : d;\n\nlet texto;\nif (registros.length === 0) {\n  texto = 'Nenhum registro de leite encontrado.';\n} else {\n  const total = registros.reduce((s, r) => s + (Number(r.litros) || 0), 0);\n  if (origemAudio) {\n    texto = `A vaca ${vaca.numero_identificacao} totalizou ${total} litros no período, último registro em ${porExtenso(registros[0].data_controle)}.`;\n  } else {\n    texto = `Relatório da vaca ${vaca.numero_identificacao}:\\n`;\n    texto += registros.map(r => `- ${paraBR(r.data_controle)}: ${r.litros}L`).join('\\n');\n    texto += `\\nTotal no período consultado: ${total}L`;\n  }\n}\nreturn [{ json: { resposta_sugerida: texto } }];\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        8496,
-        12896
-      ],
-      "id": "1395f773-d004-489f-b6f8-b15b1f9c62ab",
-      "name": "Montar Relatório Individual"
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "controle_leite",
-        "returnAll": true,
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "data_controle",
-              "condition": "gte",
-              "keyValue": "={{ $('Calcular Período Geral').item.json.dataInicio }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        8016,
-        13072
-      ],
-      "id": "7f12be30-fd1e-4964-9b40-2502c76b2aa1",
-      "name": "Buscar Produção Geral (Hoje)",
-      "alwaysOutputData": true,
-      "executeOnce": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\n\nconst { periodoDias, label, dataInicio } = $('Calcular Período Geral').item.json;\nconst origemAudio = $('Preparar Entrada Agente').item.json.origem_audio;\n\nconst vacasPropriedade = dedupeById($('Buscar Vacas Propriedade (Geral)').all().map(i => i.json));\nconst vacaIds = new Set(vacasPropriedade.map(v => v.id));\n\nconst hoje = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }) + 'T12:00:00Z');\nconst hojeStr = hoje.toISOString().slice(0, 10);\nconst round1 = (n) => Math.round(n * 10) / 10;\n\nlet registros = dedupeById($input.all().map(i => i.json))\n  .filter(r => vacaIds.has(r.vaca_id))\n  .filter(r => r.data_controle >= dataInicio && r.data_controle <= hojeStr);\n\nlet texto;\nif (registros.length === 0) {\n  texto = `Nenhum registro de leite encontrado (${label}).`;\n} else {\n  const total = round1(registros.reduce((s, r) => s + (Number(r.litros) || 0), 0));\n\n  if (periodoDias > 0) {\n    const porDia = {};\n    for (const r of registros) {\n      porDia[r.data_controle] = (porDia[r.data_controle] || 0) + (Number(r.litros) || 0);\n    }\n    const dias = Object.keys(porDia).sort();\n\n    const inicioMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10);\n    const diasMesAtual = dias.filter(d => d >= inicioMesAtual);\n    const diasMesAnterior = dias.filter(d => d < inicioMesAtual);\n\n    const somaDias = (lista) => round1(lista.reduce((s, d) => s + porDia[d], 0));\n    const mediaDias = (lista) => lista.length ? round1(somaDias(lista) / lista.length) : 0;\n\n    if (origemAudio) {\n      let partes = [`Produção ${label}: total de ${total} litros.`];\n      if (diasMesAnterior.length && diasMesAtual.length) {\n        partes.push(`Mês atual: ${somaDias(diasMesAtual)} litros, média de ${mediaDias(diasMesAtual)} por dia.`);\n        partes.push(`Mês anterior: ${somaDias(diasMesAnterior)} litros.`);\n      } else {\n        partes.push(`Média de ${mediaDias(dias)} litros por dia.`);\n      }\n      texto = partes.join(' ');\n    } else {\n      const paraBR = (d) => d.split('-').reverse().join('-');\n      let linhas = [];\n      linhas.push(`*Produção — ${label}*`);\n      linhas.push(`Total: ${total}L em ${registros.length} lançamento(s)`);\n\n      if (diasMesAnterior.length && diasMesAtual.length) {\n        linhas.push('');\n        linhas.push(`Mês atual: ${somaDias(diasMesAtual)}L (média ${mediaDias(diasMesAtual)}L/dia)`);\n        linhas.push(`Mês anterior: ${somaDias(diasMesAnterior)}L (média ${mediaDias(diasMesAnterior)}L/dia)`);\n      } else {\n        linhas.push(`Média: ${mediaDias(dias)}L/dia`);\n      }\n\n      const ultimosDias = dias.slice(-7);\n      linhas.push('');\n      linhas.push(`Últimos ${ultimosDias.length} dias com registro:`);\n      linhas.push(...ultimosDias.map(d => `- ${paraBR(d)}: ${round1(porDia[d])}L`));\n\n      texto = linhas.join('\\n');\n    }\n  } else {\n    texto = `Produção de hoje: ${total}L em ${registros.length} lançamento(s).`;\n  }\n}\nreturn [{ json: { resposta_sugerida: texto } }];\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        8496,
-        13072
-      ],
-      "id": "1406d43e-05ac-4e68-b8eb-51429e0f39f1",
-      "name": "Montar Relatório Geral"
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
@@ -1279,366 +1155,6 @@
           },
           "conditions": [
             {
-              "id": "1406f377-0bbe-47a9-af26-522eed25dbe1",
-              "leftValue": "={{ $json.entidades.tipo_relatorio }}",
-              "operator": {
-                "type": "string",
-                "operation": "equals",
-                "name": "filter.operator.equals"
-              },
-              "rightValue": "reprodutivo"
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        5856,
-        12752
-      ],
-      "id": "f08c326f-4a44-4986-ae7b-e906fedb467a",
-      "name": "Tipo Relatório Reprodutivo?"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "2e7cd4b4-7cd0-4900-9166-5f09823f250a",
-              "leftValue": "={{ String($json.entidades.numero_vaca ?? '') }}",
-              "operator": {
-                "type": "string",
-                "operation": "isNotEmpty",
-                "name": "filter.operator.isNotEmpty"
-              },
-              "rightValue": ""
-            },
-            {
-              "id": "301c8c69-c16b-4a00-acb6-1cc630633146",
-              "leftValue": "={{ $json.entidades?.numero_vaca && $json.entidades.numero_vaca !== 'null' && $json.entidades.numero_vaca !== null ? 'valido' : '' }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "looseTypeValidation": true,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        6192,
-        12544
-      ],
-      "id": "fe3adc8c-c25e-40a4-990a-c8f9911acbd2",
-      "name": "Tem Numero (Reprodutivo)?"
-    },
-    {
-      "parameters": {
-        "operation": "get",
-        "tableId": "vacas",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "numero_identificacao",
-              "keyValue": "={{ $json.entidades.numero_vaca }}"
-            },
-            {
-              "keyName": "propriedade_id",
-              "keyValue": "={{ $json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6672,
-        12432
-      ],
-      "id": "81f24385-f4a4-4006-8c0e-994f05564cb5",
-      "name": "Buscar Vaca (Reprodutivo Individual)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "get",
-        "tableId": "partos",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "vaca_id",
-              "keyValue": "={{ $('Buscar Vaca (Reprodutivo Individual)').item.json.id }}"
-            },
-            {
-              "keyName": "ativa",
-              "keyValue": "true"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        7232,
-        12432
-      ],
-      "id": "011a4284-e888-4e96-8411-21001b71c8fb",
-      "name": "Buscar Parto Ativo (Reprodutivo)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "coberturas",
-        "returnAll": true,
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "vaca_id",
-              "condition": "eq",
-              "keyValue": "={{ $('Buscar Vaca (Reprodutivo Individual)').item.json.id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6944,
-        12432
-      ],
-      "id": "8b0e125f-51af-4fd5-aeda-e5ca9c9122b5",
-      "name": "Buscar Coberturas (Reprodutivo Individual)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const dedupeById = (arr) => {\n  const seen = new Set();\n  return arr.filter(x => {\n    if (!x || !x.id || seen.has(x.id)) return false;\n    seen.add(x.id);\n    return true;\n  });\n};\n\nconst vaca = $('Buscar Vaca (Reprodutivo Individual)').item.json;\nconst origemAudio = $('Preparar Entrada Agente').item.json.origem_audio;\n\nconst partoItem = $('Buscar Parto Ativo (Reprodutivo)').item?.json || {};\nconst parto = partoItem.id ? partoItem : null;\n\nconst coberturas = dedupeById(\n  $('Buscar Coberturas (Reprodutivo Individual)').all().map(i => i.json)\n).sort((a, b) => new Date(b.data_cobertura) - new Date(a.data_cobertura));\nconst ultima = coberturas[0] || null;\n\nconst hoje = new Date();\nconst diffDias = (a, b) => Math.round((new Date(a) - new Date(b)) / 86400000);\nconst fmtData = (d) => d ? new Date(d).toISOString().slice(0, 10).split('-').reverse().join('-') : '—';\nconst meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];\nconst porExtenso = (d) => { if (!d) return '—'; const iso = new Date(d).toISOString().slice(0, 10); const [y, m, dd] = iso.split('-'); return `${Number(dd)} de ${meses[Number(m) - 1]}`; };\n\nlet diasEmAberto = null;\nlet projecao305 = null;\nlet persistencia = null;\n\nif (parto) {\n  const coberturasPosParto = coberturas\n    .filter(c => new Date(c.data_cobertura) >= new Date(parto.data_parto))\n    .sort((a, b) => new Date(a.data_cobertura) - new Date(b.data_cobertura));\n  const coberturaConfirmada = coberturasPosParto.find(c => c.diagnostico_prenhez === 'positivo');\n  diasEmAberto = coberturaConfirmada\n    ? diffDias(coberturaConfirmada.data_cobertura, parto.data_parto)\n    : diffDias(hoje, parto.data_parto);\n\n  const registrosLeite = dedupeById($('Buscar Controle Leite Ativo (Reprodutivo)').all().map(i => i.json));\n  const diasEmLactacao = Math.max(1, diffDias(hoje, parto.data_parto));\n\n  if (registrosLeite.length > 0) {\n    const totalLitros = registrosLeite.reduce((s, r) => s + (Number(r.litros) || 0), 0);\n    projecao305 = Math.round((totalLitros / diasEmLactacao) * 305);\n\n    if (diasEmLactacao >= 60) {\n      const hojeStr = hoje.toISOString().slice(0, 10);\n      const dLimite1 = new Date(hoje); dLimite1.setDate(dLimite1.getDate() - 30);\n      const dLimite2 = new Date(hoje); dLimite2.setDate(dLimite2.getDate() - 60);\n      const str1 = dLimite1.toISOString().slice(0, 10);\n      const str2 = dLimite2.toISOString().slice(0, 10);\n\n      const janela1 = registrosLeite.filter(r => r.data_controle > str1 && r.data_controle <= hojeStr);\n      const janela2 = registrosLeite.filter(r => r.data_controle > str2 && r.data_controle <= str1);\n      const media1 = janela1.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n      const media2 = janela2.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n\n      if (media2 > 0) persistencia = Math.round((media1 / media2) * 1000) / 10;\n    }\n  }\n}\n\nlet dParto = null, dSeca = null;\nif (ultima && ultima.diagnostico_prenhez === 'positivo') {\n  const dCob = new Date(ultima.data_cobertura);\n  dParto = new Date(dCob.getTime() + 283 * 86400000);\n  dSeca = new Date(dParto.getTime() - 60 * 86400000);\n}\n\nlet texto;\nif (origemAudio) {\n  let partes = [`Vaca ${vaca.numero_identificacao}, status reprodutivo ${vaca.status_reprodutivo || 'não informado'}.`];\n  if (parto) {\n    partes.push(`Em lactação desde ${porExtenso(parto.data_parto)}, ${diasEmAberto} dias em aberto.`);\n  } else {\n    partes.push('Sem lactação ativa registrada.');\n  }\n  if (ultima) {\n    partes.push(`Última cobertura em ${porExtenso(ultima.data_cobertura)}, diagnóstico ${ultima.diagnostico_prenhez}.`);\n    if (dParto) partes.push(`Previsão de parto em ${porExtenso(dParto)}.`);\n  } else {\n    partes.push('Nenhuma cobertura registrada.');\n  }\n  texto = partes.join(' ');\n} else {\n  let linhas = [];\n  linhas.push(`*Vaca ${vaca.numero_identificacao}* — status reprodutivo`);\n  linhas.push(`Status cadastrado: ${vaca.status_reprodutivo || 'não informado'}`);\n\n  if (parto) {\n    linhas.push('');\n    linhas.push(`🐄 Lactação ativa desde ${fmtData(parto.data_parto)}`);\n    if (parto.iep != null) linhas.push(`IEP: ${parto.iep} dias`);\n    linhas.push(`Dias em aberto: ${diasEmAberto}`);\n    if (projecao305 != null) linhas.push(`Projeção 305d: ${projecao305}L`);\n    if (persistencia != null) linhas.push(`Persistência: ${persistencia}%`);\n  } else {\n    linhas.push('');\n    linhas.push('⚠️ Sem lactação ativa registrada.');\n  }\n\n  linhas.push('');\n  if (ultima) {\n    linhas.push(`Última cobertura: ${fmtData(ultima.data_cobertura)} (diagnóstico: ${ultima.diagnostico_prenhez})`);\n    if (dParto) {\n      linhas.push(`Previsão de parto: ${fmtData(dParto)}`);\n      linhas.push(`Previsão de secagem: ${fmtData(dSeca)}`);\n    }\n  } else {\n    linhas.push('Nenhuma cobertura registrada.');\n  }\n  texto = linhas.join('\\n');\n}\n\nreturn [{ json: { resposta_sugerida: texto } }];\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        8032,
-        12352
-      ],
-      "id": "df94871c-a63d-41f3-947a-09b1aab15f51",
-      "name": "Montar Relatório Reprodutivo Individual"
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "vacas",
-        "returnAll": true,
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "propriedade_id",
-              "condition": "eq",
-              "keyValue": "={{ $json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6672,
-        12624
-      ],
-      "id": "7e1a2ce2-4ff6-424e-9950-9dabd593cc71",
-      "name": "Buscar Vacas Propriedade (Reprodutivo)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "coberturas",
-        "returnAll": true
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6944,
-        12624
-      ],
-      "id": "b8b427f3-9b48-403e-98c9-87ea13190f46",
-      "name": "Buscar Coberturas (Reprodutivo Geral)",
-      "alwaysOutputData": true,
-      "executeOnce": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "partos",
-        "returnAll": true,
-        "filters": {
-          "conditions": []
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        7216,
-        12624
-      ],
-      "id": "f59ad6ca-c9ba-4dad-8ece-bfce5c99edb4",
-      "name": "Buscar Partos (Reprodutivo Geral)",
-      "alwaysOutputData": true,
-      "executeOnce": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst origemAudio = $('Preparar Entrada Agente').item.json.origem_audio;\n\nconst vacas = dedupeById($('Buscar Vacas Propriedade (Reprodutivo)').all().map(i => i.json));\nconst vacaIds = new Set(vacas.map(v => v.id));\nconst numeroPorId = Object.fromEntries(vacas.map(v => [v.id, v.numero_identificacao]));\n\nconst todasCoberturas = dedupeById($('Buscar Coberturas (Reprodutivo Geral)').all().map(i => i.json))\n  .filter(c => vacaIds.has(c.vaca_id));\nconst todosPartos = dedupeById($('Buscar Partos (Reprodutivo Geral)').all().map(i => i.json))\n  .filter(p => vacaIds.has(p.vaca_id));\nconst todoControleLeite = dedupeById($('Buscar Controle Leite (Reprodutivo Geral)').all().map(i => i.json));\n\nconst coberturaIdsComParto = new Set(todosPartos.filter(p => p.cobertura_id).map(p => p.cobertura_id));\n\nconst pendentes = todasCoberturas.filter(c => c.diagnostico_prenhez === 'pendente');\nconst positivasSemParto = todasCoberturas.filter(c => c.diagnostico_prenhez === 'positivo' && !coberturaIdsComParto.has(c.id));\n\nconst paraBR = (isoStr) => isoStr.split('-').reverse().join('-');\n\n// Mantém os objetos Date reais pra ordenar/filtrar, e só formata pra BR na hora de exibir\nconst previsoes = positivasSemParto.map(c => {\n  const dCob = new Date(c.data_cobertura);\n  const dParto = new Date(dCob.getTime() + 283 * 86400000);\n  const dSeca = new Date(dParto.getTime() - 60 * 86400000);\n  return {\n    numero: numeroPorId[c.vaca_id] || '?',\n    dPartoDate: dParto,\n    dSecaDate: dSeca,\n    dataParto: paraBR(dParto.toISOString().slice(0, 10)),\n    dataSeca: paraBR(dSeca.toISOString().slice(0, 10))\n  };\n}).sort((a, b) => a.dPartoDate - b.dPartoDate);\n\nconst partosAtivos = todosPartos.filter(p => p.ativa);\n\nconst hoje = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }) + 'T12:00:00Z');\nconst diffDias = (a, b) => Math.round((new Date(a) - new Date(b)) / 86400000);\n\nconst leitePorParto = {};\nfor (const r of todoControleLeite) {\n  if (!leitePorParto[r.parto_id]) leitePorParto[r.parto_id] = [];\n  leitePorParto[r.parto_id].push(r);\n}\n\nconst indicadores = partosAtivos.map(p => {\n  const registros = leitePorParto[p.id] || [];\n  const diasEmLactacao = Math.max(1, diffDias(hoje, p.data_parto));\n\n  const coberturasVaca = todasCoberturas.filter(c => c.vaca_id === p.vaca_id);\n  const coberturasPosParto = coberturasVaca\n    .filter(c => new Date(c.data_cobertura) >= new Date(p.data_parto))\n    .sort((a, b) => new Date(a.data_cobertura) - new Date(b.data_cobertura));\n  const coberturaConfirmada = coberturasPosParto.find(c => c.diagnostico_prenhez === 'positivo');\n  const diasEmAberto = coberturaConfirmada\n    ? diffDias(coberturaConfirmada.data_cobertura, p.data_parto)\n    : diffDias(hoje, p.data_parto);\n\n  let projecao305 = null;\n  let persistencia = null;\n  if (registros.length > 0) {\n    const totalLitros = registros.reduce((s, r) => s + (Number(r.litros) || 0), 0);\n    projecao305 = Math.round((totalLitros / diasEmLactacao) * 305);\n\n    if (diasEmLactacao >= 60) {\n      const dataLimite1 = new Date(hoje); dataLimite1.setDate(dataLimite1.getDate() - 30);\n      const dataLimite2 = new Date(hoje); dataLimite2.setDate(dataLimite2.getDate() - 60);\n      const str1 = dataLimite1.toISOString().slice(0, 10);\n      const str2 = dataLimite2.toISOString().slice(0, 10);\n      const hojeStr = hoje.toISOString().slice(0, 10);\n      const janela1 = registros.filter(r => r.data_controle > str1 && r.data_controle <= hojeStr);\n      const janela2 = registros.filter(r => r.data_controle > str2 && r.data_controle <= str1);\n      const media1 = janela1.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n      const media2 = janela2.reduce((s, r) => s + (Number(r.litros) || 0), 0) / 30;\n      if (media2 > 0) persistencia = Math.round((media1 / media2) * 1000) / 10;\n    }\n  }\n\n  return {\n    numero: numeroPorId[p.vaca_id] || '?',\n    iep: p.iep,\n    diasEmAberto,\n    persistencia,\n    projecao305\n  };\n});\n\nconst secarProximas = previsoes.filter(p => {\n  const diff = (p.dSecaDate - hoje) / 86400000;\n  return diff >= -5 && diff <= 30;\n});\n\nlet texto;\nif (origemAudio) {\n  texto = `Você tem ${previsoes.length} vaca${previsoes.length === 1 ? '' : 's'} prevista${previsoes.length === 1 ? '' : 's'} pra parir, ${secarProximas.length} pra secar nos próximos 30 dias, e ${pendentes.length} cobertura${pendentes.length === 1 ? '' : 's'} aguardando diagnóstico. Se quiser os detalhes de alguma dessas, é só pedir.`;\n} else {\n  texto = 'Relatório reprodutivo do rebanho:\\n\\n';\n\n  texto += `Previsão de parto (${previsoes.length}):\\n`;\n  texto += previsoes.length\n    ? previsoes.map(p => `- Vaca ${p.numero}: parto em ${p.dataParto}`).join('\\n')\n    : 'Nenhuma prevista.';\n  texto += '\\n\\n';\n\n  texto += 'Vacas para secar (próximos 30 dias):\\n';\n  texto += secarProximas.length\n    ? secarProximas.map(p => `- Vaca ${p.numero}: secar até ${p.dataSeca}`).join('\\n')\n    : 'Nenhuma vaca para secar no período.';\n  texto += '\\n\\n';\n\n  texto += `Coberturas com diagnóstico pendente (${pendentes.length}):\\n`;\n  texto += pendentes.length\n    ? pendentes.map(c => `- Vaca ${numeroPorId[c.vaca_id] || '?'}: cobertura em ${paraBR(c.data_cobertura)}`).join('\\n')\n    : 'Nenhuma pendência.';\n  texto += '\\n\\n';\n\n  texto += `Indicadores das lactações ativas (${indicadores.length}):\\n`;\n  texto += indicadores.length\n    ? indicadores.map(p => {\n        const partes = [`Vaca ${p.numero}`];\n        if (p.iep != null) partes.push(`IEP ${p.iep}d`);\n        partes.push(`dias em aberto ${p.diasEmAberto}`);\n        if (p.persistencia != null) partes.push(`persistência ${p.persistencia}%`);\n        if (p.projecao305 != null) partes.push(`proj. 305d ${p.projecao305}L`);\n        return '- ' + partes.join(', ');\n      }).join('\\n')\n    : 'Nenhuma lactação ativa.';\n}\n\nreturn [{ json: { resposta_sugerida: texto } }];\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        8016,
-        12544
-      ],
-      "id": "961b6a7b-2087-42a4-b300-ae76f8117cba",
-      "name": "Compilar Relatório Reprodutivo Geral"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "84fa8a3b-362c-4330-82ab-23d0be8eb205",
-              "leftValue": "={{ $json.entidades.tipo_relatorio }}",
-              "rightValue": "cadastro",
-              "operator": {
-                "type": "string",
-                "operation": "equals",
-                "name": "filter.operator.equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        6176,
-        12848
-      ],
-      "id": "de8f94f5-d086-4cb1-8b8d-204e47d21f85",
-      "name": "Tipo Relatório Cadastro?"
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "vacas",
-        "returnAll": true,
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "propriedade_id",
-              "condition": "eq",
-              "keyValue": "={{ $json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6672,
-        12832
-      ],
-      "id": "e41682ba-702e-4b98-af68-9e4d95496f18",
-      "name": "Buscar Vacas (Contagem)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst vacas = dedupeById($input.all().map(i => i.json));\n\nconst porStatusProdutivo = {};\nconst porStatusReprodutivo = {};\nfor (const v of vacas) {\n  const sp = v.status_produtivo || 'não informado';\n  const sr = v.status_reprodutivo || 'não informado';\n  porStatusProdutivo[sp] = (porStatusProdutivo[sp] || 0) + 1;\n  porStatusReprodutivo[sr] = (porStatusReprodutivo[sr] || 0) + 1;\n}\n\nlet texto = `Total de vacas cadastradas: ${vacas.length}\\n\\n`;\ntexto += 'Por status produtivo:\\n';\ntexto += Object.entries(porStatusProdutivo).map(([k, v]) => `- ${k}: ${v}`).join('\\n');\ntexto += '\\n\\nPor status reprodutivo:\\n';\ntexto += Object.entries(porStatusReprodutivo).map(([k, v]) => `- ${k}: ${v}`).join('\\n');\n\nreturn [{ json: { resposta_sugerida: texto } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        8016,
-        12720
-      ],
-      "id": "fe364e4b-bb9f-4af3-b72f-4d3932ac7da7",
-      "name": "Montar Relatório Cadastro"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
               "id": "f362c765-ed5a-4271-a49d-1d17bc6276b5",
               "leftValue": "={{ $('Webhook').item.json.body.data.messageType }}",
               "rightValue": "audioMessage",
@@ -1748,65 +1264,6 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "c37ee6f6-8653-4d52-8671-8d6d692999b6",
-              "leftValue": "={{ String($('Parsear Resposta IA').item.json.entidades.numero_vaca ?? '') }}",
-              "operator": {
-                "type": "string",
-                "operation": "isNotEmpty",
-                "name": "filter.operator.isNotEmpty"
-              },
-              "rightValue": ""
-            },
-            {
-              "id": "ea81a4bc-4cb3-4497-9e29-05b4f3efb1d9",
-              "leftValue": "={{ $json.entidades?.numero_vaca && $json.entidades.numero_vaca !== 'null' && $json.entidades.numero_vaca !== null ? 'valido' : '' }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        6672,
-        13040
-      ],
-      "id": "c5fd6101-c472-43cd-994a-0a84652285b6",
-      "name": "Numero Foi Informado?",
-      "alwaysOutputData": false,
-      "executeOnce": false
-    },
-    {
-      "parameters": {
-        "jsCode": "const parsed = $('Parsear Resposta IA').item.json;\nconst periodoDiasClassificador = parsed.entidades.periodo_dias;\nconst mensagem = (parsed.mensagem_original || '').toLowerCase();\n\nconst hoje = new Date();\nlet inicio, label, periodoDias;\n\nif (periodoDiasClassificador && periodoDiasClassificador > 0) {\n  // classificador deu um numero especifico de dias (ex: \"ultimos 3 dias\")\n  periodoDias = periodoDiasClassificador;\n  inicio = new Date(hoje);\n  inicio.setDate(inicio.getDate() - periodoDias);\n  label = `últimos ${periodoDias} dias`;\n} else if (/\\bhoje\\b/.test(mensagem)) {\n  // pediu especificamente \"hoje\"\n  periodoDias = 0;\n  inicio = new Date(hoje);\n  label = 'hoje';\n} else {\n  // padrao para relatorio geral sem periodo especifico: mes atual + mes passado\n  inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);\n  const diffMs = hoje - inicio;\n  periodoDias = Math.ceil(diffMs / 86400000);\n  label = 'mês atual e mês passado';\n}\n\nconst dataInicio = inicio.toISOString().slice(0, 10);\nreturn [{ json: { dataInicio, periodoDias, label } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7472,
-        13072
-      ],
-      "id": "d366a2ad-8081-4172-abda-e533d6051378",
-      "name": "Calcular Período Geral"
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
@@ -1827,64 +1284,6 @@
       ],
       "id": "c68a56d0-49c9-49c7-9458-d3ba8b94cfb7",
       "name": "Confirmar Diagnóstico"
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "controle_leite",
-        "returnAll": true,
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "parto_id",
-              "condition": "eq",
-              "keyValue": "={{ $('Buscar Parto Ativo (Reprodutivo)').item.json.id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        7536,
-        12432
-      ],
-      "id": "3b1334c4-98ba-4122-b0fd-4e79de069076",
-      "name": "Buscar Controle Leite Ativo (Reprodutivo)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "controle_leite",
-        "returnAll": true,
-        "filters": {
-          "conditions": []
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        7520,
-        12624
-      ],
-      "id": "06fc9da3-fa1a-4023-a003-00869da93eb7",
-      "name": "Buscar Controle Leite (Reprodutivo Geral)",
-      "alwaysOutputData": true,
-      "executeOnce": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
     },
     {
       "parameters": {
@@ -1977,68 +1376,6 @@
       ],
       "id": "302c52c8-2cb9-411f-a43d-4ff62aa0ff7f",
       "name": "Confirmar Financeiro"
-    },
-    {
-      "parameters": {
-        "jsCode": "const parsed = $('Parsear Resposta IA').item.json;\nconst periodoDiasClassificador = parsed.entidades.periodo_dias;\nconst mensagem = (parsed.mensagem_original || '').toLowerCase();\n\nconst hoje = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }) + 'T12:00:00Z');\nlet inicio, label, periodoDias;\n\nif (/\\bhoje\\b/.test(mensagem)) {\n  periodoDias = 0;\n  inicio = new Date(hoje);\n  label = 'hoje';\n} else if (/\\bm[eê]s\\b/.test(mensagem) && !/\\b(passado|anterior)\\b/.test(mensagem)) {\n  // \"esse mês\" / \"mês atual\" -> mês-calendário de verdade, não janela rolante.\n  // Prioridade sobre periodo_dias porque o classificador tende a converter\n  // \"mês\" em periodo_dias=30, o que não é a mesma coisa (dia 1 até hoje\n  // tem 23 dias em julho, por exemplo, não 30).\n  inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);\n  const diffMs = hoje - inicio;\n  periodoDias = Math.ceil(diffMs / 86400000);\n  label = 'mês atual';\n} else if (periodoDiasClassificador && periodoDiasClassificador > 0) {\n  periodoDias = periodoDiasClassificador;\n  inicio = new Date(hoje);\n  inicio.setDate(inicio.getDate() - periodoDias);\n  label = `últimos ${periodoDias} dias`;\n} else {\n  inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);\n  const diffMs = hoje - inicio;\n  periodoDias = Math.ceil(diffMs / 86400000);\n  label = 'mês atual e mês passado';\n}\n\nconst dataInicio = inicio.toISOString().slice(0, 10);\nreturn [{ json: { dataInicio, periodoDias, label } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        5968,
-        15776
-      ],
-      "id": "1b94cf11-6208-4cd7-a2da-639d2649266e",
-      "name": "Calcular Período Financeiro"
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "financeiro",
-        "returnAll": true,
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "propriedade_id",
-              "condition": "eq",
-              "keyValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}"
-            },
-            {
-              "keyName": "data",
-              "condition": "gte",
-              "keyValue": "={{ $json.dataInicio }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        6576,
-        15872
-      ],
-      "id": "5a47b46e-0736-4289-a87e-a729b2839570",
-      "name": "Buscar Lançamentos Financeiros",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const dedupeById = (arr) => { const seen = new Set(); return arr.filter(x => { if (!x || !x.id || seen.has(x.id)) return false; seen.add(x.id); return true; }); };\nconst { periodoDias, label, dataInicio } = $('Calcular Período Financeiro').item.json;\nconst entidades = $('Parsear Resposta IA').item.json.entidades;\nconst origemAudio = $('Preparar Entrada Agente').item.json.origem_audio;\n\nconst hoje = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }) + 'T12:00:00Z');\nconst hojeStr = hoje.toISOString().slice(0, 10);\n\nlet lancamentos = dedupeById($input.all().map(i => i.json));\nlancamentos = lancamentos.filter(l => l.data >= dataInicio && l.data <= hojeStr);\nif (entidades.tipo_financeiro) {\n  lancamentos = lancamentos.filter(l => l.tipo === entidades.tipo_financeiro);\n}\n\nlet texto;\nif (lancamentos.length === 0) {\n  texto = `Nenhum lançamento financeiro encontrado (${label}).`;\n} else {\n  const despesas = lancamentos.filter(l => l.tipo === 'despesa');\n  const receitas = lancamentos.filter(l => l.tipo === 'receita');\n  const totalDespesas = despesas.reduce((s, l) => s + (Number(l.valor) || 0), 0);\n  const totalReceitas = receitas.reduce((s, l) => s + (Number(l.valor) || 0), 0);\n\n  if (origemAudio) {\n    let partes = [`Financeiro, ${label}.`];\n    if (!entidades.tipo_financeiro || entidades.tipo_financeiro === 'receita') {\n      partes.push(`Receitas de R$ ${totalReceitas.toFixed(2)}.`);\n    }\n    if (!entidades.tipo_financeiro || entidades.tipo_financeiro === 'despesa') {\n      partes.push(`Despesas de R$ ${totalDespesas.toFixed(2)}.`);\n    }\n    if (!entidades.tipo_financeiro) {\n      partes.push(`Saldo de R$ ${(totalReceitas - totalDespesas).toFixed(2)}.`);\n    }\n    texto = partes.join(' ');\n  } else {\n    const porCategoria = {};\n    for (const l of lancamentos) {\n      const chave = `${l.tipo} - ${l.categoria || 'outros'}`;\n      porCategoria[chave] = (porCategoria[chave] || 0) + (Number(l.valor) || 0);\n    }\n\n    texto = `Financeiro (${label}):\\n\\n`;\n    if (!entidades.tipo_financeiro || entidades.tipo_financeiro === 'receita') {\n      texto += `Receitas: R$ ${totalReceitas.toFixed(2)}\\n`;\n    }\n    if (!entidades.tipo_financeiro || entidades.tipo_financeiro === 'despesa') {\n      texto += `Despesas: R$ ${totalDespesas.toFixed(2)}\\n`;\n    }\n    if (!entidades.tipo_financeiro) {\n      texto += `Saldo: R$ ${(totalReceitas - totalDespesas).toFixed(2)}\\n`;\n    }\n    texto += `\\nPor categoria:\\n`;\n    texto += Object.entries(porCategoria).map(([k, v]) => `- ${k}: R$ ${v.toFixed(2)}`).join('\\n');\n  }\n}\n\nreturn [{ json: { resposta_sugerida: texto } }];\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7088,
-        15872
-      ],
-      "id": "b2e60a29-e765-4ffa-93e3-63b643049e62",
-      "name": "Montar Relatório Financeiro"
     },
     {
       "parameters": {
@@ -2452,37 +1789,6 @@
     },
     {
       "parameters": {
-        "operation": "getAll",
-        "tableId": "vacas",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "propriedade_id",
-              "condition": "eq",
-              "keyValue": "={{ $('Parsear Resposta IA').item.json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        7744,
-        13072
-      ],
-      "id": "2176e528-4527-452d-9117-dd6152b42fa4",
-      "name": "Buscar Vacas Propriedade (Geral)",
-      "executeOnce": true,
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
         "operation": "set",
         "key": "=audio:{{ $json.telefone }}",
         "value": "={{ $json.origem_audio }}",
@@ -2677,63 +1983,6 @@
       ],
       "id": "1459731d-6a13-4fdf-9303-2fec4627e7db",
       "name": "Code in JavaScript2"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "0f080c67-5d30-453c-b1d8-3f7c4ed722b5",
-              "leftValue": "={{ String($json.id ?? '') }}",
-              "operator": {
-                "type": "string",
-                "operation": "isNotEmpty",
-                "name": "filter.operator.isNotEmpty"
-              },
-              "rightValue": ""
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        7736,
-        13056
-      ],
-      "id": "cf261b87-846e-4556-a5ac-cdba80e8a202",
-      "name": "Vaca Encontrada (Relatório)?"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "9a013321-1f43-443f-9efb-40415f93810d",
-              "name": "resposta_sugerida",
-              "value": "=Não encontrei a vaca {{ $('Parsear Resposta IA').item.json.entidades.numero_vaca }} cadastrada. Confira o número.",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        8016,
-        13232
-      ],
-      "id": "8e745166-042b-4220-b527-0ce25a11bcf2",
-      "name": "Vaca Não Encontrada (Relatório)"
     },
     {
       "parameters": {
@@ -3293,6 +2542,56 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_consultar",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_intencao: $('Parsear Resposta IA').item.json.intencao,\n  p_entidades: $('Parsear Resposta IA').item.json.entidades || {},\n  p_mensagem: $('Parsear Resposta IA').item.json.mensagem_original || '',\n  p_audio: $('Preparar Entrada Agente').item.json.origem_audio === true\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5856,
+        12752
+      ],
+      "id": "d15a797f-840f-48f2-b507-bdb1d25149ef",
+      "name": "Consultar (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3daea708-430c-4e29-8b39-6b8d590b87ea",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "={{ $json.mensagem || 'Não consegui montar o relatório agora. Tente de novo em alguns minutos.' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6156,
+        12752
+      ],
+      "id": "c855d00e-b62f-4c7a-8922-e3838aeaa09f",
+      "name": "Montar Resposta Consulta"
     }
   ],
   "pinData": {},
@@ -3355,14 +2654,14 @@
         ],
         [
           {
-            "node": "Tipo Relatório Reprodutivo?",
+            "node": "Consultar (RPC)",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Tipo Relatório Reprodutivo?",
+            "node": "Consultar (RPC)",
             "type": "main",
             "index": 0
           }
@@ -3411,7 +2710,7 @@
         ],
         [
           {
-            "node": "Calcular Período Financeiro",
+            "node": "Consultar (RPC)",
             "type": "main",
             "index": 0
           }
@@ -3598,71 +2897,6 @@
           },
           {
             "node": "Checar Pendência Delete",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Vaca (Relatório)": {
-      "main": [
-        [
-          {
-            "node": "Vaca Encontrada (Relatório)?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Histórico Leite": {
-      "main": [
-        [
-          {
-            "node": "Montar Relatório Individual",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Montar Relatório Individual": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Produção Geral (Hoje)": {
-      "main": [
-        [
-          {
-            "node": "Montar Relatório Geral",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Montar Relatório Geral": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -3862,185 +3096,6 @@
         ]
       ]
     },
-    "Tipo Relatório Reprodutivo?": {
-      "main": [
-        [
-          {
-            "node": "Tem Numero (Reprodutivo)?",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Tipo Relatório Cadastro?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Tem Numero (Reprodutivo)?": {
-      "main": [
-        [
-          {
-            "node": "Buscar Vaca (Reprodutivo Individual)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Buscar Vacas Propriedade (Reprodutivo)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Vaca (Reprodutivo Individual)": {
-      "main": [
-        [
-          {
-            "node": "Buscar Coberturas (Reprodutivo Individual)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Parto Ativo (Reprodutivo)": {
-      "main": [
-        [
-          {
-            "node": "Buscar Controle Leite Ativo (Reprodutivo)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Coberturas (Reprodutivo Individual)": {
-      "main": [
-        [
-          {
-            "node": "Buscar Parto Ativo (Reprodutivo)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Montar Relatório Reprodutivo Individual": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Vacas Propriedade (Reprodutivo)": {
-      "main": [
-        [
-          {
-            "node": "Buscar Coberturas (Reprodutivo Geral)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Coberturas (Reprodutivo Geral)": {
-      "main": [
-        [
-          {
-            "node": "Buscar Partos (Reprodutivo Geral)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Partos (Reprodutivo Geral)": {
-      "main": [
-        [
-          {
-            "node": "Buscar Controle Leite (Reprodutivo Geral)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Compilar Relatório Reprodutivo Geral": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Tipo Relatório Cadastro?": {
-      "main": [
-        [
-          {
-            "node": "Buscar Vacas (Contagem)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Numero Foi Informado?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Vacas (Contagem)": {
-      "main": [
-        [
-          {
-            "node": "Montar Relatório Cadastro",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Montar Relatório Cadastro": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "É Áudio?": {
       "main": [
         [
@@ -4092,35 +3147,6 @@
         ]
       ]
     },
-    "Numero Foi Informado?": {
-      "main": [
-        [
-          {
-            "node": "Buscar Vaca (Relatório)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Calcular Período Geral",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Calcular Período Geral": {
-      "main": [
-        [
-          {
-            "node": "Buscar Vacas Propriedade (Geral)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Confirmar Diagnóstico": {
       "main": [
         [
@@ -4131,28 +3157,6 @@
           },
           {
             "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Controle Leite Ativo (Reprodutivo)": {
-      "main": [
-        [
-          {
-            "node": "Montar Relatório Reprodutivo Individual",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Controle Leite (Reprodutivo Geral)": {
-      "main": [
-        [
-          {
-            "node": "Compilar Relatório Reprodutivo Geral",
             "type": "main",
             "index": 0
           }
@@ -4208,44 +3212,6 @@
       ]
     },
     "Confirmar Financeiro": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Calcular Período Financeiro": {
-      "main": [
-        [
-          {
-            "node": "Buscar Lançamentos Financeiros",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Lançamentos Financeiros": {
-      "main": [
-        [
-          {
-            "node": "Montar Relatório Financeiro",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Montar Relatório Financeiro": {
       "main": [
         [
           {
@@ -4491,17 +3457,6 @@
         ]
       ]
     },
-    "Buscar Vacas Propriedade (Geral)": {
-      "main": [
-        [
-          {
-            "node": "Buscar Produção Geral (Hoje)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Ler Flag Áudio": {
       "main": [
         [
@@ -4576,40 +3531,6 @@
         [
           {
             "node": "Enviar Áudio",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Vaca Encontrada (Relatório)?": {
-      "main": [
-        [
-          {
-            "node": "Buscar Histórico Leite",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Vaca Não Encontrada (Relatório)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Vaca Não Encontrada (Relatório)": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
@@ -4844,6 +3765,33 @@
         [
           {
             "node": "Limpar Pendência (Excluído)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Montar Resposta Consulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Resposta Consulta": {
+      "main": [
+        [
+          {
+            "node": "Origem Áudio? (Principal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }

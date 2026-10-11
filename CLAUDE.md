@@ -188,11 +188,11 @@ o ideal é portar isso pra funções RPC no Postgres — assim bot e site chamam
      só calculável com pelo menos 60 dias de lactação
    - `iep`, esse sim, é gravado corretamente no momento do parto (ver regra 1) e pode ser lido
      direto do banco.
-   - **No site** (`src/lib/indicadores.ts`, ficha da vaca em `/vacas/[id]`) a média diária é a
-     média dos DIAS PESADOS (soma das ordenhas do dia ÷ nº de dias com pesagem), e projeção 305 e
-     persistência usam essa média. Com pesagem diária dá o mesmo que a conta do bot; com controle
-     leiteiro semanal/mensal a conta do bot (acumulado ÷ dias em lactação) subestima. Os
-     relatórios do bot ainda usam a conta antiga.
+   - **Regra atual, site e bot** (`src/lib/indicadores.ts` e `_indicadores_lactacao`, 0027): a
+     média diária é a média dos DIAS PESADOS (soma das ordenhas do dia ÷ nº de dias com pesagem),
+     e projeção 305 e persistência usam essa média. A conta antiga do bot (acumulado ÷ dias em
+     lactação) subestimava com controle leiteiro semanal/mensal. Dias em aberto vão até a
+     cobertura positiva MAIS RECENTE da lactação.
 
 6. **Deletar qualquer coisa** (registro de leite, lançamento financeiro) deve pedir confirmação
    antes de executar — nunca apagar direto na primeira mensagem/ação. **O bot atual viola essa
@@ -245,9 +245,9 @@ Estes são bugs REAIS no fluxo em produção, não só gaps de documentação. R
 site compartilha o mesmo banco e pode ter que lidar com dados sujos deixados por eles, e (b) não
 devem ser reintroduzidos ao portar lógica pro site/RPC.
 
-**Os bugs 1, 3, 4, 5, 6 e 7 não existem mais no JSON do repo** (0022, 0024 e 0025: o bot passa
-pelas funções do banco — ver seção "Bot: todas as escritas pelo banco"). Ficam descritos porque
-explicam dados antigos. Os bugs 2 e 8 (relatórios) continuam.
+**Nenhum destes bugs existe mais no JSON do repo** (0022, 0024, 0025 e 0027: escritas e relatórios
+do bot passam pelas funções do banco — ver seções "Bot: todas as escritas pelo banco" e
+"Relatórios do bot"). Ficam descritos porque explicam dados antigos.
 
 1. **[Crítico] Exclusão de registro de leite não é segura de fato.** No fluxo `deletar_registro`
    (leite), o `DELETE` no Supabase roda **antes** de pedir confirmação SIM/NAO — a mensagem de
@@ -385,6 +385,19 @@ explicam dados antigos. Os bugs 2 e 8 (relatórios) continuam.
   registro é da fazenda do telefone.
 - Corrigir/apagar financeiro exige categoria ou data (antes pegava o lançamento mais recente da
   fazenda). Categoria gravada pelo bot é normalizada no banco (`_categoria_normalizada`).
+
+## Relatórios do bot (0027_bot_relatorios.sql)
+
+- Consultas do WhatsApp (`consultar_vaca`, `consultar_relatorio`, `consultar_financeiro`) vão
+  todas pro nó "Consultar (RPC)" → `bot_consultar`, que escolhe o relatório e devolve o texto
+  pronto (versão curta, sem formatação, quando a pergunta veio por áudio). Nada mais é baixado e
+  filtrado no n8n.
+- Indicadores por `_indicadores_lactacao(parto_id)` — mesma regra de `src/lib/indicadores.ts`
+  (média dos dias pesados). Site e bot mostram os mesmos números.
+- Roteamento: financeiro → `_rel_financeiro`; `cadastro` → censo; com número de vaca →
+  `reprodutivo`, `leite` ou os dois (`geral`/sem tipo); sem número → `reprodutivo` (rebanho),
+  `geral` (produção + reprodução) ou produção. Período: "hoje", "mês" (financeiro),
+  `periodo_dias`, senão mês atual + passado (`_periodo_consulta`).
 
 ## Pesagem do dia (0026_pesagem.sql)
 

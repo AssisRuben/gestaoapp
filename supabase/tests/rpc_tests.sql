@@ -955,6 +955,66 @@ begin
     end if;
   end;
 
+  -- ============================================================
+  -- relatórios do bot no banco (0027)
+  -- vaca 90002: parto há 10 dias; leite por dia = 9 (hoje), 15 (ontem), 13 (anteontem);
+  -- cobertura positiva há 3 dias
+  -- ============================================================
+
+  v_alvo_bot := _indicadores_lactacao((select id from partos where vaca_id = v_vaca_bot and ativa));
+  if round((v_alvo_bot->>'media')::numeric, 2) <> 12.33 or (v_alvo_bot->>'dias_pesados')::integer <> 3
+     or (v_alvo_bot->>'dias_em_aberto')::integer <> 7 or not (v_alvo_bot->>'aberto_fechado')::boolean then
+    raise exception 'FALHOU [_indicadores_lactacao]: média dos dias pesados / dias em aberto errados (veio %)', v_alvo_bot;
+  end if;
+
+  v_bot := bot_consultar('5500000000001', 'consultar_vaca', '{"numero_vaca": "90002", "tipo_relatorio": "reprodutivo"}', '', false);
+  if not (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%Vaca 90002%reprodução%'
+     or v_bot->>'mensagem' not ilike '%Parto previsto%' or v_bot->>'mensagem' not ilike '%12,3 L/dia%' then
+    raise exception 'FALHOU [bot_consultar]: relatório reprodutivo da vaca (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_consultar('5500000000001', 'consultar_vaca', '{"numero_vaca": "90002", "tipo_relatorio": "geral"}', '', false);
+  if v_bot->>'mensagem' not ilike '%— reprodução%' or v_bot->>'mensagem' not ilike '%— leite%' then
+    raise exception 'FALHOU [bot_consultar]: "geral" de uma vaca deveria juntar leite e reprodução (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_consultar('5500000000001', 'consultar_vaca', '{"numero_vaca": "99999"}', '', false);
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%não encontrei a vaca 99999%' then
+    raise exception 'FALHOU [bot_consultar]: vaca inexistente (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_consultar('5500000000001', 'consultar_relatorio', '{"tipo_relatorio": "reprodutivo"}', '', false);
+  if v_bot->>'mensagem' not ilike '%Reprodução do rebanho%' or v_bot->>'mensagem' not ilike '%Vaca 90002: parto em%' then
+    raise exception 'FALHOU [bot_consultar]: reprodução do rebanho (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_consultar('5500000000001', 'consultar_relatorio', '{"tipo_relatorio": "reprodutivo"}', '', true);
+  if v_bot->>'mensagem' not ilike 'Você tem%' or v_bot->>'mensagem' like '%*%' then
+    raise exception 'FALHOU [bot_consultar]: versão em áudio deveria ser texto corrido (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_consultar('5500000000001', 'consultar_relatorio', '{"tipo_relatorio": "cadastro"}', '', false);
+  if v_bot->>'mensagem' not ilike '%Rebanho%vacas%' then
+    raise exception 'FALHOU [bot_consultar]: censo (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_consultar('5500000000001', 'consultar_relatorio', '{"tipo_relatorio": "leite"}', 'quanto deu de leite hoje', false);
+  if v_bot->>'mensagem' not ilike 'Produção de hoje%' then
+    raise exception 'FALHOU [bot_consultar]: produção de hoje (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_consultar('5500000000001', 'consultar_relatorio', '{}', 'como está a produção', false);
+  if v_bot->>'mensagem' not ilike '%Produção — mês atual e mês passado%' then
+    raise exception 'FALHOU [bot_consultar]: produção no período padrão (veio %)', v_bot;
+  end if;
+
+  insert into financeiro (propriedade_id, tipo, categoria, valor, data)
+  values (v_propriedade_id, 'receita', 'venda de leite', 300, _hoje_fazenda());
+  v_bot := bot_consultar('5500000000001', 'consultar_financeiro', '{}', 'relatorio financeiro', false);
+  if v_bot->>'mensagem' not ilike '%Receitas: R$ 300,00%' or v_bot->>'mensagem' not ilike '%receita - venda de leite%' then
+    raise exception 'FALHOU [bot_consultar]: financeiro (veio %)', v_bot;
+  end if;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 
