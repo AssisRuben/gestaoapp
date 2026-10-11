@@ -24,6 +24,7 @@ const INTENCAO_LABEL: Record<string, string> = {
   consultar_financeiro: "Consultar financeiro",
   atualizar_financeiro: "Corrigir financeiro",
   deletar_financeiro: "Apagar financeiro",
+  outras_acoes: "Doses, lembretes, bezerra→vaca",
   outro: "Não entendida",
   // gravada pelo nó "Registrar Interação (Log)" quando a mensagem é o SIM/NÃO de uma exclusão
   confirmacao_exclusao: "Confirmação de exclusão",

@@ -1222,6 +1222,54 @@ begin
     raise exception 'FALHOU [registrar_lancamento_campo]: vaca de outra fazenda deveria ser recusada';
   end if;
 
+  -- ============================================================
+  -- WhatsApp: doses, lembretes e bezerra que vira vaca (0036)
+  -- ============================================================
+
+  insert into touros (nome, codigo) values ('Touro Ação', 'TA-01') returning id into v_cob_status;
+  insert into entregas_doses (propriedade_id, touro_id, quantidade, data_entrega)
+  values (v_propriedade_id, v_cob_status, 5, _hoje_fazenda() - 2);
+
+  v_bot := bot_consultar('5500000000001', 'consultar_relatorio', '{"tipo_relatorio": "doses"}', 'quantas doses eu tenho', false);
+  if v_bot->>'mensagem' not ilike '%Aguardando você confirmar%Touro Ação%' then
+    raise exception 'FALHOU [bot_consultar doses]: deveria mostrar a entrega pendente (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_acao('5500000000001', 'confirmar_doses', '{"touro_semen": "touro acao"}');
+  if not (v_bot->>'ok')::boolean
+     or exists (select 1 from entregas_doses where touro_id = v_cob_status and recebido_em is null) then
+    raise exception 'FALHOU [bot_acao confirmar_doses]: deveria confirmar a entrega do touro falado (veio %)', v_bot;
+  end if;
+  v_bot := bot_acao('5500000000001', 'confirmar_doses', '{"touro_semen": "touro acao"}');
+  if (v_bot->>'ok')::boolean then
+    raise exception 'FALHOU [bot_acao confirmar_doses]: não há mais o que confirmar (veio %)', v_bot;
+  end if;
+
+  perform bot_acao('5500000000001', 'desligar_lembretes', '{}');
+  if (select lembretes_whatsapp from propriedades where id = v_propriedade_id) then
+    raise exception 'FALHOU [bot_acao]: desligar_lembretes deveria desligar';
+  end if;
+  perform bot_acao('5500000000001', 'ligar_lembretes', '{}');
+  if not (select lembretes_whatsapp from propriedades where id = v_propriedade_id) then
+    raise exception 'FALHOU [bot_acao]: ligar_lembretes deveria ligar';
+  end if;
+
+  insert into bezerros (propriedade_id, mae_id, numero_identificacao, sexo, data_nascimento)
+  values (v_propriedade_id, v_vaca_bot, 90040, 'femea', _hoje_fazenda() - 500);
+  v_bot := bot_acao('5500000000001', 'promover_bezerro', '{"numero_bezerro": "90040"}');
+  if not (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike 'Bezerra 90040 cadastrada como vaca%filha da vaca 90002%' then
+    raise exception 'FALHOU [bot_acao promover_bezerro]: deveria cadastrar a bezerra como vaca (veio %)', v_bot;
+  end if;
+  v_bot := bot_acao('5500000000001', 'promover_bezerro', '{"numero_bezerro": "90031"}');
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%só bezerras%' then
+    raise exception 'FALHOU [bot_acao promover_bezerro]: macho deveria ser recusado (veio %)', v_bot;
+  end if;
+
+  v_bot := bot_acao('5500000000001', 'voar', '{}');
+  if (v_bot->>'ok')::boolean then
+    raise exception 'FALHOU [bot_acao]: ação desconhecida deveria ser recusada';
+  end if;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

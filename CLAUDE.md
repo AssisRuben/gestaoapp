@@ -461,6 +461,17 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   dias, secagem/parto atrasados, vazia +120 dias em lactação, doses sem confirmação +7 dias. O
   botão de documento de cada alerta abre o resumo da fazenda.
 
+## Bot: doses, lembretes e bezerra→vaca (0036_bot_acoes.sql)
+
+- "Quantas doses eu tenho?" → `consultar_relatorio` com `tipo_relatorio='doses'` → `_rel_doses`
+  (saldo por touro + entregas esperando confirmação).
+- Intenção `outras_acoes` (saída própria no "Rotear Intencao" → nó "Outra Ação (RPC)" →
+  `bot_acao`) com `entidades.acao`: `confirmar_doses` (entregas pendentes, só do touro falado se
+  disser), `ligar_lembretes`/`desligar_lembretes`, `promover_bezerro` (`numero_bezerro`).
+  `_promover_bezerro` é a regra única (site chama via `promover_bezerro`, com checagem de acesso).
+- O nó "Parsear Resposta IA" monta as entidades campo a campo: entidade nova no prompt precisa ser
+  acrescentada lá também.
+
 ## Relatórios do bot (0027_bot_relatorios.sql)
 
 - Consultas do WhatsApp (`consultar_vaca`, `consultar_relatorio`, `consultar_financeiro`) vão
