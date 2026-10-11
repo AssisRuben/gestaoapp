@@ -383,7 +383,8 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   mensagem.
 - Leite (`_registrar_leite`, também usado pelo site): litros entre 0 e 100, data não futura (fuso
   de Fortaleza, `_hoje_fazenda()`) e não anterior ao parto ativo; mesma ordenha repetida no mesmo
-  dia é recusada. Corrigir/apagar com mais de uma ordenha no dia usa o período falado; sem dar pra
+  dia é recusada; vaca com status "seca" é recusada (0040 — a secagem não fecha a lactação, então
+  o parto continua ativo; as telas de Leite e Pesagem também não listam vaca seca). Corrigir/apagar com mais de uma ordenha no dia usa o período falado; sem dar pra
   saber qual, responde listando as opções em vez de adivinhar.
 - Exclusões (leite e financeiro) continuam em duas etapas: `bot_localizar_*_exclusao` devolve a
   pergunta e o id (pendência no Redis); só depois do SIM `bot_excluir_*` apaga, conferindo que o

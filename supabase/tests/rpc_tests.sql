@@ -1403,6 +1403,18 @@ begin
     if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%já tem parto registrado em%' then
       raise exception 'FALHOU [parto duplicado]: o bot deveria recusar com a mensagem (veio %)', v_bot;
     end if;
+
+    -- vaca seca não recebe leite (0040), mesmo com o parto ativo
+    update vacas set status_produtivo = 'seca' where id = v_vaca_lig;
+    v_bot := bot_registrar_leite('5500000000001', 90903, 12, _hoje_fazenda(), 'manha');
+    if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%está seca%' then
+      raise exception 'FALHOU [vaca seca]: leite de vaca seca deveria ser recusado (veio %)', v_bot;
+    end if;
+    update vacas set status_produtivo = 'lactacao' where id = v_vaca_lig;
+    v_bot := bot_registrar_leite('5500000000001', 90903, 12, _hoje_fazenda(), 'manha');
+    if not (v_bot->>'ok')::boolean then
+      raise exception 'FALHOU [vaca seca]: de volta à lactação deveria aceitar (veio %)', v_bot;
+    end if;
   end;
 
   raise notice 'TODOS OS TESTES PASSARAM';

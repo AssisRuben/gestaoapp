@@ -19,7 +19,7 @@ export default async function LeitePage() {
   ]);
 
   const registros = registrosData as unknown as RegistroLeite[];
-  const todasVacas = vacasData as unknown as { id: string; numero_identificacao: number }[];
+  const todasVacas = vacasData as unknown as { id: string; numero_identificacao: number; status_produtivo: string | null }[];
   const partos = partosData as unknown as { vaca_id: string; ativa: boolean }[];
 
   // Só dá pra lançar leite de vaca com parto ativo (regra 2 do CLAUDE.md) — o dropdown já
@@ -27,8 +27,9 @@ export default async function LeitePage() {
   // não por vacas.status_produtivo: esse campo é só um espelho e pode ficar dessincronizado
   // (ex.: dado de teste com status "lactacao" mas sem nenhum parto ativo criado de fato).
   const vacaIdsComLactacaoAtiva = new Set(partos.filter((p) => p.ativa).map((p) => p.vaca_id));
+  // vaca seca não recebe leite (0040), mesmo com o parto ainda ativo
   const vacas: VacaOpcao[] = todasVacas
-    .filter((v) => vacaIdsComLactacaoAtiva.has(v.id))
+    .filter((v) => vacaIdsComLactacaoAtiva.has(v.id) && v.status_produtivo !== "seca")
     .map((v) => ({ id: v.id, numero_identificacao: v.numero_identificacao }));
 
   return (
