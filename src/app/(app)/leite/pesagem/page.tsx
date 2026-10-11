@@ -19,10 +19,18 @@ export default async function PesagemPage() {
       .map((p) => [p.vaca_id, p.data_parto]),
   );
 
+  const todasVacas = vacasData as unknown as { id: string; numero_identificacao: number; status_produtivo: string }[];
+
   // Só vaca com parto ativo pode receber leite (regra 2 do CLAUDE.md).
-  const vacas: VacaPesagem[] = (vacasData as unknown as { id: string; numero_identificacao: number }[])
+  const vacas: VacaPesagem[] = todasVacas
     .filter((v) => partoAtivo.has(v.id))
     .map((v) => ({ id: v.id, numero: v.numero_identificacao, dataParto: partoAtivo.get(v.id)! }))
+    .sort((a, b) => a.numero - b.numero);
+
+  // marcada "em lactação" sem parto registrado: não entra na lista — avisa em vez de sumir calada
+  const semParto = todasVacas
+    .filter((v) => v.status_produtivo === "lactacao" && !partoAtivo.has(v.id))
+    .map((v) => ({ id: v.id, numero: v.numero_identificacao }))
     .sort((a, b) => a.numero - b.numero);
 
   const registros: RegistroPesagem[] = (
@@ -31,7 +39,7 @@ export default async function PesagemPage() {
 
   return (
     <div className="flex flex-1 flex-col p-4 sm:p-6">
-      <PesagemClient vacas={vacas} registros={registros} />
+      <PesagemClient vacas={vacas} registros={registros} semParto={semParto} />
     </div>
   );
 }

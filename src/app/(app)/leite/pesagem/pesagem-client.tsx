@@ -213,7 +213,15 @@ function ListaPesagem({
   );
 }
 
-export function PesagemClient({ vacas, registros }: { vacas: VacaPesagem[]; registros: RegistroPesagem[] }) {
+export function PesagemClient({
+  vacas,
+  registros,
+  semParto = [],
+}: {
+  vacas: VacaPesagem[];
+  registros: RegistroPesagem[];
+  semParto?: { id: string; numero: number }[];
+}) {
   const hoje = hojeBrasil();
   const [data, setData] = useState(hoje);
   const [periodo, setPeriodo] = useState<Periodo>(periodoPelaHora);
@@ -263,6 +271,26 @@ export function PesagemClient({ vacas, registros }: { vacas: VacaPesagem[]; regi
           </div>
         </div>
       </div>
+
+      {semParto.length > 0 && (
+        <p className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-800 dark:text-amber-300">
+          {semParto.length === 1 ? "A vaca " : "As vacas "}
+          {semParto.map((v, i) => (
+            <span key={v.id}>
+              {i > 0 && (i === semParto.length - 1 ? " e " : ", ")}
+              <Link href={`/vacas/${v.id}`} className="font-medium underline">
+                {v.numero}
+              </Link>
+            </span>
+          ))}{" "}
+          {semParto.length === 1 ? "está marcada" : "estão marcadas"} em lactação, mas sem parto registrado — por isso não
+          {semParto.length === 1 ? " aparece" : " aparecem"} aqui. Registre o parto em{" "}
+          <Link href="/reproducao" className="font-medium underline">
+            Reprodução
+          </Link>{" "}
+          (com a data aproximada, se não souber a exata).
+        </p>
+      )}
 
       <ListaPesagem key={`${data}|${periodo}`} vacas={vacas} registros={registros} data={data} periodo={periodo} />
     </div>
