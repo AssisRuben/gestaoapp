@@ -15,7 +15,12 @@ function resultadoCadastro(
   error: { message: string } | null,
 ): CadastroState {
   if (error) {
-    return { error: /already registered|already exists/i.test(error.message) ? JA_CADASTRADO : error.message };
+    if (/already registered|already exists/i.test(error.message)) return { error: JA_CADASTRADO };
+    // limite de envio do e-mail padrão do Supabase (poucos por hora, somando confirmações e senhas)
+    if (/rate limit/i.test(error.message)) {
+      return { error: "Muitos e-mails enviados pelo sistema em pouco tempo. Tente de novo daqui a uma hora." };
+    }
+    return { error: error.message };
   }
   if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
     return { error: JA_CADASTRADO };
