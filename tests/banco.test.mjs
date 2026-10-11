@@ -70,3 +70,13 @@ try {
   console.error(`FALHOU nos dados de exemplo: ${e.message}`);
   process.exit(1);
 }
+
+// o diagnóstico de dados antigos (rodado à mão no SQL Editor) precisa continuar válido
+try {
+  const { rows } = await db.query(ler("supabase/diagnosticos/dados_antigos.sql"));
+  if (rows.length !== 12) throw new Error(`esperava 12 verificações, veio ${rows.length}`);
+  console.log("diagnóstico de dados antigos: ok");
+} catch (e) {
+  console.error(`FALHOU no diagnóstico de dados antigos: ${e.message}`);
+  process.exit(1);
+}

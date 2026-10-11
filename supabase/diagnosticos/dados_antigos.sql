@@ -70,6 +70,27 @@ orfas as (
   select p.nome_propriedade from propriedades p
   where not exists (select 1 from usuarios_whatsapp u where u.propriedade_id = p.id)
     and not exists (select 1 from usuarios_propriedades up where up.propriedade_id = p.id)
+),
+-- partos da mesma vaca a menos de 240 dias um do outro (a 0039 passou a recusar; os antigos ficam)
+todos_partos as (
+  select vaca_id, data_parto from partos
+  union all
+  select vaca_id, data_parto from partos_historico
+),
+parto_dup as (
+  select pr.nome_propriedade, v.numero_identificacao numero, a.data_parto d1, b.data_parto d2
+  from todos_partos a
+  join todos_partos b on b.vaca_id = a.vaca_id and b.data_parto > a.data_parto and b.data_parto - a.data_parto < 240
+  join vacas v on v.id = a.vaca_id
+  join propriedades pr on pr.id = v.propriedade_id
+),
+-- parto inativo que ficou em partos (o bot antes da 0022 fechava a lactação sem arquivar)
+parto_nao_arquivado as (
+  select pr.nome_propriedade, v.numero_identificacao numero, p.data_parto
+  from partos p
+  join vacas v on v.id = p.vaca_id
+  join propriedades pr on pr.id = v.propriedade_id
+  where not p.ativa
 )
 select 1 ordem, 'Financeiro: categoria fora do padrão' problema, coalesce(sum(n), 0) quantidade,
        string_agg(format('"%s" (%s)', coalesce(categoria, 'vazia'), n), ', ' order by n desc) exemplos
@@ -110,4 +131,12 @@ union all
 select 10, 'Fazendas sem WhatsApp nem usuário do site', count(*),
        string_agg(nome_propriedade, ', ')
 from orfas
+union all
+select 11, 'Partos da mesma vaca a menos de 240 dias (duplicados)', (select count(*) from parto_dup),
+       (select string_agg(format('%s / vaca %s: %s e %s', nome_propriedade, numero, to_char(d1, 'DD/MM/YY'), to_char(d2, 'DD/MM/YY')), '; ')
+        from (select * from parto_dup order by 1, 2, 3 limit 15) x)
+union all
+select 12, 'Partos inativos não arquivados (lactação fechada pelo bot antigo)', (select count(*) from parto_nao_arquivado),
+       (select string_agg(format('%s / vaca %s: %s', nome_propriedade, numero, to_char(data_parto, 'DD/MM/YY')), '; ')
+        from (select * from parto_nao_arquivado order by 1, 2, 3 limit 15) x)
 order by 1;
