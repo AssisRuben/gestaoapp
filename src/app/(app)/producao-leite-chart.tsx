@@ -142,10 +142,12 @@ export function ProducaoLeiteChart({
               <>
                 <circle cx={x(ultimoIndex)} cy={y(ultimoPonto[1])} r={9} className="fill-background" />
                 <circle cx={x(ultimoIndex)} cy={y(ultimoPonto[1])} r={6} className="fill-leite" />
+                {/* Rótulo à esquerda do último ponto; com um ponto só (colado no eixo) vai pra
+                    direita, senão sai cortado do gráfico. */}
                 <text
-                  x={x(ultimoIndex) - 12}
+                  x={pontos.length > 1 ? x(ultimoIndex) - 12 : x(ultimoIndex) + 12}
                   y={y(ultimoPonto[1]) - 14}
-                  textAnchor="end"
+                  textAnchor={pontos.length > 1 ? "end" : "start"}
                   className="fill-black font-mono tabular-nums dark:fill-zinc-50"
                   fontSize={28}
                   fontWeight={700}
@@ -164,15 +166,17 @@ export function ProducaoLeiteChart({
             >
               {formatarDataCurta(pontos[0][0])}
             </text>
-            <text
-              x={LARGURA_TOTAL - PLOT_RIGHT}
-              y={181}
-              textAnchor="end"
-              className="fill-zinc-600 font-mono tabular-nums dark:fill-zinc-400"
-              fontSize={22}
-            >
-              {formatarDataCurta(ultimoPonto[0])}
-            </text>
+            {pontos.length > 1 && (
+              <text
+                x={LARGURA_TOTAL - PLOT_RIGHT}
+                y={181}
+                textAnchor="end"
+                className="fill-zinc-600 font-mono tabular-nums dark:fill-zinc-400"
+                fontSize={22}
+              >
+                {formatarDataCurta(ultimoPonto[0])}
+              </text>
+            )}
 
             {pontos.map(([data, litros], i) => (
               <circle

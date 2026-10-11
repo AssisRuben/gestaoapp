@@ -6,6 +6,7 @@ import {
   getFinanceiroCache,
   getCoberturasCache,
   getBezerrosCache,
+  getPartosCache,
 } from "@/lib/cached-data";
 import { DashboardClient } from "./dashboard-client";
 import { hojeBrasil, somarDias } from "@/lib/datas";
@@ -19,12 +20,13 @@ export default async function DashboardPage() {
 
   const hoje = hojeBrasil();
 
-  const [vacasData, leiteData, financeiroData, coberturasData, bezerrosData] = await Promise.all([
+  const [vacasData, leiteData, financeiroData, coberturasData, bezerrosData, partosData] = await Promise.all([
     getVacasCache(propriedadeAtual.id),
     getControleLeiteCache(propriedadeAtual.id),
     getFinanceiroCache(propriedadeAtual.id),
     getCoberturasCache(propriedadeAtual.id),
     getBezerrosCache(propriedadeAtual.id),
+    getPartosCache(propriedadeAtual.id),
   ]);
 
   const vacas = vacasData as unknown as { id: string; status_produtivo: string }[];
@@ -58,10 +60,33 @@ export default async function DashboardPage() {
   ).length;
   const totalAnimais = vacasTotal + bezerrosVivos;
 
+  const partos = partosData as unknown as {
+    vaca_id: string;
+    cobertura_id: string | null;
+    data_parto: string;
+    ativa: boolean;
+  }[];
+
+  // Só contam as coberturas da lactação atual: a positiva que gerou o parto continua na tabela
+  // (o parto aponta pra ela) e não pode virar "pra secar" de novo; cobertura anterior ao parto
+  // ativo é de uma gestação que já terminou. Mesma ideia do "not exists partos" do banco.
+  const coberturasComParto = new Set(partos.map((p) => p.cobertura_id).filter(Boolean));
+  const partoAtivoPorVaca = new Map<string, string>();
+  for (const p of partos) {
+    if (!p.ativa) continue;
+    const atual = partoAtivoPorVaca.get(p.vaca_id);
+    if (!atual || p.data_parto > atual) partoAtivoPorVaca.set(p.vaca_id, p.data_parto);
+  }
+  const daLactacaoAtual = (c: { id: string; vaca_id: string; data_cobertura: string }) => {
+    if (coberturasComParto.has(c.id)) return false;
+    const parto = partoAtivoPorVaca.get(c.vaca_id);
+    return !parto || c.data_cobertura >= parto;
+  };
+
   // Vacas pra secar: cobertura confirmada mais recente por vaca (regra 7 do CLAUDE.md)
   const ultimaPositivaPorVaca = new Map<string, { data_cobertura: string; numero: number }>();
   for (const c of coberturas) {
-    if (c.diagnostico_prenhez !== "positivo") continue;
+    if (c.diagnostico_prenhez !== "positivo" || !daLactacaoAtual(c)) continue;
     const atual = ultimaPositivaPorVaca.get(c.vaca_id);
     if (!atual || c.data_cobertura > atual.data_cobertura) {
       ultimaPositivaPorVaca.set(c.vaca_id, {
@@ -86,8 +111,15 @@ export default async function DashboardPage() {
     .filter((v) => v.partoPrevisto >= inicioJanelaParto && v.partoPrevisto <= fimJanelaParto)
     .sort((a, b) => a.secagemPrevista.localeCompare(b.secagemPrevista));
 
-  // Diagnósticos pendentes
-  const diagnosticosPendentes = coberturas
+  // Diagnósticos pendentes: só a cobertura mais recente de cada vaca (é nela que o diagnóstico
+  // vale — regra 3); pendente antiga, já seguida de outra cobertura, não aparece de novo.
+  const ultimaCoberturaPorVaca = new Map<string, (typeof coberturas)[number]>();
+  for (const c of coberturas) {
+    if (!daLactacaoAtual(c)) continue;
+    const atual = ultimaCoberturaPorVaca.get(c.vaca_id);
+    if (!atual || c.data_cobertura > atual.data_cobertura) ultimaCoberturaPorVaca.set(c.vaca_id, c);
+  }
+  const diagnosticosPendentes = [...ultimaCoberturaPorVaca.values()]
     .filter((c) => c.diagnostico_prenhez === "pendente")
     .map((c) => ({ coberturaId: c.id, vacaId: c.vaca_id, numero: c.vaca.numero_identificacao, data_cobertura: c.data_cobertura }))
     .sort((a, b) => a.data_cobertura.localeCompare(b.data_cobertura));
