@@ -341,7 +341,8 @@ devem ser reintroduzidos ao portar lógica pro site/RPC.
 - Falha no bot: o nó "Guardar Remetente (Erro)" grava no Redis (`exec_remetente:<execução>`, 15
   min) quem mandou a mensagem; o workflow `fazenda-leite-erros.json` (Error Trigger) lê isso,
   avisa o produtor que a mensagem pode não ter sido registrada e grava `intencao_detectada='erro'`
-  em interacoes_log. Precisa estar selecionado em Settings → Error workflow do workflow principal.
+  em interacoes_log. Precisa estar selecionado em Settings → Error workflow do workflow principal,
+  e o workflow de erros precisa estar **publicado** (não só salvo) pra aparecer nessa lista.
 - Datas de "hoje" no site: sempre `hojeBrasil()` de `src/lib/datas.ts` (fuso de Fortaleza), nunca
   `new Date().toISOString()`.
 
