@@ -276,7 +276,9 @@ function PatrimonioSecao({
                 <td className="px-3 py-2 text-black dark:text-zinc-50">{p.tipo_ativo ?? "—"}</td>
                 <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{formatarMoeda(p.valor_total)}</td>
                 <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">
-                  {p.taxa_juros !== null ? `${p.taxa_juros}%` : "—"}
+                  {p.taxa_juros !== null
+                    ? `${Number(p.taxa_juros).toLocaleString("pt-BR", { maximumFractionDigits: 3 })}%`
+                    : "—"}
                 </td>
                 <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{p.vida_util ?? "—"}</td>
               </tr>
