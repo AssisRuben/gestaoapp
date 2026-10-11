@@ -5,6 +5,7 @@ import {
 } from "@/lib/cached-data";
 import { normalizarResumo, normalizarLeite, normalizarFinanceiro } from "@/lib/gestor";
 import { GestorDashboardClient } from "./gestor-dashboard-client";
+import { ExportarPlanilhas } from "./exportar-planilhas";
 
 // Dados reais, agregados no banco (0020_gestor_dados_reais.sql). O layout do gestor já validou
 // isGestor() antes de chegar aqui, que é o que autoriza as leituras com service role.
@@ -34,11 +35,14 @@ export default async function GestorDashboardPage() {
   const iepQtd = resumo.reduce((soma, r) => soma + r.iep_qtd, 0);
 
   return (
-    <GestorDashboardClient
-      fazendas={fazendas}
-      registrosLeite={normalizarLeite(leiteData)}
-      lancamentos={normalizarFinanceiro(financeiroData)}
-      iepMedio={iepQtd > 0 ? iepSoma / iepQtd : null}
-    />
+    <>
+      <GestorDashboardClient
+        fazendas={fazendas}
+        registrosLeite={normalizarLeite(leiteData)}
+        lancamentos={normalizarFinanceiro(financeiroData)}
+        iepMedio={iepQtd > 0 ? iepSoma / iepQtd : null}
+      />
+      <ExportarPlanilhas />
+    </>
   );
 }

@@ -7,7 +7,7 @@ export const GESTOR_NAV_ITEMS: NavItem[] = [
   { href: "/gestor", label: "Visão Geral", icon: HomeIcon, accent: "inicio" },
   { href: "/gestor/ranking", label: "Ranking", icon: TrophyIcon, accent: "ranking" },
   { href: "/gestor/programa", label: "Programa", icon: StrawIcon, accent: "reproducao" },
-  { href: "/gestor/tecnicos", label: "Técnicos", icon: PeopleIcon, accent: "vacas" },
+  { href: "/gestor/tecnicos", label: "Acessos", icon: PeopleIcon, accent: "vacas" },
   { href: "/gestor/alertas", label: "Alertas", icon: AlertIcon, accent: "alerta" },
   { href: "/gestor/agente", label: "Agente", icon: ChatIcon, accent: "agente" },
 ];

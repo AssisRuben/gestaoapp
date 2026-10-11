@@ -461,6 +461,18 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   dias, secagem/parto atrasados, vazia +120 dias em lactação, doses sem confirmação +7 dias. O
   botão de documento de cada alerta abre o resumo da fazenda.
 
+## Gestor: gestores, planilhas e fazenda própria (0037_gestores.sql)
+
+- Aba "Acessos" (`/gestor/tecnicos`): seção "Gestores do programa" — `listar_gestores`,
+  `adicionar_gestor` (por e-mail de conta existente), `remover_gestor` (nunca deixa zero gestores).
+  Só gestor executa.
+- Gestor que também tem vínculo com fazenda usa o site normalmente; o layout de (app) só manda pro
+  /gestor quem não tem fazenda. Botões "Painel do gestor" / "Minha fazenda" alternam.
+- Planilhas (Visão Geral → Exportar): `GET /gestor/exportar/{fazendas|leite|financeiro|doses}`.
+  Route handler não passa pelo layout de /gestor: checa `isGestor()` na própria rota. CSV pelo
+  `src/lib/csv.ts` (BOM, ";", vírgula decimal, datas dd/mm/aaaa) — mesmo formato que o Excel em
+  português abre direto.
+
 ## Bot: doses, lembretes e bezerra→vaca (0036_bot_acoes.sql)
 
 - "Quantas doses eu tenho?" → `consultar_relatorio` com `tipo_relatorio='doses'` → `_rel_doses`

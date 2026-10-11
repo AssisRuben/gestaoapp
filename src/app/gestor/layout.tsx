@@ -1,7 +1,8 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
-import { isGestor } from "@/lib/propriedade";
+import Link from "next/link";
+import { isGestor, getPropriedadesDoUsuario } from "@/lib/propriedade";
 import { logout } from "../(app)/actions";
 import { GestorTopNav, GestorBottomNav } from "./gestor-nav";
 
@@ -14,7 +15,8 @@ export default async function GestorLayout({
     redirect("/login");
   }
 
-  if (!(await isGestor())) {
+  const [gestor, vinculos] = await Promise.all([isGestor(), getPropriedadesDoUsuario()]);
+  if (!gestor) {
     redirect("/");
   }
 
@@ -35,6 +37,11 @@ export default async function GestorLayout({
         </span>
 
         <div className="flex items-center gap-3">
+          {vinculos.length > 0 && (
+            <Link href="/" className="rounded-full border border-black/[.08] px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]">
+              Minha fazenda
+            </Link>
+          )}
           <GestorTopNav />
           <form action={logout}>
             <button

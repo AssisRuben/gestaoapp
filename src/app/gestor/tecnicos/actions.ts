@@ -49,3 +49,34 @@ export async function desvincularTecnicoGestor(
   revalidatePath("/gestor/tecnicos");
   return { success: true };
 }
+
+export async function adicionarGestor(
+  _state: TecnicoActionState,
+  formData: FormData,
+): Promise<TecnicoActionState> {
+  if (!(await isGestor())) return { error: SEM_ACESSO };
+
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) return { error: "Informe o e-mail da conta." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("adicionar_gestor", { p_email: email });
+  if (error) return { error: error.message };
+
+  revalidatePath("/gestor/tecnicos");
+  return { success: true };
+}
+
+export async function removerGestor(
+  _state: TecnicoActionState,
+  formData: FormData,
+): Promise<TecnicoActionState> {
+  if (!(await isGestor())) return { error: SEM_ACESSO };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("remover_gestor", { p_usuario_id: formData.get("usuario_id") as string });
+  if (error) return { error: error.message };
+
+  revalidatePath("/gestor/tecnicos");
+  return { success: true };
+}

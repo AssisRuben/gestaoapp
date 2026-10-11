@@ -1270,6 +1270,46 @@ begin
     raise exception 'FALHOU [bot_acao]: ação desconhecida deveria ser recusada';
   end if;
 
+  -- ============================================================
+  -- gestores pela tela (0037) — o usuário de teste é gestor desde a seção de técnicos
+  -- ============================================================
+
+  delete from gestores where usuario_id <> v_usuario_id;
+  begin
+    perform remover_gestor(v_usuario_id);
+    raise exception 'FALHOU [remover_gestor]: não pode deixar o programa sem gestor';
+  exception when others then
+    if sqlerrm not ilike '%pelo menos um gestor%' then
+      raise exception 'FALHOU [remover_gestor]: erro inesperado: %', sqlerrm;
+    end if;
+  end;
+
+  perform adicionar_gestor('  __TECNICO_TESTE__@exemplo.invalid ');
+  if (select count(*) from listar_gestores()) <> 2 then
+    raise exception 'FALHOU [adicionar_gestor]: deveria virar 2 gestores';
+  end if;
+  begin
+    perform adicionar_gestor('__ninguem__@exemplo.invalid');
+    raise exception 'FALHOU [adicionar_gestor]: e-mail sem conta deveria ser recusado';
+  exception when others then
+    if sqlerrm not ilike '%Não existe conta%' then
+      raise exception 'FALHOU [adicionar_gestor]: erro inesperado: %', sqlerrm;
+    end if;
+  end;
+
+  -- quem não é gestor não mexe
+  perform set_config('request.jwt.claim.sub', (select id::text from auth.users where email = '__tecnico_teste__@exemplo.invalid'), true);
+  perform remover_gestor(v_usuario_id);
+  perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+  begin
+    perform listar_gestores();
+    raise exception 'FALHOU [listar_gestores]: quem deixou de ser gestor não deveria ver';
+  exception when others then
+    if sqlerrm not ilike '%Só o gestor%' then
+      raise exception 'FALHOU [listar_gestores]: erro inesperado: %', sqlerrm;
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

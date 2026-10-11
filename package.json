@@ -11,7 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit -p .",
-    "test": "node tests/indicadores.test.mjs && node tests/offline.test.mjs && node tests/banco.test.mjs",
+    "test": "node tests/indicadores.test.mjs && node tests/csv.test.mjs && node tests/offline.test.mjs && node tests/banco.test.mjs",
     "test:db": "node scripts/run-db-tests.js"
   },
   "dependencies": {

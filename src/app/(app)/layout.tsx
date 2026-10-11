@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
 import { getPropriedadesDoUsuario, getPropriedadeAtual, isGestor } from "@/lib/propriedade";
@@ -17,11 +18,14 @@ export default async function AppLayout({
     redirect("/login");
   }
 
-  if (await isGestor()) {
+  const [gestor, vinculos] = await Promise.all([isGestor(), getPropriedadesDoUsuario()]);
+
+  // gestor sem fazenda própria vai direto pro painel; gestor que também é produtor/técnico usa a
+  // fazenda normalmente e alterna pelo botão "Painel do gestor"
+  if (gestor && vinculos.length === 0) {
     redirect("/gestor");
   }
 
-  const vinculos = await getPropriedadesDoUsuario();
   const propriedadeAtual = await getPropriedadeAtual();
 
   return (
@@ -46,7 +50,14 @@ export default async function AppLayout({
         )}
 
         {propriedadeAtual ? (
-          <TopNav />
+          <div className="flex items-center gap-2">
+            {gestor && (
+              <Link href="/gestor" className="rounded-full border border-black/[.08] px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]">
+                Painel do gestor
+              </Link>
+            )}
+            <TopNav />
+          </div>
         ) : (
           <form action={logout}>
             <button
