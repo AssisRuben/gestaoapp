@@ -7,6 +7,14 @@ export type UsuarioWhatsapp = {
   created_at: string;
 };
 
+export type Acesso = {
+  usuario_id: string;
+  email: string;
+  nome: string | null;
+  papel: string;
+  created_at: string;
+};
+
 export type PatrimonioItem = {
   id: string;
   propriedade_id: string;

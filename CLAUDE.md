@@ -290,8 +290,8 @@ devem ser reintroduzidos ao portar lógica pro site/RPC.
 - `registrar_cobertura`/`atualizar_cobertura` bloqueiam dose sem saldo (`_garantir_saldo_dose`).
 - `bezerros.touro_id` (pai) é gravado em registrar_parto a partir da cobertura vinculada — fica no
   bezerro porque `bezerros.parto_id` é zerado quando a lactação é arquivada.
-- O gestor escreve só em touros, entregas e adesões; as RPCs de dados da fazenda continuam sem
-  enxergá-lo.
+- O gestor escreve só em touros, entregas, adesões e acessos de técnicos (0023); as RPCs de dados
+  da fazenda continuam sem enxergá-lo.
 
 ### Adesão e linha de base (0019_adesao_linha_base.sql)
 
@@ -324,10 +324,23 @@ devem ser reintroduzidos ao portar lógica pro site/RPC.
   central. Até 0022 o bot gravava o texto num campo `touro`; coberturas antigas do bot podem ter o
   touro só ali (ou em lugar nenhum, se essa coluna não existir no banco)
 - `patrimonio` não tem nenhuma integração com o bot ainda
-- Não existe tabela de vínculo técnico↔propriedades (necessária se o veterinário/zootecnista for
-  atender mais de uma propriedade no site)
-- Relatório de cadastro/censo (`tipo_relatorio=cadastro`: total de vacas agrupado por
-  `status_produtivo`/`status_reprodutivo`) existe no bot mas não está portado/planejado pro site
+
+## Acesso de técnicos (0023_acesso_tecnicos.sql)
+
+- O vínculo é a própria `usuarios_propriedades` (0001), com `papel='tecnico'`. Toda RPC/policy só
+  confere "existe vínculo", então o técnico lê e escreve tudo da fazenda, como o produtor; com
+  mais de uma fazenda, o seletor do cabeçalho troca entre elas.
+- Quem concede/remove (`vincular_tecnico` por e-mail, `desvincular_tecnico`): o produtor da fazenda
+  (modal da fazenda → Acessos) ou o gestor (aba Técnicos — necessário pra fazenda só-WhatsApp, que
+  não tem produtor com conta). O técnico não concede nada; vínculo de produtor nunca sai por aqui.
+- O técnico cria a conta antes (login → Cadastre-se → "Sou técnico", ou Google): conta sem
+  `nome_propriedade` no metadata não cria fazenda (trigger de 0013).
+
+## Censo do rebanho
+
+- Quadro status produtivo × reprodutivo no topo da tela Vacas (`vacas/censo-rebanho.tsx`),
+  calculado no cliente a partir da lista de vacas; tocar num número filtra a lista. Status fora do
+  vocabulário (ou nulo) conta como "Outro" pra fechar com o total.
 
 ## Bot usando as funções do banco (0022_bot_registro.sql)
 

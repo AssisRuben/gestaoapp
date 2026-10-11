@@ -5,6 +5,7 @@ import { getPropriedadesDoUsuario, getPropriedadeAtual, isGestor } from "@/lib/p
 import { BottomNav } from "./bottom-nav";
 import { TopNav } from "./top-nav";
 import { FazendaTrigger } from "./fazenda-trigger";
+import { logout } from "./actions";
 
 export default async function AppLayout({
   children,
@@ -43,7 +44,18 @@ export default async function AppLayout({
           </>
         )}
 
-        <TopNav />
+        {propriedadeAtual ? (
+          <TopNav />
+        ) : (
+          <form action={logout}>
+            <button
+              type="submit"
+              className="text-sm font-medium text-red-600 hover:underline dark:text-red-400"
+            >
+              Sair
+            </button>
+          </form>
+        )}
       </header>
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col pb-16 sm:pb-0">{children}</main>

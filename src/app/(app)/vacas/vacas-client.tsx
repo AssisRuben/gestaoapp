@@ -5,6 +5,13 @@ import { cadastrarVaca, atualizarVaca, deletarVaca } from "./actions";
 import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../mobile-list";
 import { useSuccessToast, SuccessToast } from "../toast";
 import type { Vaca } from "./types";
+import {
+  CensoRebanho,
+  chaveProdutivo,
+  chaveReprodutivo,
+  rotuloFiltro,
+  type FiltroCenso,
+} from "./censo-rebanho";
 
 const STATUS_PRODUTIVO_LABEL: Record<string, string> = {
   novilha: "Novilha",
@@ -155,14 +162,23 @@ export function VacasClient({ vacas }: { vacas: Vaca[] }) {
     }
   }, [excluirState, mostrarToast]);
 
+  const [filtroCenso, setFiltroCenso] = useState<FiltroCenso>({});
+
   const vacasFiltradas = useMemo(() => {
-    if (!busca.trim()) return vacas;
-    return vacas.filter((v) => String(v.numero_identificacao) === busca.trim());
-  }, [vacas, busca]);
+    let lista = vacas;
+    if (filtroCenso.produtivo) lista = lista.filter((v) => chaveProdutivo(v) === filtroCenso.produtivo);
+    if (filtroCenso.reprodutivo) lista = lista.filter((v) => chaveReprodutivo(v) === filtroCenso.reprodutivo);
+    if (busca.trim()) lista = lista.filter((v) => String(v.numero_identificacao) === busca.trim());
+    return lista;
+  }, [vacas, busca, filtroCenso]);
+
+  const rotuloCenso = rotuloFiltro(filtroCenso);
 
   return (
     <div className="flex flex-1 flex-col gap-4 pb-36 sm:pb-0">
       <SuccessToast mensagem={mensagemToast} />
+
+      <CensoRebanho vacas={vacas} filtro={filtroCenso} onFiltrar={setFiltroCenso} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <input
@@ -180,6 +196,24 @@ export function VacasClient({ vacas }: { vacas: Vaca[] }) {
           Nova vaca
         </button>
       </div>
+
+      {rotuloCenso && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-zinc-600 dark:text-zinc-400">Mostrando:</span>
+          <button
+            type="button"
+            onClick={() => setFiltroCenso({})}
+            className="inline-flex items-center gap-1.5 rounded-full bg-vacas-tint px-3 py-1 font-medium text-vacas-ink"
+          >
+            {rotuloCenso}
+            <span aria-hidden>✕</span>
+            <span className="sr-only">(limpar filtro)</span>
+          </button>
+          <span className="text-zinc-600 dark:text-zinc-400">
+            {vacasFiltradas.length} {vacasFiltradas.length === 1 ? "vaca" : "vacas"}
+          </span>
+        </div>
+      )}
 
       <div className="hidden overflow-x-auto rounded-2xl border bg-surface border-black/[.08] sm:block dark:border-white/[.145]">
         <table className="w-full text-left text-base">

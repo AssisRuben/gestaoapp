@@ -99,6 +99,17 @@ export function ChatIcon({ className }: { className?: string }) {
   );
 }
 
+export function PeopleIcon({ className }: { className?: string }) {
+  return (
+    <svg {...commonProps} className={className}>
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+      <circle cx="17" cy="9" r="2.3" />
+      <path d="M15.5 14.2A4.5 4.5 0 0 1 21 18.5" />
+    </svg>
+  );
+}
+
 export function StrawIcon({ className }: { className?: string }) {
   return (
     <svg {...commonProps} className={className}>

@@ -1,4 +1,5 @@
 import { getPropriedadeAtual } from "@/lib/propriedade";
+import { SemPropriedade } from "../sem-propriedade";
 import { getFinanceiroCache } from "@/lib/cached-data";
 import { FinanceiroClient } from "./financeiro-client";
 import type { Lancamento } from "./types";
@@ -7,14 +8,7 @@ export default async function FinanceiroPage() {
   const propriedadeAtual = await getPropriedadeAtual();
 
   if (!propriedadeAtual) {
-    return (
-      <div className="flex flex-1 items-center justify-center p-6 text-center sm:p-16">
-        <p className="max-w-md text-zinc-600 dark:text-zinc-400">
-          Sua conta ainda não está vinculada a nenhuma propriedade. Fale com o
-          administrador do sistema.
-        </p>
-      </div>
-    );
+    return <SemPropriedade />;
   }
 
   const data = await getFinanceiroCache(propriedadeAtual.id);

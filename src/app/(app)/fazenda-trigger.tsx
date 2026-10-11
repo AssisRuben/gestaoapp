@@ -6,7 +6,6 @@ import { FazendaModal } from "./fazenda-modal";
 import { getFazendaData } from "./fazenda-actions";
 import { PropriedadeSelect } from "./propriedade-select";
 import type { Propriedade, VinculoPropriedade } from "@/lib/propriedade";
-import type { UsuarioWhatsapp, PatrimonioItem } from "./fazenda-types";
 
 export function FazendaTrigger({
   propriedade,
@@ -17,10 +16,7 @@ export function FazendaTrigger({
 }) {
   const [aberto, setAberto] = useState(false);
   const [carregando, setCarregando] = useState(false);
-  const [dados, setDados] = useState<{
-    usuarioWhatsapp: UsuarioWhatsapp | null;
-    patrimonios: PatrimonioItem[];
-  } | null>(null);
+  const [dados, setDados] = useState<Awaited<ReturnType<typeof getFazendaData>> | null>(null);
 
   async function abrir() {
     setAberto(true);
@@ -60,6 +56,9 @@ export function FazendaTrigger({
           propriedade={propriedade}
           usuarioWhatsapp={dados.usuarioWhatsapp}
           patrimonios={dados.patrimonios}
+          acessos={dados.acessos}
+          podeGerenciarAcessos={dados.podeGerenciarAcessos}
+          onAcessosChange={(acessos) => setDados({ ...dados, acessos })}
           onClose={() => setAberto(false)}
         />
       )}

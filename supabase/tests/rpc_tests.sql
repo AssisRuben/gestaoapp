@@ -49,6 +49,9 @@ declare
   v_baixa_id uuid;
   v_bezerro_parto2 bezerros;
   v_bot jsonb;
+  v_tecnico_id uuid;
+  v_prop_sem uuid;
+  v_qtd integer;
 begin
   select id into v_usuario_id from auth.users limit 1;
   if v_usuario_id is null then
@@ -541,6 +544,122 @@ begin
   values (v_prop_ind, current_date - 1, 12);
   if (select litros_vaca_dia from indicadores_atuais_programa() where propriedade_id = v_prop_ind) <> 17.33 then
     raise exception 'FALHOU [indicadores_atuais_programa]: deveria trazer o valor de hoje da fazenda que aderiu';
+  end if;
+
+  -- ============================================================
+  -- acesso de técnicos (0023)
+  -- ============================================================
+
+  -- o usuário de teste é produtor de v_propriedade_id (papel default); começa sem ser gestor
+  delete from gestores where usuario_id = v_usuario_id;
+
+  insert into auth.users (id, email, raw_user_meta_data)
+  values (gen_random_uuid(), '__tecnico_teste__@exemplo.invalid', '{"nome": "Técnico Teste"}')
+  returning id into v_tecnico_id;
+
+  perform vincular_tecnico(v_propriedade_id, '  __TECNICO_TESTE__@exemplo.invalid ');
+  if not exists (
+    select 1 from usuarios_propriedades
+    where usuario_id = v_tecnico_id and propriedade_id = v_propriedade_id and papel = 'tecnico'
+  ) then
+    raise exception 'FALHOU [vincular_tecnico]: produtor deveria vincular pelo e-mail (sem diferenciar maiúscula/espaço)';
+  end if;
+
+  begin
+    perform vincular_tecnico(v_propriedade_id, '__tecnico_teste__@exemplo.invalid');
+    raise exception 'FALHOU [vincular_tecnico]: vínculo repetido deveria ser recusado';
+  exception when others then
+    if sqlerrm not ilike '%já tem acesso%' then
+      raise exception 'FALHOU [vincular_tecnico]: erro inesperado no repetido: %', sqlerrm;
+    end if;
+  end;
+
+  begin
+    perform vincular_tecnico(v_propriedade_id, '__ninguem__@exemplo.invalid');
+    raise exception 'FALHOU [vincular_tecnico]: e-mail sem conta deveria ser recusado';
+  exception when others then
+    if sqlerrm not ilike '%Não existe conta%' then
+      raise exception 'FALHOU [vincular_tecnico]: erro inesperado no e-mail sem conta: %', sqlerrm;
+    end if;
+  end;
+
+  select count(*) into v_qtd from listar_acessos_propriedade(v_propriedade_id);
+  if v_qtd <> 2 then
+    raise exception 'FALHOU [listar_acessos_propriedade]: esperava 2 acessos (produtor + técnico), veio %', v_qtd;
+  end if;
+  if (select papel from listar_acessos_propriedade(v_propriedade_id) limit 1) <> 'produtor' then
+    raise exception 'FALHOU [listar_acessos_propriedade]: o produtor deveria vir primeiro';
+  end if;
+  if (select nome from listar_acessos_propriedade(v_propriedade_id) where usuario_id = v_tecnico_id) <> 'Técnico Teste' then
+    raise exception 'FALHOU [listar_acessos_propriedade]: nome do técnico deveria vir do metadata';
+  end if;
+
+  -- logado como o técnico: enxerga os acessos, mas não concede nem remove
+  perform set_config('request.jwt.claim.sub', v_tecnico_id::text, true);
+
+  select count(*) into v_qtd from listar_acessos_propriedade(v_propriedade_id);
+  if v_qtd <> 2 then
+    raise exception 'FALHOU [listar_acessos_propriedade]: técnico vinculado deveria ver os acessos da fazenda';
+  end if;
+
+  begin
+    perform desvincular_tecnico(v_propriedade_id, v_tecnico_id);
+    raise exception 'FALHOU [desvincular_tecnico]: técnico não deveria remover acesso';
+  exception when others then
+    if sqlerrm not ilike '%Só o produtor%' then
+      raise exception 'FALHOU [desvincular_tecnico]: erro inesperado pro técnico: %', sqlerrm;
+    end if;
+  end;
+
+  begin
+    perform listar_acessos_propriedade(v_prop_ind);
+    raise exception 'FALHOU [listar_acessos_propriedade]: técnico sem vínculo não deveria ver outra fazenda';
+  exception when others then
+    if sqlerrm not ilike '%sem acesso%' then
+      raise exception 'FALHOU [listar_acessos_propriedade]: erro inesperado sem vínculo: %', sqlerrm;
+    end if;
+  end;
+
+  perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+
+  -- fazenda onde o usuário não é produtor: só o gestor consegue vincular
+  insert into propriedades (nome_propriedade, nome_produtor)
+  values ('__teste_rpc_sem_produtor__', '__teste_rpc__')
+  returning id into v_prop_sem;
+
+  begin
+    perform vincular_tecnico(v_prop_sem, '__tecnico_teste__@exemplo.invalid');
+    raise exception 'FALHOU [vincular_tecnico]: sem ser produtor da fazenda nem gestor deveria ser recusado';
+  exception when others then
+    if sqlerrm not ilike '%Só o produtor%' then
+      raise exception 'FALHOU [vincular_tecnico]: erro inesperado sem permissão: %', sqlerrm;
+    end if;
+  end;
+
+  insert into gestores (usuario_id) values (v_usuario_id);
+  perform vincular_tecnico(v_prop_sem, '__tecnico_teste__@exemplo.invalid');
+  if not exists (
+    select 1 from acessos_todas_fazendas()
+    where propriedade_id = v_prop_sem and usuario_id = v_tecnico_id and papel = 'tecnico'
+  ) then
+    raise exception 'FALHOU [acessos_todas_fazendas]: gestor deveria vincular e ver o técnico em qualquer fazenda';
+  end if;
+
+  perform desvincular_tecnico(v_prop_sem, v_tecnico_id);
+  if exists (select 1 from usuarios_propriedades where usuario_id = v_tecnico_id and propriedade_id = v_prop_sem) then
+    raise exception 'FALHOU [desvincular_tecnico]: vínculo deveria ter sido removido';
+  end if;
+
+  begin
+    perform desvincular_tecnico(v_propriedade_id, v_usuario_id);
+    raise exception 'FALHOU [desvincular_tecnico]: não deveria remover vínculo de produtor';
+  exception when others then
+    if sqlerrm not ilike '%não tem acesso%' then
+      raise exception 'FALHOU [desvincular_tecnico]: erro inesperado ao tentar remover produtor: %', sqlerrm;
+    end if;
+  end;
+  if not exists (select 1 from usuarios_propriedades where usuario_id = v_usuario_id and propriedade_id = v_propriedade_id) then
+    raise exception 'FALHOU [desvincular_tecnico]: vínculo de produtor foi apagado';
   end if;
 
   raise notice 'TODOS OS TESTES PASSARAM';

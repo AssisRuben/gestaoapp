@@ -1,13 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import type { Propriedade } from "@/lib/propriedade";
-import type { UsuarioWhatsapp, PatrimonioItem } from "./fazenda-types";
+import type { UsuarioWhatsapp, PatrimonioItem, Acesso } from "./fazenda-types";
 import {
   atualizarPropriedade,
   cadastrarPatrimonio,
   atualizarPatrimonio,
   deletarPatrimonio,
+  vincularTecnico,
+  desvincularTecnico,
 } from "./fazenda-actions";
 import { logout } from "./actions";
 import { useSuccessToast, SuccessToast } from "./toast";
@@ -452,15 +454,181 @@ function PatrimonioSecao({
   );
 }
 
+const PAPEL_LABEL: Record<string, string> = {
+  produtor: "Produtor",
+  tecnico: "Técnico",
+};
+
+function AcessosSecao({
+  acessos,
+  podeGerenciar,
+  onChange,
+  onSuccess,
+}: {
+  acessos: Acesso[];
+  podeGerenciar: boolean;
+  onChange: (acessos: Acesso[]) => void;
+  onSuccess: (mensagem: string) => void;
+}) {
+  const [paraRemover, setParaRemover] = useState<Acesso | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const [vincularState, vincularAction, vincularPending] = useActionState(vincularTecnico, undefined);
+  const [removerState, removerAction, removerPending] = useActionState(desvincularTecnico, undefined);
+
+  useEffect(() => {
+    if (vincularState?.success && vincularState.acessos) {
+      const novos = vincularState.acessos;
+      queueMicrotask(() => {
+        onChange(novos);
+        formRef.current?.reset();
+        onSuccess("Acesso liberado!");
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vincularState]);
+  useEffect(() => {
+    if (removerState?.success && removerState.acessos) {
+      const novos = removerState.acessos;
+      queueMicrotask(() => {
+        onChange(novos);
+        setParaRemover(null);
+        onSuccess("Acesso removido!");
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [removerState]);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-0.5">
+        <h3 className="text-base font-semibold text-black dark:text-zinc-50">Acessos</h3>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Quem entra no site com acesso a esta fazenda. Técnicos veem e lançam dados como o produtor.
+        </p>
+      </div>
+
+      <ul className="flex flex-col divide-y divide-black/[.08] rounded-2xl border border-black/[.08] bg-surface dark:divide-white/[.145] dark:border-white/[.145]">
+        {acessos.map((a) => (
+          <li key={a.usuario_id} className="flex items-center justify-between gap-3 px-3 py-2">
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-black dark:text-zinc-50">{a.nome ?? a.email}</span>
+              {a.nome && (
+                <span className="truncate text-sm text-zinc-600 dark:text-zinc-400">{a.email}</span>
+              )}
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                {PAPEL_LABEL[a.papel] ?? a.papel}
+              </span>
+              {podeGerenciar && a.papel === "tecnico" && (
+                <button
+                  type="button"
+                  onClick={() => setParaRemover(a)}
+                  className="text-sm font-medium text-red-600 hover:underline dark:text-red-400"
+                >
+                  Remover
+                </button>
+              )}
+            </div>
+          </li>
+        ))}
+        {acessos.length === 0 && (
+          <li className="px-3 py-4 text-center text-zinc-600 dark:text-zinc-400">
+            Nenhuma conta do site vinculada.
+          </li>
+        )}
+      </ul>
+
+      {podeGerenciar ? (
+        <form ref={formRef} action={vincularAction} className="flex flex-col gap-2">
+          <label htmlFor="acesso_email" className={LABEL_CLASSES}>
+            Dar acesso a um técnico
+          </label>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              id="acesso_email"
+              name="email"
+              type="email"
+              required
+              placeholder="e-mail da conta do técnico"
+              className={`min-w-0 flex-1 ${CAMPO_CLASSES}`}
+            />
+            <button
+              type="submit"
+              disabled={vincularPending}
+              className="whitespace-nowrap rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark disabled:opacity-50"
+            >
+              {vincularPending ? "Liberando..." : "Dar acesso"}
+            </button>
+          </div>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            O técnico precisa ter criado a conta antes (tela de login → Cadastre-se → Sou técnico).
+          </p>
+          {vincularState?.error && (
+            <p className="text-sm text-red-600 dark:text-red-400">{vincularState.error}</p>
+          )}
+        </form>
+      ) : (
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Só o produtor da fazenda ou o gestor do programa pode alterar os acessos.
+        </p>
+      )}
+
+      {paraRemover && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setParaRemover(null)} />
+          <form
+            action={removerAction}
+            className="relative flex w-full max-w-sm flex-col gap-3 rounded-2xl bg-white p-6 dark:bg-zinc-950"
+          >
+            <input type="hidden" name="usuario_id" value={paraRemover.usuario_id} />
+            <h4 className="text-base font-semibold text-black dark:text-zinc-50">Remover acesso?</h4>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              {paraRemover.nome ?? paraRemover.email} deixa de ver e lançar dados desta fazenda. Os
+              registros que ele já fez continuam.
+            </p>
+            {removerState?.error && (
+              <p className="text-sm text-red-600 dark:text-red-400">{removerState.error}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setParaRemover(null)}
+                className="flex-1 rounded-full border border-black/[.08] px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={removerPending}
+                className="flex-1 rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              >
+                Remover
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function FazendaModal({
   propriedade,
   usuarioWhatsapp,
   patrimonios,
+  acessos,
+  podeGerenciarAcessos,
+  onAcessosChange,
   onClose,
 }: {
   propriedade: Propriedade;
   usuarioWhatsapp: UsuarioWhatsapp | null;
   patrimonios: PatrimonioItem[];
+  acessos: Acesso[];
+  podeGerenciarAcessos: boolean;
+  onAcessosChange: (acessos: Acesso[]) => void;
   onClose: () => void;
 }) {
   const { mensagemToast, mostrarToast } = useSuccessToast();
@@ -484,6 +652,12 @@ export function FazendaModal({
 
         <DadosGeraisForm propriedade={propriedade} usuarioWhatsapp={usuarioWhatsapp} onSuccess={mostrarToast} />
         <PatrimonioSecao itens={patrimonios} onSuccess={mostrarToast} />
+        <AcessosSecao
+          acessos={acessos}
+          podeGerenciar={podeGerenciarAcessos}
+          onChange={onAcessosChange}
+          onSuccess={mostrarToast}
+        />
 
         <form action={logout} className="border-t border-black/[.08] pt-4 dark:border-white/[.145]">
           <button
