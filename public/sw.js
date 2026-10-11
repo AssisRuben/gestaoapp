@@ -1,4 +1,5 @@
-// Service worker do Gestão Pec: deixa a PESAGEM DO DIA funcionar sem internet (curral sem sinal).
+// Service worker do Gestão Pec: deixa a PESAGEM DO DIA e o LANÇAR NO CAMPO (cobertura, parto,
+// diagnóstico) funcionarem sem internet (curral/pasto sem sinal).
 //
 // - Arquivos do site (/_next/static, ícones): guardados no primeiro uso (os nomes mudam a cada
 //   deploy, então nunca ficam velhos).
@@ -12,7 +13,7 @@
 
 const PAGINAS = "gestaopec-paginas-v1";
 const ESTATICO = "gestaopec-estatico-v1";
-const OFFLINE = ["/leite/pesagem"];
+const OFFLINE = ["/leite/pesagem", "/campo"];
 
 const PAGINA_OFFLINE = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Sem internet — Gestão Pec</title>
@@ -20,8 +21,8 @@ const PAGINA_OFFLINE = `<!doctype html><html lang="pt-BR"><head><meta charset="u
 a{display:inline-block;margin-top:16px;background:#2f5233;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:600}
 p{max-width:420px;margin:12px auto;line-height:1.5}</style></head><body>
 <h1>Sem internet</h1>
-<p>Esta tela precisa de conexão. A <strong>pesagem do dia</strong> funciona sem sinal: lance o leite e ele é enviado sozinho quando a internet voltar.</p>
-<a href="/leite/pesagem">Abrir pesagem do dia</a>
+<p>Esta tela precisa de conexão. A <strong>pesagem do dia</strong> e o <strong>lançar no campo</strong> (cobertura, parto, diagnóstico) funcionam sem sinal: o lançamento é enviado sozinho quando a internet voltar.</p>
+<a href="/leite/pesagem">Pesagem do dia</a> <a href="/campo">Lançar no campo</a>
 </body></html>`;
 
 self.addEventListener("install", () => self.skipWaiting());

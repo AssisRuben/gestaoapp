@@ -247,6 +247,12 @@ export function DashboardClient({
           {propriedadeAtual.estado && `/${propriedadeAtual.estado}`}
         </p>
         <Link
+          href="/campo"
+          className="rounded-full bg-brand-green px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark"
+        >
+          Lançar no campo
+        </Link>
+        <Link
           href="/relatorio"
           className="rounded-full border border-black/[.08] px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
         >

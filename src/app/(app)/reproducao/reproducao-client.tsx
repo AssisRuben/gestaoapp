@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   registrarCobertura,
   atualizarCobertura,
@@ -180,6 +181,16 @@ export function ReproducaoClient({
         baixas={baixas}
         onConfirmado={mostrarToast}
       />
+
+      <Link
+        href="/campo"
+        className="flex items-center justify-between gap-3 rounded-2xl border border-brand-green/30 bg-brand-green/5 px-4 py-3 text-sm text-black transition-colors hover:bg-brand-green/10 dark:text-zinc-50"
+      >
+        <span>
+          <strong>Lançar no campo</strong> — cobertura, parto e diagnóstico pelo celular, mesmo sem internet
+        </span>
+        <span aria-hidden>→</span>
+      </Link>
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Coberturas</h2>

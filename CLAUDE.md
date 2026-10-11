@@ -476,6 +476,12 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   internet — é pelo endereço fixo `POST /api/pesagem` (não por Server Action, cujo id muda a cada
   deploy). Reenviar é seguro: `registrar_pesagem` corrige a mesma ordenha. 401 = sessão expirada →
   fica na fila; recusada pelo servidor → sai da fila mostrando o erro.
+- `/campo` ("Lançar no campo", 0035): cobertura, parto e diagnóstico, também offline (fila
+  `src/lib/fila-campo.ts` → `POST /api/campo` → `registrar_lancamento_campo`). Como cobertura e
+  parto NÃO são idempotentes, cada lançamento leva um id gerado no celular; `lancamentos_campo`
+  guarda id + resultado e o reenvio do mesmo id só devolve o resultado, sem lançar de novo.
+  Regras: as mesmas `_registrar_cobertura`/`_registrar_parto` de 0022; diagnóstico na cobertura
+  mais recente. Recusa de regra volta `{ok:false}` e fica no histórico do celular com o motivo.
 - O proxy de autenticação não intercepta `sw.js` nem `manifest.json`.
 - Mudou o comportamento do service worker? Troque o sufixo `-v1` dos nomes de cache em `sw.js`.
 

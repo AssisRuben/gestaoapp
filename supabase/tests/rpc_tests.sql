@@ -1178,6 +1178,50 @@ begin
     raise exception 'FALHOU [excluir_visita]: deveria apagar a visita e as recomendações';
   end if;
 
+  -- ============================================================
+  -- lançamentos do campo sem internet (0035) — reenvio não duplica
+  -- ============================================================
+
+  v_qtd := (select count(*) from coberturas where vaca_id = v_vaca_bot);
+  v_cob_status := gen_random_uuid();
+  v_bot := registrar_lancamento_campo(v_cob_status, v_propriedade_id, 'cobertura',
+    jsonb_build_object('vaca_id', v_vaca_bot, 'data', _hoje_fazenda() - 1, 'touro_texto', 'Touro Campo'));
+  if not (v_bot->>'ok')::boolean or (select count(*) from coberturas where vaca_id = v_vaca_bot) <> v_qtd + 1 then
+    raise exception 'FALHOU [registrar_lancamento_campo]: cobertura deveria ser registrada (veio %)', v_bot;
+  end if;
+
+  v_bot := registrar_lancamento_campo(v_cob_status, v_propriedade_id, 'cobertura',
+    jsonb_build_object('vaca_id', v_vaca_bot, 'data', _hoje_fazenda() - 1, 'touro_texto', 'Touro Campo'));
+  if not (v_bot->>'repetido')::boolean or (select count(*) from coberturas where vaca_id = v_vaca_bot) <> v_qtd + 1 then
+    raise exception 'FALHOU [registrar_lancamento_campo]: reenvio do mesmo lançamento não pode duplicar (veio %)', v_bot;
+  end if;
+
+  v_bot := registrar_lancamento_campo(gen_random_uuid(), v_propriedade_id, 'diagnostico',
+    jsonb_build_object('vaca_id', v_vaca_bot, 'resultado', 'positivo'));
+  if not (v_bot->>'ok')::boolean
+     or (select diagnostico_prenhez from coberturas where vaca_id = v_vaca_bot and touro_semen = 'Touro Campo') <> 'positivo' then
+    raise exception 'FALHOU [registrar_lancamento_campo]: diagnóstico deveria ir na cobertura mais recente (veio %)', v_bot;
+  end if;
+
+  v_bot := registrar_lancamento_campo(gen_random_uuid(), v_propriedade_id, 'parto',
+    jsonb_build_object('vaca_id', (select id from vacas where propriedade_id = v_propriedade_id and numero_identificacao = 90020),
+                       'data', _hoje_fazenda(), 'sexo_bezerro', 'femea'));
+  if not (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike 'Parto da vaca 90020%' then
+    raise exception 'FALHOU [registrar_lancamento_campo]: parto deveria ser registrado (veio %)', v_bot;
+  end if;
+
+  v_bot := registrar_lancamento_campo(gen_random_uuid(), v_propriedade_id, 'cobertura',
+    jsonb_build_object('vaca_id', v_vaca_bot, 'data', _hoje_fazenda() + 3));
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%data da cobertura inválida%' then
+    raise exception 'FALHOU [registrar_lancamento_campo]: data futura deveria voltar como recusa (veio %)', v_bot;
+  end if;
+
+  v_bot := registrar_lancamento_campo(gen_random_uuid(), v_propriedade_id, 'cobertura',
+    jsonb_build_object('vaca_id', gen_random_uuid(), 'data', _hoje_fazenda()));
+  if (v_bot->>'ok')::boolean then
+    raise exception 'FALHOU [registrar_lancamento_campo]: vaca de outra fazenda deveria ser recusada';
+  end if;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 
