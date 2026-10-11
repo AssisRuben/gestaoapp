@@ -771,7 +771,7 @@
               "id": "12b86297-b8a2-474b-a37e-efc3417256d9",
               "name": "origem_audio",
               "type": "boolean",
-              "value": "={{ $json.origem_audio_raw === 'true' }}"
+              "value": "={{ String($json.origem_audio_raw) === 'true' }}"
             }
           ]
         },
@@ -2573,7 +2573,7 @@
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_intencao: $('Parsear Resposta IA').item.json.intencao,\n  p_entidades: $('Parsear Resposta IA').item.json.entidades || {},\n  p_mensagem: $('Parsear Resposta IA').item.json.mensagem_original || '',\n  p_audio: $('Preparar Entrada Agente').item.json.origem_audio === true\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_intencao: $('Parsear Resposta IA').item.json.intencao,\n  p_entidades: $('Parsear Resposta IA').item.json.entidades || {},\n  p_mensagem: $('Parsear Resposta IA').item.json.mensagem_original || '',\n  p_audio: ($('Webhook').first().json.body.data.messageType === 'audioMessage') || String($('Preparar Entrada Agente').item.json.origem_audio) === 'true'\n}) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
