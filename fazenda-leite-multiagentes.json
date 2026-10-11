@@ -468,6 +468,7 @@
       "name": "Enviar texto",
       "credentials": {
         "evolutionApi": {
+          "id": "4KHj6VZl0o9j7a3Y",
           "name": "Evolution Assis"
         }
       }
@@ -1569,6 +1570,7 @@
       "name": "Enviar texto1",
       "credentials": {
         "evolutionApi": {
+          "id": "4KHj6VZl0o9j7a3Y",
           "name": "Evolution Assis"
         }
       }
@@ -1988,6 +1990,7 @@
       "name": "Enviar Áudio",
       "credentials": {
         "evolutionApi": {
+          "id": "4KHj6VZl0o9j7a3Y",
           "name": "Evolution Assis"
         }
       },
@@ -3909,7 +3912,11 @@
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/Sao_Paulo",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "jGfkvwTtNi4c6fSs"
   },
   "versionId": "70d4b210-6189-4d7f-9e0b-f48bfb2f46f5",
   "meta": {
