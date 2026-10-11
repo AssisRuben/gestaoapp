@@ -5,6 +5,8 @@ import {
   getIndicadoresTodasCache,
 } from "@/lib/cached-data";
 import { normalizarResumo, normalizarLeite, normalizarFinanceiro, hojeBrasil } from "@/lib/gestor";
+import { createServiceClient } from "@/lib/supabase/service";
+import { somarDias } from "@/lib/datas";
 import { RankingClient, type FazendaRanking } from "./ranking-client";
 
 const NOMES_MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -51,13 +53,31 @@ function somarPorMes<T extends { propriedade_id: string; data: string }>(
 
 const numeroOuNull = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 
+const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+// Período escolhido (?de=&ate=): indicadores_periodo (0041). Sem período (ou inválido): a régua
+// padrão da linha de base — 30 dias de leite e 12 meses de despesa.
+async function indicadoresDoPeriodo(de: string, ate: string) {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase.rpc("indicadores_periodo", { p_inicio: de, p_fim: ate });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Record<string, unknown>[];
+}
+
 // Dados reais (0020_gestor_dados_reais.sql). O layout do gestor já validou isGestor().
-export default async function GestorRankingPage() {
+export default async function GestorRankingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ de?: string; ate?: string }>;
+}) {
+  const { de, ate } = await searchParams;
+  const periodo = de && ate && DATA_ISO.test(de) && DATA_ISO.test(ate) && de <= ate ? { de, ate } : null;
+
   const [resumoData, leiteData, financeiroData, indicadoresData] = await Promise.all([
     getResumoFazendasCache(),
     getLeiteDiarioTodasCache(),
     getFinanceiroDiarioTodasCache(),
-    getIndicadoresTodasCache(),
+    periodo ? indicadoresDoPeriodo(periodo.de, periodo.ate) : getIndicadoresTodasCache(),
   ]);
 
   const meses = ultimosMesesFechados(hojeBrasil(), 6);
@@ -85,6 +105,9 @@ export default async function GestorRankingPage() {
 
   return (
     <RankingClient
+      periodo={periodo}
+      hoje={hojeBrasil()}
+      inicioPadrao={somarDias(hojeBrasil(), -29)}
       meses={meses.map((m) => `${NOMES_MESES[Number(m.slice(5, 7)) - 1]}/${m.slice(2, 4)}`)}
       fazendas={fazendas}
       mediaHistoricoLitros={mediaPorMes([...litrosPorFazenda.values()], meses)}

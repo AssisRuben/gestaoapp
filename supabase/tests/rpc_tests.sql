@@ -1417,6 +1417,20 @@ begin
     end if;
   end;
 
+  -- ============================================================
+  -- ranking por período (0041): nos mesmos 30 dias, a mesma régua de calcular_indicadores
+  -- ============================================================
+
+  if (select litros_vaca_dia from indicadores_periodo(_hoje_fazenda() - 29, _hoje_fazenda()) where propriedade_id = v_propriedade_id)
+     is distinct from (select litros_vaca_dia from calcular_indicadores(v_propriedade_id, _hoje_fazenda())) then
+    raise exception 'FALHOU [indicadores_periodo]: L/vaca/dia de 30 dias deveria bater com calcular_indicadores (% x %)',
+      (select litros_vaca_dia from indicadores_periodo(_hoje_fazenda() - 29, _hoje_fazenda()) where propriedade_id = v_propriedade_id),
+      (select litros_vaca_dia from calcular_indicadores(v_propriedade_id, _hoje_fazenda()));
+  end if;
+  if exists (select 1 from indicadores_periodo(_hoje_fazenda(), _hoje_fazenda() - 1)) then
+    raise exception 'FALHOU [indicadores_periodo]: período invertido deveria voltar vazio';
+  end if;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

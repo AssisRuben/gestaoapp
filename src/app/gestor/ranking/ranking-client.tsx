@@ -34,12 +34,57 @@ function SemDados() {
 const media = (valores: number[]) =>
   valores.length ? valores.reduce((soma, v) => soma + v, 0) / valores.length : 0;
 
+const dataBR = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+
+const CAMPO_DATA =
+  "rounded-md border border-black/[.08] bg-zinc-100 px-3 py-2 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50";
+
+// Formulário GET: o período vai pro endereço (?de=&ate=) e o servidor recalcula os rankings.
+function FiltroPeriodo({
+  periodo,
+  hoje,
+  inicioPadrao,
+}: {
+  periodo: { de: string; ate: string } | null;
+  hoje: string;
+  inicioPadrao: string;
+}) {
+  return (
+    <form method="get" className="flex flex-col gap-2 rounded-2xl border bg-surface border-black/[.08] p-4 sm:flex-row sm:items-end dark:border-white/[.145]">
+      <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-black dark:text-zinc-50">
+        De
+        <input type="date" name="de" required max={hoje} defaultValue={periodo?.de ?? inicioPadrao} className={CAMPO_DATA} />
+      </label>
+      <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-black dark:text-zinc-50">
+        Até
+        <input type="date" name="ate" required max={hoje} defaultValue={periodo?.ate ?? hoje} className={CAMPO_DATA} />
+      </label>
+      <div className="flex gap-2">
+        <button type="submit" className="flex-1 rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark sm:flex-none">
+          Aplicar
+        </button>
+        {periodo && (
+          <Link href="/gestor/ranking" className="flex-1 rounded-full border border-black/[.08] px-4 py-2 text-center text-sm font-medium text-black transition-colors hover:bg-black/[.04] sm:flex-none dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]">
+            Padrão
+          </Link>
+        )}
+      </div>
+    </form>
+  );
+}
+
 export function RankingClient({
+  periodo,
+  hoje,
+  inicioPadrao,
   meses,
   fazendas,
   mediaHistoricoLitros,
   mediaHistoricoSaldo,
 }: {
+  periodo: { de: string; ate: string } | null;
+  hoje: string;
+  inicioPadrao: string;
   meses: string[];
   fazendas: FazendaRanking[];
   mediaHistoricoLitros: number[];
@@ -93,13 +138,17 @@ export function RankingClient({
         </h1>
       </div>
 
+      <FiltroPeriodo periodo={periodo} hoje={hoje} inicioPadrao={inicioPadrao} />
+
       <div className="rounded-2xl border bg-surface border-black/[.08] p-4 dark:border-white/[.145]">
         <p className="mb-1 flex items-center gap-2 text-base font-semibold text-black dark:text-zinc-50">
           <span className="h-2.5 w-2.5 rounded-full bg-ranking" aria-hidden="true" />
           Top 10: Produção de leite
         </p>
         <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">
-          Litros por dia do rebanho, pela média das pesagens dos últimos 30 dias.
+          {periodo
+            ? `Litros por dia do rebanho, pela média das pesagens de ${dataBR(periodo.de)} a ${dataBR(periodo.ate)}.`
+            : "Litros por dia do rebanho, pela média das pesagens dos últimos 30 dias."}
         </p>
         {rankingLitros.length === 0 && <SemDados />}
         <BarRanking
@@ -117,7 +166,9 @@ export function RankingClient({
           Top 10: Custo por litro
         </p>
         <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">
-          Do menor (mais eficiente) pro maior. Despesa média mensal dos últimos 12 meses ÷ produção.
+          {periodo
+            ? `Do menor (mais eficiente) pro maior. Despesas de ${dataBR(periodo.de)} a ${dataBR(periodo.ate)} ÷ litros produzidos no período.`
+            : "Do menor (mais eficiente) pro maior. Despesa média mensal dos últimos 12 meses ÷ produção."}
         </p>
         {rankingCustoPorLitro.length === 0 && <SemDados />}
         <BarRanking
