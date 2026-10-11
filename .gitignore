@@ -45,3 +45,7 @@ next-env.d.ts
 /deploy/*.exe
 /deploy/*.log
 /deploy/nssm-2.24/
+
+# gerados pra homologação (scripts/montar-banco.js e scripts/workflow-homologacao.js)
+/supabase/homologacao/banco_completo.sql
+/n8n-homologacao/

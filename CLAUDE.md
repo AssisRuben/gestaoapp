@@ -386,6 +386,18 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - Corrigir/apagar financeiro exige categoria ou data (antes pegava o lançamento mais recente da
   fazenda). Categoria gravada pelo bot é normalizada no banco (`_categoria_normalizada`).
 
+## Homologação e banco do zero
+
+- As tabelas originais (propriedades, vacas, partos...) NÃO são criadas por nenhuma migration — o
+  estado anterior à 0001 está em `supabase/base/0000_esquema_original.sql`.
+- `node scripts/montar-banco.js [--com-dados]` junta 0000 + todas as migrations (+ a Fazenda
+  Demonstração) em `supabase/homologacao/banco_completo.sql`, pra um Supabase novo. Verificado:
+  banco montado do zero + `rpc_tests.sql` inteiro passam (Postgres 16 e 18).
+- Migration nova precisa continuar funcionando nos dois caminhos: em cima da produção e no banco
+  montado do zero. Ao acrescentar coluna em tabela original, use `add column if not exists`.
+- Passo a passo do ambiente (Supabase, Easypanel, n8n): `deploy/HOMOLOGACAO.md`.
+  `scripts/workflow-homologacao.js` gera as cópias dos workflows sem as credenciais de produção.
+
 ## Visitas técnicas (0032_visitas.sql)
 
 - `visitas` (data, observações, autor + `autor_nome` gravado) e `recomendacoes` (texto, prazo,
