@@ -67,33 +67,79 @@ Painel do projeto de produção → **Authentication**:
 
 ## 5. Textos dos e-mails em português
 
-**Authentication → Emails → Templates.** Em cada modelo, troque o assunto e o corpo. Os links
-abaixo passam pela rota `/auth/confirm` do site, que já existe — copie exatamente.
+**Authentication → Emails → Templates.** Em cada modelo, troque o assunto e **substitua o corpo
+inteiro** pelo código abaixo. Os links passam pela rota `/auth/confirm` do site — copie exatamente.
+
+Não use `<head>`/`<title>` nem texto escondido de pré-visualização: o Gmail mostrou os restos
+deles no topo do e-mail ("çã—ã"). Estilo sempre direto nas tags (cliente de e-mail ignora `<style>`).
 
 **Confirm signup** — assunto: `Confirme seu cadastro no Gestão Pec`
 
 ```html
-<h2>Bem-vindo ao Gestão Pec</h2>
-<p>Falta só confirmar seu e-mail pra começar a usar o sistema.</p>
-<p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/">Confirmar meu e-mail</a></p>
-<p>Se não foi você que se cadastrou, ignore esta mensagem.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;">
+  <tr>
+    <td align="center" style="padding:24px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+        <tr><td style="font-size:22px;font-weight:bold;color:#2f5d3a;padding-bottom:16px;">Confirme seu cadastro</td></tr>
+        <tr><td style="font-size:15px;line-height:22px;padding-bottom:12px;">Olá,</td></tr>
+        <tr><td style="font-size:15px;line-height:22px;padding-bottom:24px;">Sua conta no <strong>Gestão Pec</strong> foi criada. Falta só confirmar o seu e-mail no botão abaixo.</td></tr>
+        <tr>
+          <td align="center" style="padding-bottom:24px;">
+            <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/" style="display:inline-block;background:#2f5d3a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:12px 28px;border-radius:6px;">Confirmar meu e-mail</a>
+          </td>
+        </tr>
+        <tr><td style="font-size:14px;line-height:20px;color:#4b5563;padding-bottom:24px;">Se você não se cadastrou no Gestão Pec, ignore este e-mail.</td></tr>
+        <tr><td style="border-top:1px solid #e5e7eb;padding-top:16px;font-size:12px;line-height:18px;color:#6b7280;">Gestão Pec Soluções Zootécnicas · Este é um e-mail automático, não responda.</td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
 ```
 
-**Reset Password** — assunto: `Redefinir sua senha do Gestão Pec`
+**Reset Password** — assunto: `Redefinição de senha — Gestão Pec`
 
 ```html
-<h2>Redefinir senha</h2>
-<p>Recebemos um pedido pra trocar a senha da sua conta no Gestão Pec.</p>
-<p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/redefinir-senha">Criar uma senha nova</a></p>
-<p>Se não foi você, ignore esta mensagem — sua senha continua a mesma.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;">
+  <tr>
+    <td align="center" style="padding:24px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+        <tr><td style="font-size:22px;font-weight:bold;color:#2f5d3a;padding-bottom:16px;">Redefinir sua senha</td></tr>
+        <tr><td style="font-size:15px;line-height:22px;padding-bottom:12px;">Olá,</td></tr>
+        <tr><td style="font-size:15px;line-height:22px;padding-bottom:24px;">Recebemos um pedido para redefinir a senha da sua conta no <strong>Gestão Pec</strong>. Clique no botão abaixo para criar uma nova senha:</td></tr>
+        <tr>
+          <td align="center" style="padding-bottom:24px;">
+            <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/redefinir-senha" style="display:inline-block;background:#2f5d3a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:12px 28px;border-radius:6px;">Criar nova senha</a>
+          </td>
+        </tr>
+        <tr><td style="font-size:14px;line-height:20px;color:#4b5563;padding-bottom:24px;">Se você não pediu a redefinição, ignore este e-mail. Sua senha atual continua valendo.</td></tr>
+        <tr><td style="border-top:1px solid #e5e7eb;padding-top:16px;font-size:12px;line-height:18px;color:#6b7280;">Gestão Pec Soluções Zootécnicas · Este é um e-mail automático, não responda.</td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
 ```
 
-**Change Email Address** — assunto: `Confirme seu novo e-mail no Gestão Pec`
+**Change Email Address** — assunto: `Confirme seu novo e-mail — Gestão Pec`
 
 ```html
-<h2>Confirmar novo e-mail</h2>
-<p>Confirme a troca do e-mail da sua conta de {{ .Email }} para {{ .NewEmail }}.</p>
-<p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email_change&next=/">Confirmar troca</a></p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;">
+  <tr>
+    <td align="center" style="padding:24px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+        <tr><td style="font-size:22px;font-weight:bold;color:#2f5d3a;padding-bottom:16px;">Confirme seu novo e-mail</td></tr>
+        <tr><td style="font-size:15px;line-height:22px;padding-bottom:12px;">Olá,</td></tr>
+        <tr><td style="font-size:15px;line-height:22px;padding-bottom:24px;">Recebemos um pedido para trocar o e-mail da sua conta no <strong>Gestão Pec</strong> de <strong>{{ .Email }}</strong> para <strong>{{ .NewEmail }}</strong>. Clique no botão abaixo para confirmar:</td></tr>
+        <tr>
+          <td align="center" style="padding-bottom:24px;">
+            <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email_change&next=/" style="display:inline-block;background:#2f5d3a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:12px 28px;border-radius:6px;">Confirmar novo e-mail</a>
+          </td>
+        </tr>
+        <tr><td style="font-size:14px;line-height:20px;color:#4b5563;padding-bottom:24px;">Se você não pediu essa troca, ignore este e-mail. Seu e-mail atual continua valendo.</td></tr>
+        <tr><td style="border-top:1px solid #e5e7eb;padding-top:16px;font-size:12px;line-height:18px;color:#6b7280;">Gestão Pec Soluções Zootécnicas · Este é um e-mail automático, não responda.</td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
 ```
 
 ## 6. Testar
