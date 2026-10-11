@@ -1,4 +1,4 @@
-import { getPropriedadeAtual } from "@/lib/propriedade";
+import { getPropriedadeAtual, getNomesUsuarios } from "@/lib/propriedade";
 import { SemPropriedade } from "../sem-propriedade";
 import {
   getCoberturasCache,
@@ -27,7 +27,7 @@ export default async function ReproducaoPage() {
     return <SemPropriedade />;
   }
 
-  const [coberturasData, partosData, vacasData, tourosData, entregasData, saldosData, baixasData] =
+  const [coberturasData, partosData, vacasData, tourosData, entregasData, saldosData, baixasData, nomes] =
     await Promise.all([
       getCoberturasCache(propriedadeAtual.id),
       getPartosCache(propriedadeAtual.id),
@@ -36,6 +36,7 @@ export default async function ReproducaoPage() {
       getEntregasDosesCache(propriedadeAtual.id),
       getSaldoDosesCache(propriedadeAtual.id),
       getBaixasDosesCache(propriedadeAtual.id),
+      getNomesUsuarios(propriedadeAtual.id),
     ]);
 
   const coberturas = coberturasData as unknown as Cobertura[];
@@ -56,6 +57,7 @@ export default async function ReproducaoPage() {
         entregas={entregas}
         saldos={saldos}
         baixas={baixas}
+        nomes={nomes}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { getPropriedadeAtual } from "@/lib/propriedade";
+import { getPropriedadeAtual, getNomesUsuarios } from "@/lib/propriedade";
 import { SemPropriedade } from "../sem-propriedade";
 import { getFinanceiroCache } from "@/lib/cached-data";
 import { FinanceiroClient } from "./financeiro-client";
@@ -11,12 +11,15 @@ export default async function FinanceiroPage() {
     return <SemPropriedade />;
   }
 
-  const data = await getFinanceiroCache(propriedadeAtual.id);
+  const [data, nomes] = await Promise.all([
+    getFinanceiroCache(propriedadeAtual.id),
+    getNomesUsuarios(propriedadeAtual.id),
+  ]);
   const lancamentos = data as unknown as Lancamento[];
 
   return (
     <div className="flex flex-1 flex-col p-4 sm:p-6">
-      <FinanceiroClient lancamentos={lancamentos} />
+      <FinanceiroClient lancamentos={lancamentos} nomes={nomes} />
     </div>
   );
 }

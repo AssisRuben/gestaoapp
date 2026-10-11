@@ -1,4 +1,4 @@
-import { getPropriedadeAtual } from "@/lib/propriedade";
+import { getPropriedadeAtual, getNomesUsuarios } from "@/lib/propriedade";
 import { SemPropriedade } from "../sem-propriedade";
 import { getControleLeiteCache, getVacasCache, getPartosCache } from "@/lib/cached-data";
 import { LeiteClient } from "./leite-client";
@@ -11,10 +11,11 @@ export default async function LeitePage() {
     return <SemPropriedade />;
   }
 
-  const [registrosData, vacasData, partosData] = await Promise.all([
+  const [registrosData, vacasData, partosData, nomes] = await Promise.all([
     getControleLeiteCache(propriedadeAtual.id),
     getVacasCache(propriedadeAtual.id),
     getPartosCache(propriedadeAtual.id),
+    getNomesUsuarios(propriedadeAtual.id),
   ]);
 
   const registros = registrosData as unknown as RegistroLeite[];
@@ -32,7 +33,7 @@ export default async function LeitePage() {
 
   return (
     <div className="flex flex-1 flex-col p-4 sm:p-6">
-      <LeiteClient registros={registros} vacas={vacas} />
+      <LeiteClient registros={registros} vacas={vacas} nomes={nomes} />
     </div>
   );
 }

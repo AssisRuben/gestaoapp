@@ -386,6 +386,20 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - Corrigir/apagar financeiro exige categoria ou data (antes pegava o lançamento mais recente da
   fazenda). Categoria gravada pelo bot é normalizada no banco (`_categoria_normalizada`).
 
+## Autoria (0030_autoria.sql)
+
+- `controle_leite`, `coberturas`, `partos`, `financeiro`, `vacas`, `bezerros` têm `criado_por`,
+  `criado_via` ('site' | 'whatsapp'), `atualizado_por`, `atualizado_em`, preenchidos por trigger
+  em toda escrita (`auth.uid()` nulo = bot). Não precisa passar nada nas funções.
+- Arquivar a lactação copia período e autoria pro `controle_leite_historico` (trigger no histórico).
+- Site: linha "Lançado por ... / alterado por ..." nos formulários de edição de leite, financeiro,
+  cobertura e parto; nomes via `getNomesUsuarios` (acessos da fazenda, 0023).
+
+## Bezerra vira vaca (0029)
+
+- `promover_bezerro` (botão "Virou vaca" em Bezerros): cria a novilha com o mesmo número e liga
+  bezerro ↔ vaca direto (sem a heurística de `cadastrar_vaca`). Macho/natimorto recusado.
+
 ## Resumo da fazenda (gestor e relatório de visita)
 
 - `carregarResumoFazenda` (`src/lib/resumo-fazenda.ts`) + `ResumoFazendaView`

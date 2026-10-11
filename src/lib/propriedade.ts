@@ -52,6 +52,16 @@ export const isGestor = cache(async (): Promise<boolean> => {
   return !!data;
 });
 
+// id → nome (ou e-mail) de quem tem/teve acesso à fazenda, pra mostrar quem lançou cada registro.
+// Usa listar_acessos_propriedade (0023), que só responde pra quem tem vínculo com a fazenda.
+export const getNomesUsuarios = cache(async (propriedadeId: string): Promise<Record<string, string>> => {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("listar_acessos_propriedade", { p_propriedade_id: propriedadeId });
+  return Object.fromEntries(
+    ((data ?? []) as { usuario_id: string; nome: string | null; email: string }[]).map((a) => [a.usuario_id, a.nome ?? a.email]),
+  );
+});
+
 export async function getPropriedadeAtual(): Promise<Propriedade | null> {
   const vinculos = await getPropriedadesDoUsuario();
   if (vinculos.length === 0) return null;

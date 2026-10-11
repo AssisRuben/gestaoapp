@@ -1,8 +1,9 @@
 export type { VacaOpcao } from "../vaca-opcao";
+import type { CamposAutoria } from "../autoria";
 
 export type DiagnosticoPrenhez = "pendente" | "positivo" | "negativo";
 
-export type Cobertura = {
+export type Cobertura = CamposAutoria & {
   id: string;
   vaca_id: string;
   data_cobertura: string;
@@ -14,7 +15,7 @@ export type Cobertura = {
   vaca: { id: string; numero_identificacao: number };
 };
 
-export type Parto = {
+export type Parto = CamposAutoria & {
   id: string;
   vaca_id: string;
   cobertura_id: string | null;

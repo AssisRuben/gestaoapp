@@ -5,6 +5,7 @@ import { registrarLancamento, atualizarLancamento, deletarLancamento } from "./a
 import { MobileCardList, MobileCard, CardHeader, CardRow } from "../mobile-list";
 import { useSuccessToast, SuccessToast } from "../toast";
 import { formatarDataBR } from "../format";
+import { Autoria } from "../autoria";
 import type { Lancamento } from "./types";
 import { hojeBrasil, primeiroDiaMesBrasil } from "@/lib/datas";
 
@@ -169,7 +170,13 @@ function CamposLancamento({
   );
 }
 
-export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] }) {
+export function FinanceiroClient({
+  lancamentos,
+  nomes = {},
+}: {
+  lancamentos: Lancamento[];
+  nomes?: Record<string, string>;
+}) {
   const [inicio, setInicio] = useState(primeiroDiaMesBrasil());
   const [fim, setFim] = useState(hojeBrasil());
   const [drawerAberto, setDrawerAberto] = useState(false);
@@ -426,6 +433,7 @@ export function FinanceiroClient({ lancamentos }: { lancamentos: Lancamento[] })
             <input type="hidden" name="id" value={lancamentoEmEdicao.id} />
 
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Editar lançamento</h2>
+            <Autoria registro={lancamentoEmEdicao} nomes={nomes} />
 
             <CamposLancamento
               defaultTipo={lancamentoEmEdicao.tipo}

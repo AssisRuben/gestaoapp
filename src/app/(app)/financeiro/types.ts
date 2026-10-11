@@ -1,6 +1,8 @@
+import type { CamposAutoria } from "../autoria";
+
 export type TipoFinanceiro = "receita" | "despesa";
 
-export type Lancamento = {
+export type Lancamento = CamposAutoria & {
   id: string;
   propriedade_id: string;
   tipo: TipoFinanceiro;

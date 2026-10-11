@@ -1069,6 +1069,50 @@ begin
     end if;
   end;
 
+  -- ============================================================
+  -- autoria (0030)
+  -- ============================================================
+
+  perform registrar_leite(v_vaca_bot, 7, _hoje_fazenda() - 4, 'manha');
+  if not exists (
+    select 1 from controle_leite
+    where vaca_id = v_vaca_bot and data_controle = _hoje_fazenda() - 4
+      and criado_por = v_usuario_id and criado_via = 'site'
+  ) then
+    raise exception 'FALHOU [autoria]: lançamento pelo site deveria guardar o usuário e a origem';
+  end if;
+
+  -- o bot roda com a service role, sem usuário logado
+  perform set_config('request.jwt.claim.sub', '', true);
+  v_bot := bot_registrar_leite('5500000000001', 90002, 6, _hoje_fazenda() - 4, 'tarde');
+  perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+  if not exists (
+    select 1 from controle_leite
+    where vaca_id = v_vaca_bot and data_controle = _hoje_fazenda() - 4 and periodo = 'tarde'
+      and criado_por is null and criado_via = 'whatsapp'
+  ) then
+    raise exception 'FALHOU [autoria]: lançamento pelo bot deveria ficar como whatsapp (veio %)', v_bot;
+  end if;
+
+  update controle_leite set litros = 8
+  where vaca_id = v_vaca_bot and data_controle = _hoje_fazenda() - 4 and periodo = 'tarde';
+  if not exists (
+    select 1 from controle_leite
+    where vaca_id = v_vaca_bot and data_controle = _hoje_fazenda() - 4 and periodo = 'tarde'
+      and criado_via = 'whatsapp' and atualizado_por = v_usuario_id and atualizado_em is not null
+  ) then
+    raise exception 'FALHOU [autoria]: correção deveria guardar quem alterou sem mudar quem criou';
+  end if;
+
+  -- arquivamento da lactação leva período e autoria pro histórico
+  insert into controle_leite_historico (id, vaca_id, parto_id, litros, data_controle, created_at)
+  select id, vaca_id, parto_id, litros, data_controle, created_at
+  from controle_leite where vaca_id = v_vaca_bot and data_controle = _hoje_fazenda() - 4;
+  if (select count(*) from controle_leite_historico
+      where vaca_id = v_vaca_bot and data_controle = _hoje_fazenda() - 4 and periodo is not null and criado_via is not null) <> 2 then
+    raise exception 'FALHOU [autoria]: histórico deveria receber período e autoria do lançamento';
+  end if;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

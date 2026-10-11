@@ -8,6 +8,7 @@ import { useSuccessToast, SuccessToast } from "../toast";
 import { ProducaoLeiteChart } from "../producao-leite-chart";
 import type { RegistroLeite, VacaOpcao } from "./types";
 import { formatarDataBR } from "../format";
+import { Autoria } from "../autoria";
 import { hojeBrasil, primeiroDiaMesBrasil } from "@/lib/datas";
 
 const CAMPO_CLASSES =
@@ -49,7 +50,15 @@ function formatarLitrosInteiro(litros: number) {
   return `${litros.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} L`;
 }
 
-export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; vacas: VacaOpcao[] }) {
+export function LeiteClient({
+  registros,
+  vacas,
+  nomes = {},
+}: {
+  registros: RegistroLeite[];
+  vacas: VacaOpcao[];
+  nomes?: Record<string, string>;
+}) {
   const [inicio, setInicio] = useState(primeiroDiaMesBrasil());
   const [fim, setFim] = useState(hojeBrasil());
   const [drawerAberto, setDrawerAberto] = useState(false);
@@ -350,6 +359,7 @@ export function LeiteClient({ registros, vacas }: { registros: RegistroLeite[]; 
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">
               Editar registro — vaca {registroEmEdicao.vaca.numero_identificacao}
             </h2>
+            <Autoria registro={registroEmEdicao} nomes={nomes} />
 
             {historicoVacaEmEdicao.length > 1 && (
               <ProducaoLeiteChart registros={historicoVacaEmEdicao} />

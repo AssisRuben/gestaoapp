@@ -11,6 +11,7 @@ import {
 } from "./actions";
 import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../mobile-list";
 import { useSuccessToast, SuccessToast } from "../toast";
+import { Autoria } from "../autoria";
 import { formatarDataBR } from "../format";
 import { DosesPrograma, CamposTouro } from "./doses-programa";
 import type {
@@ -62,6 +63,7 @@ export function ReproducaoClient({
   entregas,
   saldos,
   baixas,
+  nomes = {},
 }: {
   coberturas: Cobertura[];
   partos: Parto[];
@@ -70,6 +72,7 @@ export function ReproducaoClient({
   entregas: EntregaDoses[];
   saldos: SaldoDoses[];
   baixas: BaixaDoses[];
+  nomes?: Record<string, string>;
 }) {
   const [busca, setBusca] = useState("");
   const [drawerAberto, setDrawerAberto] = useState(false);
@@ -525,6 +528,7 @@ export function ReproducaoClient({
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">
               Editar parto — vaca {partoEmEdicao.vaca.numero_identificacao}
             </h2>
+            <Autoria registro={partoEmEdicao} nomes={nomes} />
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Só a data é editável (recalcula o IEP automaticamente). Pra corrigir o bezerro
               gerado por esse parto, edita direto na aba Bezerros.
@@ -660,6 +664,7 @@ export function ReproducaoClient({
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">
               Editar cobertura — vaca {coberturaEmEdicao.vaca.numero_identificacao}
             </h2>
+            <Autoria registro={coberturaEmEdicao} nomes={nomes} />
 
             <div className="flex flex-col gap-1">
               <label htmlFor="data_cobertura" className={LABEL_CLASSES}>

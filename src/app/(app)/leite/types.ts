@@ -1,8 +1,9 @@
 export type { VacaOpcao } from "../vaca-opcao";
+import type { CamposAutoria } from "../autoria";
 
 export type Periodo = "manha" | "tarde" | "dia_inteiro";
 
-export type RegistroLeite = {
+export type RegistroLeite = CamposAutoria & {
   id: string;
   vaca_id: string;
   parto_id: string;
