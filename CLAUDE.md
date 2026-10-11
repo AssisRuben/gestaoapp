@@ -484,8 +484,9 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   `bot_acao`) com `entidades.acao`: `confirmar_doses` (entregas pendentes, só do touro falado se
   disser), `ligar_lembretes`/`desligar_lembretes`, `promover_bezerro` (`numero_bezerro`).
   `_promover_bezerro` é a regra única (site chama via `promover_bezerro`, com checagem de acesso).
-- O nó "Parsear Resposta IA" monta as entidades campo a campo: entidade nova no prompt precisa ser
-  acrescentada lá também.
+- O nó "Parsear Resposta IA" monta as entidades campo a campo e só aceita intenções de
+  `INTENCOES_VALIDAS` (o resto vira "outro"): entidade ou intenção nova no prompt precisa ser
+  acrescentada lá também (outras_acoes ficou de fora até 2026-10-11).
 
 ## Relatórios do bot (0027_bot_relatorios.sql)
 
