@@ -129,6 +129,11 @@ export function VacasClient({ vacas, editarId }: { vacas: Vaca[]; editarId?: str
   const [vacaEmEdicao, setVacaEmEdicao] = useState<Vaca | null>(
     () => vacas.find((v) => v.id === editarId) ?? null,
   );
+
+  // fechou a edição aberta pela ficha: tira o ?editar= do endereço pra recarregar não reabrir
+  useEffect(() => {
+    if (editarId && vacaEmEdicao === null) router.replace("/vacas", { scroll: false });
+  }, [editarId, vacaEmEdicao, router]);
   const [vacaParaExcluir, setVacaParaExcluir] = useState<Vaca | null>(null);
 
   const [criarState, criarAction, criarPending] = useActionState(cadastrarVaca, undefined);
