@@ -47,6 +47,24 @@ export type LactacaoResumo = {
   situacao: "prenhe" | "em_servico" | "vazia";
 };
 
+export type RecomendacaoResumo = {
+  id: string;
+  texto: string;
+  prazo: string | null;
+  concluidaEm: string | null;
+  concluidaPorNome: string | null;
+  dataVisita: string;
+};
+
+export type VisitaResumo = {
+  id: string;
+  data: string;
+  observacoes: string | null;
+  autorId: string | null;
+  autorNome: string | null;
+  recomendacoes: RecomendacaoResumo[];
+};
+
 export type ResumoFazenda = {
   hoje: string;
   propriedade: {
@@ -81,13 +99,76 @@ export type ResumoFazenda = {
   diagnosticos: { vacaId: string; numero: number; dataCobertura: string; dias: number }[];
   producao60dias: { data_controle: string; litros: number }[];
   financeiroMeses: { mes: string; receita: number; despesa: number }[];
+  visitas: VisitaResumo[];
+  recomendacoesAbertas: RecomendacaoResumo[];
 };
+
+type LinhaVisita = { id: string; data_visita: string; observacoes: string | null; autor_id: string | null; autor_nome: string | null };
+type LinhaRecomendacao = {
+  id: string;
+  visita_id: string;
+  texto: string;
+  prazo: string | null;
+  concluida_em: string | null;
+  concluida_por_nome: string | null;
+  created_at: string;
+};
+
+// Visitas (0032): as 10 mais recentes, com as recomendações; e todas as recomendações ainda em
+// aberto (podem ser de visitas mais antigas). Sem as tabelas (migration não rodada), volta vazio.
+async function carregarVisitas(supabase: ReturnType<typeof createServiceClient>, propriedadeId: string) {
+  const [{ data: visitas, error: e1 }, { data: recs, error: e2 }] = await Promise.all([
+    supabase
+      .from("visitas")
+      .select("id, data_visita, observacoes, autor_id, autor_nome")
+      .eq("propriedade_id", propriedadeId)
+      .order("data_visita", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("recomendacoes")
+      .select("id, visita_id, texto, prazo, concluida_em, concluida_por_nome, created_at")
+      .eq("propriedade_id", propriedadeId)
+      .order("created_at"),
+  ]);
+  if (e1 || e2) return { visitas: [] as VisitaResumo[], abertas: [] as RecomendacaoResumo[] };
+
+  const dataDaVisita = new Map<string, string>();
+  const todas = (visitas ?? []) as LinhaVisita[];
+  const idsVisitas = [...new Set(((recs ?? []) as LinhaRecomendacao[]).map((r) => r.visita_id))];
+  if (idsVisitas.length > 0) {
+    const { data: datasAntigas } = await supabase.from("visitas").select("id, data_visita").in("id", idsVisitas);
+    for (const v of (datasAntigas ?? []) as { id: string; data_visita: string }[]) dataDaVisita.set(v.id, v.data_visita);
+  }
+
+  const paraResumo = (r: LinhaRecomendacao): RecomendacaoResumo => ({
+    id: r.id,
+    texto: r.texto,
+    prazo: r.prazo,
+    concluidaEm: r.concluida_em,
+    concluidaPorNome: r.concluida_por_nome,
+    dataVisita: dataDaVisita.get(r.visita_id) ?? "",
+  });
+  const linhas = (recs ?? []) as LinhaRecomendacao[];
+
+  return {
+    visitas: todas.map((v) => ({
+      id: v.id,
+      data: v.data_visita,
+      observacoes: v.observacoes,
+      autorId: v.autor_id,
+      autorNome: v.autor_nome,
+      recomendacoes: linhas.filter((r) => r.visita_id === v.id).map(paraResumo),
+    })),
+    abertas: linhas.filter((r) => !r.concluida_em).map(paraResumo).sort((a, b) => a.dataVisita.localeCompare(b.dataVisita)),
+  };
+}
 
 const media = (v: number[]) => (v.length ? v.reduce((s, x) => s + x, 0) / v.length : null);
 
 export async function carregarResumoFazenda(propriedadeId: string): Promise<ResumoFazenda | null> {
   const supabase = createServiceClient();
-  const [{ data: prop }, { data: whats }, vacasD, partosD, cobD, leiteD, bezD, finD, diarioD] = await Promise.all([
+  const [{ data: prop }, { data: whats }, vacasD, partosD, cobD, leiteD, bezD, finD, diarioD, visitasD] = await Promise.all([
     supabase
       .from("propriedades")
       .select("id, nome_propriedade, nome_produtor, municipio, estado, tecnico_responsavel")
@@ -107,6 +188,7 @@ export async function carregarResumoFazenda(propriedadeId: string): Promise<Resu
     getBezerrosCache(propriedadeId),
     getFinanceiroCache(propriedadeId),
     getLeiteDiarioTodasCache(),
+    carregarVisitas(supabase, propriedadeId),
   ]);
   if (!prop) return null;
 
@@ -228,5 +310,7 @@ export async function carregarResumoFazenda(propriedadeId: string): Promise<Resu
     diagnosticos,
     producao60dias: diario.map((d) => ({ data_controle: d.data, litros: d.litros })),
     financeiroMeses,
+    visitas: visitasD.visitas,
+    recomendacoesAbertas: visitasD.abertas,
   };
 }

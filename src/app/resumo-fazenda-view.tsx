@@ -116,6 +116,53 @@ export function ResumoFazendaView({
         </div>
       </section>
 
+      {(resumo.visitas.length > 0 || resumo.recomendacoesAbertas.length > 0) && (
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 print:grid-cols-2">
+          <div className={`p-4 ${CARTAO}`}>
+            <Titulo>Recomendações em aberto ({resumo.recomendacoesAbertas.length})</Titulo>
+            {resumo.recomendacoesAbertas.length === 0 ? (
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Todas cumpridas.</p>
+            ) : (
+              <ul className="mt-2 flex flex-col gap-1 text-sm">
+                {resumo.recomendacoesAbertas.map((r) => {
+                  const vencida = r.prazo !== null && r.prazo < resumo.hoje;
+                  return (
+                    <li key={r.id} className={vencida ? "text-red-600 dark:text-red-400" : "text-black dark:text-zinc-50"}>
+                      ○ {r.texto}
+                      <span className="text-zinc-600 dark:text-zinc-400">
+                        {" "}
+                        — desde {formatarDataBR(r.dataVisita)}
+                        {r.prazo && `, prazo ${formatarDataBR(r.prazo)}`}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          {resumo.visitas[0] && (
+            <div className={`p-4 ${CARTAO}`}>
+              <Titulo>
+                Última visita: {formatarDataBR(resumo.visitas[0].data)}
+                {resumo.visitas[0].autorNome && ` (${resumo.visitas[0].autorNome})`}
+              </Titulo>
+              {resumo.visitas[0].observacoes && (
+                <p className="mt-2 whitespace-pre-line text-sm text-black dark:text-zinc-50">{resumo.visitas[0].observacoes}</p>
+              )}
+              {resumo.visitas[0].recomendacoes.length > 0 && (
+                <ul className="mt-2 flex flex-col gap-1 text-sm">
+                  {resumo.visitas[0].recomendacoes.map((r) => (
+                    <li key={r.id} className={r.concluidaEm ? "text-zinc-500 line-through" : "text-black dark:text-zinc-50"}>
+                      {r.concluidaEm ? "✓" : "○"} {r.texto}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
       <section className="flex flex-col gap-2">
         <Titulo>Lactações em andamento ({resumo.lactacoes.length})</Titulo>
         {resumo.lactacoes.length === 0 ? (

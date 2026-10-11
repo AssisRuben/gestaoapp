@@ -1136,6 +1136,48 @@ begin
     raise exception 'FALHOU [lembretes_do_dia]: não deveria mandar duas vezes no mesmo dia';
   end if;
 
+  -- ============================================================
+  -- visitas técnicas (0032)
+  -- ============================================================
+
+  v_cob_status := (registrar_visita(v_propriedade_id, _hoje_fazenda(), 'Pasto bem manejado.',
+    array['Fazer diagnóstico da vaca 90001', '  ', 'Ajustar sal mineral'])).id;
+  if (select count(*) from recomendacoes where visita_id = v_cob_status) <> 2
+     or (select autor_id from visitas where id = v_cob_status) <> v_usuario_id then
+    raise exception 'FALHOU [registrar_visita]: deveria gravar a visita com 2 recomendações (ignorando a vazia) e o autor';
+  end if;
+
+  perform concluir_recomendacao((select id from recomendacoes where visita_id = v_cob_status and texto like 'Ajustar%'), true);
+  if (select count(*) from recomendacoes where visita_id = v_cob_status and concluida_em is not null) <> 1 then
+    raise exception 'FALHOU [concluir_recomendacao]: deveria marcar como feita';
+  end if;
+
+  begin
+    perform registrar_visita(v_propriedade_id, _hoje_fazenda(), '  ', array['', ' ']);
+    raise exception 'FALHOU [registrar_visita]: visita vazia deveria ser recusada';
+  exception when others then
+    if sqlerrm not ilike '%escreva as observações%' then
+      raise exception 'FALHOU [registrar_visita]: erro inesperado na visita vazia: %', sqlerrm;
+    end if;
+  end;
+
+  -- outro usuário (o técnico) não exclui a visita de quem registrou
+  perform set_config('request.jwt.claim.sub', v_tecnico_id::text, true);
+  begin
+    perform excluir_visita(v_cob_status);
+    raise exception 'FALHOU [excluir_visita]: só o autor deveria excluir';
+  exception when others then
+    if sqlerrm not ilike '%só quem registrou%' then
+      raise exception 'FALHOU [excluir_visita]: erro inesperado: %', sqlerrm;
+    end if;
+  end;
+  perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+
+  perform excluir_visita(v_cob_status);
+  if exists (select 1 from recomendacoes where visita_id = v_cob_status) then
+    raise exception 'FALHOU [excluir_visita]: deveria apagar a visita e as recomendações';
+  end if;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

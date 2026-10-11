@@ -4,6 +4,8 @@ import { carregarResumoFazenda } from "@/lib/resumo-fazenda";
 import { ResumoFazendaView } from "../../resumo-fazenda-view";
 import { BotaoImprimir } from "../../botao-imprimir";
 import { SemPropriedade } from "../sem-propriedade";
+import { VisitasPainel } from "./visitas-painel";
+import { getUser } from "@/lib/supabase/server";
 
 // Relatório da visita técnica: o resumo da fazenda atual, pronto pra imprimir ou salvar em PDF
 // (o navegador salva em PDF pelo "Imprimir"). O id vem de getPropriedadeAtual(), que já confere o
@@ -12,7 +14,7 @@ export default async function RelatorioPage() {
   const propriedadeAtual = await getPropriedadeAtual();
   if (!propriedadeAtual) return <SemPropriedade />;
 
-  const resumo = await carregarResumoFazenda(propriedadeAtual.id);
+  const [resumo, usuario] = await Promise.all([carregarResumoFazenda(propriedadeAtual.id), getUser()]);
   if (!resumo) return <SemPropriedade />;
 
   return (
@@ -28,6 +30,7 @@ export default async function RelatorioPage() {
         &quot;Salvar como PDF&quot;.
       </p>
       <ResumoFazendaView resumo={resumo} linkVaca={(id) => `/vacas/${id}`} />
+      <VisitasPainel visitas={resumo.visitas} usuarioId={usuario?.id ?? null} />
       <p className="hidden text-xs text-zinc-500 print:block">Gerado pelo Gestão Pec.</p>
     </div>
   );

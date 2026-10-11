@@ -386,6 +386,21 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - Corrigir/apagar financeiro exige categoria ou data (antes pegava o lançamento mais recente da
   fazenda). Categoria gravada pelo bot é normalizada no banco (`_categoria_normalizada`).
 
+## Visitas técnicas (0032_visitas.sql)
+
+- `visitas` (data, observações, autor + `autor_nome` gravado) e `recomendacoes` (texto, prazo,
+  concluída em/por). Escrita só por `registrar_visita`, `concluir_recomendacao` (qualquer vínculo
+  da fazenda marca/desmarca) e `excluir_visita` (só o autor); leitura por RLS pra quem tem vínculo.
+- `/relatorio`: formulário da visita + histórico com as recomendações marcáveis (não imprime). O
+  resumo da fazenda (PDF e gestor) mostra "Recomendações em aberto" e a última visita.
+
+## Diagnóstico de dados antigos
+
+- `supabase/diagnosticos/dados_antigos.sql`: só leitura, roda no SQL Editor e lista sujeira deixada
+  por bugs antigos (categorias, diagnóstico repetido em cobertura antiga, número de vaca repetido,
+  bezerros sem número/sexo, lactação duplicada, leite em dobro, telefone fora do formato, fazenda
+  órfã). A correção vira migration depois de revisar o resultado — não corrigir às cegas.
+
 ## Lembretes diários pelo WhatsApp (0031_lembretes.sql)
 
 - Workflow separado `fazenda-leite-lembretes.json` (6h, fuso de Fortaleza; tem também "Testar
