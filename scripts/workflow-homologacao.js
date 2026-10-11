@@ -20,6 +20,7 @@ if (!urlHomolog || !/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(urlHomolog) || !
 }
 
 const URL_PRODUCAO = "https://zlgtkcdscwzxgnltodhb.supabase.co";
+const INSTANCIA_PRODUCAO = "Assis Rubens";
 if (urlHomolog === URL_PRODUCAO) {
   console.error("esse é o Supabase de PRODUÇÃO — use o do projeto de homologação");
   process.exit(1);
@@ -30,7 +31,13 @@ const saida = path.join(raiz, "n8n-homologacao");
 fs.mkdirSync(saida, { recursive: true });
 
 for (const arquivo of ["fazenda-leite-multiagentes.json", "fazenda-leite-erros.json", "fazenda-leite-lembretes.json"]) {
-  const texto = fs.readFileSync(path.join(raiz, arquivo), "utf8").split(URL_PRODUCAO).join(urlHomolog);
+  const texto = fs
+    .readFileSync(path.join(raiz, arquivo), "utf8")
+    .split(URL_PRODUCAO)
+    .join(urlHomolog)
+    // filtro de instância do "Acesso Liberado?" (só aceita eventos da instância do bot)
+    .split(`body.instance === '${INSTANCIA_PRODUCAO}'`)
+    .join(`body.instance === '${instanciaHomolog.replace(/'/g, "\\'")}'`);
   const wf = JSON.parse(texto);
 
   wf.name = `${wf.name} (HOMOLOGAÇÃO)`;

@@ -1732,7 +1732,7 @@
           "conditions": [
             {
               "id": "11b6b8d2-974e-43ed-8ddc-2e629f3d7c4b",
-              "leftValue": "={{ !String($('Webhook').item.json.body.data.key.remoteJid).endsWith('@g.us') && ($('Webhook').item.json.body.data.key.fromMe !== true || $('Webhook').item.json.body.data.key.remoteJid === $('Webhook').item.json.body.sender) && $json.statusAcesso === 'ok' }}",
+              "leftValue": "={{ $('Webhook').item.json.body.instance === 'Assis Rubens' && !String($('Webhook').item.json.body.data.key.remoteJid).endsWith('@g.us') && ($('Webhook').item.json.body.data.key.fromMe !== true || $('Webhook').item.json.body.data.key.remoteJid === $('Webhook').item.json.body.sender) && $json.statusAcesso === 'ok' }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",

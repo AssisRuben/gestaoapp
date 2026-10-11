@@ -346,7 +346,9 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   cobertura mais recente da lactação atual: nenhuma → vazia, pendente → vazia_em_servico,
   positivo → prenhe, negativo → vazia. Edição manual vale até a próxima mudança de cobertura.
 - Bot, nó "Acesso Liberado?": processa mensagem de usuário cadastrado e ativo (não grupo) ou a
-  conversa do número consigo mesmo (teste). Desativado recebe aviso; número não cadastrado é
+  conversa do número consigo mesmo (teste), e só de eventos da instância do bot
+  (`body.instance === 'Assis Rubens'`) — outra instância com webhook pro mesmo n8n repassava as
+  mensagens que ELA recebia (2026-10-11). Trocou a instância? Mude ali também. Desativado recebe aviso; número não cadastrado é
   ignorado em silêncio (a instância pode ser um número pessoal).
 - Falha no bot: o nó "Guardar Remetente (Erro)" grava no Redis (`exec_remetente:<execução>`, 15
   min) quem mandou a mensagem; o workflow `fazenda-leite-erros.json` (Error Trigger) lê isso,
