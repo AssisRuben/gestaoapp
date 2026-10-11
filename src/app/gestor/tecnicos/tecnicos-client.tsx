@@ -206,7 +206,7 @@ export function TecnicosClient({
                 className="flex flex-col gap-2 rounded-2xl border border-black/[.08] bg-surface p-4 dark:border-white/[.145]"
               >
                 <h3 className="font-semibold text-black dark:text-zinc-50">
-                  <Link href={`/gestor/fazendas/${f.id}`} className="hover:underline">
+                  <Link href={`/gestor/fazendas/${f.id}?de=acessos`} className="hover:underline">
                     {f.nome}
                   </Link>
                 </h3>

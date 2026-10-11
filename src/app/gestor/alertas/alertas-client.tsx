@@ -170,7 +170,7 @@ function AcoesAlerta({
         </span>
       )}
       <Link
-        href={`/gestor/fazendas/${fazendaId}`}
+        href={`/gestor/fazendas/${fazendaId}?de=alertas`}
         title="Abrir fazenda (resumo pra imprimir ou salvar em PDF)"
         aria-label="Abrir fazenda"
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/[.08] text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"

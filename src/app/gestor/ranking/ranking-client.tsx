@@ -160,7 +160,7 @@ export function RankingClient({
         {fazendaSelecionada && (
           <div className="flex flex-col items-center gap-8 pt-5">
             <Link
-              href={`/gestor/fazendas/${fazendaSelecionada.id}`}
+              href={`/gestor/fazendas/${fazendaSelecionada.id}?de=ranking`}
               className="rounded-full border border-black/[.08] px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
             >
               Abrir {fazendaSelecionada.nome} →
