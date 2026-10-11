@@ -63,8 +63,8 @@ export function ResumoFazendaView({
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 print:grid-cols-3">
         <Numero rotulo="Vacas em lactação" valor={`${r.lactacao} de ${r.vacas}`} detalhe={`${r.secas} secas · ${r.novilhas} novilhas`} />
-        <Numero rotulo="Produção por dia" valor={m.producaoDia === null ? "—" : `${n0(m.producaoDia)} L`} detalhe="média dos últimos 30 dias" />
-        <Numero rotulo="Litros por vaca/dia" valor={n1(m.litrosVacaDia)} detalhe="produção ÷ vacas em lactação" />
+        <Numero rotulo="Produção por dia" valor={m.producaoDia === null ? "—" : `${n0(m.producaoDia)} L`} detalhe="L/vaca/dia × vacas em lactação" />
+        <Numero rotulo="Litros por vaca/dia" valor={n1(m.litrosVacaDia)} detalhe="média das vacas pesadas nos últimos 30 dias" />
         <Numero rotulo="Projeção 305 dias" valor={m.projecao305 === null ? "—" : `${n0(m.projecao305)} L`} detalhe="média das lactações em andamento" />
         <Numero rotulo="IEP médio" valor={m.iep === null ? "—" : `${n0(m.iep)} dias`} />
         <Numero rotulo="Dias em aberto (média)" valor={n0(m.diasEmAberto)} detalhe={`${r.prenhes} prenhes · ${r.emServico} em serviço · ${r.vazias} vazias`} />

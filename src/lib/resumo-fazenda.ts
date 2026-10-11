@@ -261,9 +261,18 @@ export async function carregarResumoFazenda(propriedadeId: string): Promise<Resu
   const diario = normalizarLeite(diarioD as Record<string, unknown>[]).filter(
     (d) => d.propriedade_id === propriedadeId && d.data >= inicio60 && d.data <= hoje,
   );
-  const ultimos30 = diario.filter((d) => d.data > somarDias(hoje, -30)).map((d) => d.litros);
-  const producaoDia = media(ultimos30);
   const emLactacao = vacas.filter((v) => v.status_produtivo === "lactacao").length;
+
+  // Produção e L/vaca/dia pela MESMA régua do ranking e da linha de base (calcular_indicadores,
+  // 0019): média por vaca pesada nos últimos 30 dias × vacas em lactação. A conta antiga (média do
+  // total da fazenda nos dias com pesagem) dava número baixo quando cada vaca é pesada num dia —
+  // 72 L/dia no resumo contra 348 no ranking pra mesma fazenda (teste 8.2).
+  const { data: indD } = await supabase
+    .rpc("calcular_indicadores", { p_propriedade_id: propriedadeId, p_data: hoje })
+    .maybeSingle();
+  const ind = indD as { litros_vaca_dia: number | string | null; producao_dia: number | string | null } | null;
+  const litrosVacaDia = ind?.litros_vaca_dia != null ? Number(ind.litros_vaca_dia) : null;
+  const producaoDia = ind?.producao_dia != null ? Number(ind.producao_dia) : null;
 
   // financeiro: últimos 6 meses (inclui o atual)
   const meses: string[] = [];
@@ -305,7 +314,7 @@ export async function carregarResumoFazenda(propriedadeId: string): Promise<Resu
     },
     lactacoes,
     medias: {
-      litrosVacaDia: producaoDia !== null && emLactacao > 0 ? producaoDia / emLactacao : null,
+      litrosVacaDia,
       producaoDia,
       projecao305: media(ativas.map((l) => l.projecao305).filter((v): v is number => v !== null)),
       iep: media(lactacoes.map((l) => l.iep).filter((v): v is number => v !== null)),

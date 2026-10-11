@@ -457,6 +457,8 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 
 ## Resumo da fazenda (gestor e relatório de visita)
 
+- Produção/dia e L/vaca/dia do resumo vêm de `calcular_indicadores` (mesma régua do ranking e da
+  linha de base) — não da média do total diário da fazenda, que subestima com pesagem espalhada.
 - `carregarResumoFazenda` (`src/lib/resumo-fazenda.ts`) + `ResumoFazendaView`
   (`src/app/resumo-fazenda-view.tsx`): rebanho, médias (produção/dia, L/vaca/dia, projeção 305,
   IEP, dias em aberto), pendências (secar, diagnóstico, partos previstos), tabela das lactações
