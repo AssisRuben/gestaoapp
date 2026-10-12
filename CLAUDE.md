@@ -434,7 +434,13 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   bezerros sem número/sexo, lactação duplicada, leite em dobro, telefone fora do formato, fazenda
   órfã). A correção vira migration depois de revisar o resultado — não corrigir às cegas.
 
-## Lembretes diários pelo WhatsApp (0031_lembretes.sql)
+## Lembretes diários pelo WhatsApp (0031_lembretes.sql) — SUSPENSOS (0043)
+
+- **Suspensos desde 11/10/2026**: a instância é Evolution (API não oficial) e disparo iniciado pelo
+  número pra várias fazendas arrisca bloquear a conta. Workflow despublicado; site esconde a opção
+  (`LEMBRETES_WHATSAPP_DISPONIVEL` em `fazenda-modal.tsx`); `bot_acao` responde que não está
+  disponível. Pra voltar (API oficial da Meta ou resumo por e-mail): ligar a constante e rever
+  `bot_acao`. Respostas do bot (inclusive o aviso de erro) continuam — são reativas, não disparo.
 
 - Workflow separado `fazenda-leite-lembretes.json` (6h, fuso de Fortaleza; tem também "Testar
   agora"): `lembretes_do_dia()` devolve uma linha por fazenda com lembrete LIGADO e pendência no

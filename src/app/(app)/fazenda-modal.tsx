@@ -19,6 +19,12 @@ const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
 const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
 
+// Lembretes diários pelo WhatsApp suspensos (11/10/2026): a instância é da Evolution (API não
+// oficial) e disparo iniciado pelo número, pra várias fazendas no mesmo horário, arrisca bloquear a
+// conta. O campo some; o resto (coluna, workflow despublicado, lembretes_do_dia) fica pronto pra
+// voltar com a API oficial ou por e-mail — aí é só ligar aqui e rever bot_acao (0043).
+const LEMBRETES_WHATSAPP_DISPONIVEL = false;
+
 function SecaoHeader({ titulo, onNovo, rotuloNovo }: { titulo: string; onNovo: () => void; rotuloNovo: string }) {
   return (
     <div className="flex items-center justify-between">
@@ -165,7 +171,7 @@ function DadosGeraisForm({
         </div>
       </div>
 
-      {lembretes !== null && (
+      {LEMBRETES_WHATSAPP_DISPONIVEL && lembretes !== null && (
         <label className="flex items-start gap-3 rounded-xl border border-black/[.08] p-3 dark:border-white/[.145]">
           <input type="hidden" name="lembretes_presente" value="1" />
           <input

@@ -1256,9 +1256,11 @@ begin
   if (select lembretes_whatsapp from propriedades where id = v_propriedade_id) then
     raise exception 'FALHOU [bot_acao]: desligar_lembretes deveria desligar';
   end if;
-  perform bot_acao('5500000000001', 'ligar_lembretes', '{}');
-  if not (select lembretes_whatsapp from propriedades where id = v_propriedade_id) then
-    raise exception 'FALHOU [bot_acao]: ligar_lembretes deveria ligar';
+  -- lembretes pelo WhatsApp suspensos (0043): ligar não liga, só explica
+  v_bot := bot_acao('5500000000001', 'ligar_lembretes', '{}');
+  if (select lembretes_whatsapp from propriedades where id = v_propriedade_id)
+     or v_bot->>'mensagem' not ilike '%ainda não estão disponíveis%' then
+    raise exception 'FALHOU [bot_acao]: ligar_lembretes deveria responder que não está disponível (veio %)', v_bot;
   end if;
 
   insert into bezerros (propriedade_id, mae_id, numero_identificacao, sexo, data_nascimento)
