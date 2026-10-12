@@ -28,7 +28,7 @@ import {
 } from "./ui";
 import { hojeBrasil } from "@/lib/datas";
 import { mascaraTelefone } from "@/lib/telefone";
-import { mascaraCnpj } from "@/lib/cnpj";
+import Link from "next/link";
 
 type Propriedade = { id: string; nome_propriedade: string };
 
@@ -50,7 +50,9 @@ export function ProgramaClient({
   atuais,
   baixas,
   reprodutivos,
+  entidades,
 }: {
+  entidades: EntidadeOpcao[];
   propriedades: Propriedade[];
   touros: Touro[];
   entregas: EntregaDoses[];
@@ -279,7 +281,7 @@ export function ProgramaClient({
           entrega={entregaAberta}
           propriedades={propriedades}
           touros={touros}
-          entidades={entidadesConhecidas(entregas)}
+          entidades={entidades}
           onFechar={() => setEntregaAberta(null)}
           onSucesso={(msg) => {
             setEntregaAberta(null);
@@ -378,88 +380,54 @@ function TouroModal({
   );
 }
 
-type EntidadeOpcao = { nome: string; cnpj?: string | null; responsavel: string | null; telefone: string | null };
+export type EntidadeOpcao = { id: string; nome: string; responsavel: string | null; telefone: string | null };
 
-// Entidades já usadas em entregas (pra sugerir e preencher responsável/telefone ao escolher).
-function entidadesConhecidas(entregas: EntregaDoses[]): EntidadeOpcao[] {
-  const mapa = new Map<string, EntidadeOpcao>();
-  for (const e of entregas) if (e.entidade) mapa.set(e.entidade.nome.trim().toLowerCase(), e.entidade);
-  return [...mapa.values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-}
+// Entidade beneficiada (associação, cooperativa…) por onde a fazenda recebe — 0048. Escolhida na
+// lista das cadastradas na aba Entidades (é lá que se cria e corrige responsável/telefone/CNPJ).
+function CamposEntidade({ entidades, inicialId }: { entidades: EntidadeOpcao[]; inicialId: string }) {
+  const [entidadeId, setEntidadeId] = useState(inicialId);
+  const escolhida = entidades.find((e) => e.id === entidadeId);
 
-// Entidade beneficiada (associação, cooperativa…) por onde a fazenda recebe — 0048. Digitar um
-// nome já usado preenche responsável e telefone.
-function CamposEntidade({ entidades, inicial }: { entidades: EntidadeOpcao[]; inicial: EntidadeOpcao | null }) {
-  const [nome, setNome] = useState(inicial?.nome ?? "");
-  const [responsavel, setResponsavel] = useState(inicial?.responsavel ?? "");
-  const [telefone, setTelefone] = useState(inicial?.telefone ?? "");
-  const [cnpj, setCnpj] = useState(inicial?.cnpj ? mascaraCnpj(inicial.cnpj) : "");
-
-  function escolher(valor: string) {
-    setNome(valor);
-    const conhecida = entidades.find((e) => e.nome.trim().toLowerCase() === valor.trim().toLowerCase());
-    if (conhecida) {
-      setResponsavel(conhecida.responsavel ?? "");
-      setTelefone(conhecida.telefone ?? "");
-      setCnpj(conhecida.cnpj ? mascaraCnpj(conhecida.cnpj) : "");
-    }
+  if (entidades.length === 0) {
+    return (
+      <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-black dark:text-zinc-50">
+        Nenhuma entidade cadastrada. Cadastre a entidade na aba{" "}
+        <Link href="/gestor/entidades" className="font-medium text-brand-green underline">
+          Entidades
+        </Link>{" "}
+        e volte aqui pra registrar a entrega.
+      </p>
+    );
   }
 
   return (
-    <fieldset className="flex flex-col gap-3 rounded-xl border border-black/[.08] p-3 dark:border-white/[.145]">
-      <legend className="px-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">Entidade beneficiada</legend>
-      <Campo id="entidade_nome" label="Nome da entidade">
-        <input
-          id="entidade_nome"
-          name="entidade_nome"
-          required
-          list="entidades_conhecidas"
-          placeholder="ex.: Associação dos Produtores do Riacho"
-          value={nome}
-          onChange={(e) => escolher(e.target.value)}
-          className={CAMPO_CLASSES}
-        />
-        <datalist id="entidades_conhecidas">
-          {entidades.map((e) => (
-            <option key={e.nome} value={e.nome} />
-          ))}
-        </datalist>
-      </Campo>
-      <Campo id="entidade_cnpj" label="CNPJ">
-        <input
-          id="entidade_cnpj"
-          name="entidade_cnpj"
-          inputMode="numeric"
-          placeholder="00.000.000/0000-00"
-          value={cnpj}
-          onChange={(e) => setCnpj(mascaraCnpj(e.target.value))}
-          className={CAMPO_CLASSES}
-        />
-      </Campo>
-      <Campo id="entidade_responsavel" label="Responsável">
-        <input
-          id="entidade_responsavel"
-          name="entidade_responsavel"
-          required
-          value={responsavel}
-          onChange={(e) => setResponsavel(e.target.value)}
-          className={CAMPO_CLASSES}
-        />
-      </Campo>
-      <Campo id="entidade_telefone" label="Telefone do responsável">
-        <input
-          id="entidade_telefone"
-          name="entidade_telefone"
-          type="tel"
-          inputMode="tel"
-          required
-          placeholder="(85) 99999-9999"
-          value={telefone}
-          onChange={(e) => setTelefone(mascaraTelefone(e.target.value))}
-          className={CAMPO_CLASSES}
-        />
-      </Campo>
-    </fieldset>
+    <Campo id="entidade_id" label="Entidade beneficiada">
+      <select
+        id="entidade_id"
+        name="entidade_id"
+        required
+        value={entidadeId}
+        onChange={(e) => setEntidadeId(e.target.value)}
+        className={CAMPO_CLASSES}
+      >
+        <option value="" disabled>
+          Selecione
+        </option>
+        {entidades.map((e) => (
+          <option key={e.id} value={e.id}>
+            {e.nome}
+          </option>
+        ))}
+      </select>
+      {escolhida && (escolhida.responsavel || escolhida.telefone) && (
+        <span className="text-sm text-zinc-600 dark:text-zinc-400">
+          Responsável: {[escolhida.responsavel, escolhida.telefone && mascaraTelefone(escolhida.telefone)].filter(Boolean).join(" · ")}
+        </span>
+      )}
+      <Link href="/gestor/entidades" className="text-sm font-medium text-brand-green hover:underline">
+        Cadastrar ou corrigir entidade
+      </Link>
+    </Campo>
   );
 }
 
@@ -505,7 +473,7 @@ function EntregaModal({
           entrega pode ser corrigida ou excluída.
         </p>
 
-        <CamposEntidade entidades={entidades} inicial={entrega.entidade ?? null} />
+        <CamposEntidade entidades={entidades} inicialId={entrega.entidade_id ?? ""} />
 
         <Campo id="propriedade_id" label="Fazenda que recebe">
           <select

@@ -103,23 +103,18 @@ export async function salvarEntrega(
     return { error: "Informe quantos kits a fazenda vai receber (número inteiro maior que zero)." };
   }
 
-  const supabase = await createClient();
+  // a fazenda recebe pela entidade (0048), escolhida entre as cadastradas na aba Entidades
+  const entidadeId = textoOuNull(formData.get("entidade_id"));
+  if (!entidadeId) return { error: "Escolha a entidade beneficiada (cadastre na aba Entidades se não estiver na lista)." };
 
-  // a fazenda recebe pela entidade (0048): acha pelo nome ou cria, e atualiza responsável/telefone
-  const { data: entidadeId, error: erroEntidade } = await supabase.rpc("gestor_salvar_entidade", {
-    p_nome: String(formData.get("entidade_nome") ?? ""),
-    p_responsavel: textoOuNull(formData.get("entidade_responsavel")),
-    p_telefone: textoOuNull(formData.get("entidade_telefone")),
-    p_cnpj: textoOuNull(formData.get("entidade_cnpj")),
-  });
-  if (erroEntidade) return { error: erroEntidade.message };
+  const supabase = await createClient();
 
   const dados = {
     propriedade_id: formData.get("propriedade_id") as string,
     touro_id: formData.get("touro_id") as string,
     quantidade,
     kits,
-    entidade_id: entidadeId as string,
+    entidade_id: entidadeId,
     data_entrega: formData.get("data_entrega") as string,
     observacao: textoOuNull(formData.get("observacao")),
   };

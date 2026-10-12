@@ -17,7 +17,8 @@ import type {
   BaixaDoses,
   IndicadoresReprodutivos,
 } from "@/lib/programa";
-import { ProgramaClient } from "./programa-client";
+import { createServiceClient } from "@/lib/supabase/service";
+import { ProgramaClient, type EntidadeOpcao } from "./programa-client";
 
 // Dados reais (diferente das outras abas do gestor, ainda fictícias). O layout do gestor já
 // validou isGestor() antes de chegar aqui, que é o que autoriza as leituras com service role.
@@ -31,6 +32,7 @@ export default async function ProgramaPage() {
     atuaisData,
     baixasData,
     reprodutivosData,
+    { data: entidadesData },
   ] = await Promise.all([
     getPropriedadesTodasCache(),
     getTourosCache(),
@@ -40,6 +42,8 @@ export default async function ProgramaPage() {
     getIndicadoresAtuaisCache(),
     getBaixasDosesTodasCache(),
     getIndicadoresReprodutivosTodasCache(),
+    // entidades cadastradas (aba Entidades) pra escolher na entrega — sem cache, a lista é curta
+    createServiceClient().from("entidades").select("id, nome, responsavel, telefone").order("nome"),
   ]);
 
   return (
@@ -52,6 +56,7 @@ export default async function ProgramaPage() {
       atuais={atuaisData as unknown as IndicadoresAtuais[]}
       baixas={baixasData as unknown as BaixaDoses[]}
       reprodutivos={reprodutivosData as unknown as IndicadoresReprodutivos[]}
+      entidades={(entidadesData ?? []) as EntidadeOpcao[]}
     />
   );
 }

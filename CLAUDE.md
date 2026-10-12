@@ -299,9 +299,10 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   (faturamento, despesa, custo/receita/sobra por litro, produção, L/vaca/dia, IEP, concepção):
   a ideia é comparar eficiência entre entidades; só doses/kits/gestações/nascidos são totais. A tela
   mostra a "Média geral" (cada fazenda uma vez) e pinta verde/vermelho contra ela. Só gestor vê.
-- Entidade tem CNPJ (0050, dígitos verificadores em `_cnpj_valido`, único). Cadastro/edição na aba
-  Entidades (`gestor_editar_entidade`) ou dentro da entrega (`gestor_salvar_entidade`: acha pelo
-  CNPJ, senão pelo nome).
+- Entidade tem CNPJ (0050, dígitos verificadores em `_cnpj_valido`, único). Cadastro/edição só na
+  aba Entidades; a entrega (aba Programa) escolhe numa lista das entidades cadastradas e grava o
+  `entidade_id` direto (12/10/2026 — antes criava pelo nome dentro da entrega;
+  `gestor_salvar_entidade` continua no banco, sem uso pela entrega).
 - Fazenda "participa" do programa = tem alguma linha em `entregas_doses`. Sem isso, o site do
   produtor/técnico não mostra nada do programa (catálogo de touros e dose na cobertura, Reprodução
   e Lançar no campo; bloco "Programa de sêmen" nos Índices). A comparação com a linha de base da
