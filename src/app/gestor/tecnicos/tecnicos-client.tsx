@@ -45,8 +45,9 @@ function CadastrarFazenda() {
         <div className="flex flex-col gap-0.5">
           <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Cadastrar fazenda</h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Pra fazenda que vai usar o bot. Com o WhatsApp do produtor, ele já pode mandar mensagem pro
-            bot na hora — sem conta no site.
+            O normal é o produtor se cadastrar no site (Cadastre-se → Sou produtor), o que já libera o
+            WhatsApp dele pro bot. Use aqui só pra quem não consegue se cadastrar sozinho: o WhatsApp
+            informado passa a falar com o bot na hora.
           </p>
         </div>
         {!aberto && (
@@ -207,10 +208,9 @@ export function TecnicosClient({
         <div className="flex flex-col gap-0.5">
           <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Dar acesso ao site</h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            A pessoa cria a conta antes: o técnico em Cadastre-se → Sou técnico; o produtor em
-            Cadastre-se → Sou produtor, com o WhatsApp da fazenda (o site percebe que a fazenda já existe e
-            não cria outra). Depois libere aqui pelo e-mail. O produtor também pode liberar técnicos pelo
-            menu da fazenda.
+            A pessoa cria a conta antes (Cadastre-se → Sou técnico, ou entrar com Google) e você libera
+            aqui pelo e-mail. &quot;Produtor&quot; serve pra ligar a conta de alguém a uma fazenda que já existe
+            (ex.: cadastrada aqui pelo gestor). O produtor também pode liberar técnicos pelo menu da fazenda.
           </p>
         </div>
         <form ref={formRef} action={vincularAction} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr_auto] sm:items-end">

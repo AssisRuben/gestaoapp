@@ -480,10 +480,16 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   dias, secagem/parto atrasados, vazia +120 dias em lactação, doses sem confirmação +7 dias. O
   botão de documento de cada alerta abre o resumo da fazenda.
 
-## Entrada de fazendas e produtores (0044_gestor_cria_fazenda.sql)
+## Entrada de fazendas e produtores (0044, 0046, 0047)
 
-- Gestor → Acessos → **Cadastrar fazenda** (`gestor_criar_fazenda`): fazenda + WhatsApp do
-  produtor numa transação; o produtor já usa o bot sem conta no site.
+- **O produtor se cadastra no site primeiro** — o cadastro "Sou produtor" cria a fazenda e grava o
+  WhatsApp (obrigatório desde 12/10/2026), que é o que libera o número pro bot ("Acesso Liberado?"
+  ignora número não cadastrado). Roteiro: `deploy/ENTRADA_PRODUTORES.md`.
+- Conta sem fazenda (entrou com Google): a tela "Sua conta ainda não tem fazenda" tem "Sou
+  produtor: cadastrar minha fazenda" (`criar_minha_fazenda`, 0047) — mesma coisa do cadastro;
+  WhatsApp de outra fazenda é recusado.
+- Exceção: gestor → Acessos → **Cadastrar fazenda** (`gestor_criar_fazenda`) pra quem não consegue
+  se cadastrar; o WhatsApp fala com o bot na hora.
 - Conta do site de quem já usa o bot: o produtor se cadastra normal em "Sou produtor" com o
   WhatsApp da fazenda; o trigger de cadastro (`handle_new_user_signup`, 0046) vê que o número já é
   de uma fazenda (`_telefone_chave`) e NÃO cria outra — a conta fica sem fazenda e a tela "Falta

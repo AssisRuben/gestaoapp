@@ -1584,6 +1584,35 @@ begin
     end if;
   end;
 
+  -- ============================================================
+  -- conta sem fazenda (Google) cadastra a própria fazenda (0047)
+  -- ============================================================
+
+  declare
+    v_conta uuid;
+    v_faz uuid;
+  begin
+    insert into auth.users (email) values ('__google__@exemplo.invalid') returning id into v_conta;
+    perform set_config('request.jwt.claim.sub', v_conta::text, true);
+
+    begin
+      perform criar_minha_fazenda('__minha__', 'Sicrano', '(85) 99777-1234');
+      raise exception 'FALHOU [criar_minha_fazenda]: WhatsApp de outra fazenda deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%já está cadastrado numa fazenda%' then
+        raise exception 'FALHOU [criar_minha_fazenda]: erro inesperado: %', sqlerrm;
+      end if;
+    end;
+
+    v_faz := criar_minha_fazenda('__minha__', 'Sicrano', '(88) 98888-7777', 'Iguatu', 'ce');
+    if not exists (select 1 from usuarios_propriedades where usuario_id = v_conta and propriedade_id = v_faz and papel = 'produtor')
+       or (select telefone from usuarios_whatsapp where propriedade_id = v_faz) <> '5588988887777' then
+      raise exception 'FALHOU [criar_minha_fazenda]: fazenda, vínculo ou WhatsApp não gravados';
+    end if;
+
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

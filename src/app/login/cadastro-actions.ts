@@ -35,9 +35,13 @@ export async function cadastrarNovaFazenda(
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
+  // obrigatório: o cadastro no site é o que libera o número pro bot de WhatsApp
   const whatsapp = String(formData.get("whatsapp") ?? "").trim();
   const digitos = whatsapp.replace(/\D/g, "");
-  if (whatsapp && (digitos.length < 10 || digitos.length > 13)) {
+  if (!whatsapp) {
+    return { error: "Informe o WhatsApp: é por ele que você vai usar o bot do Gestão Pec." };
+  }
+  if (digitos.length < 10 || digitos.length > 13) {
     return { error: "WhatsApp inválido. Informe com DDD, por exemplo (85) 99999-9999." };
   }
 

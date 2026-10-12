@@ -80,6 +80,11 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Confira seu e-mail e clique no link de confirmação pra ativar sua conta e poder entrar.
           </p>
+          {tipo === "produtor" && (
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              O WhatsApp que você informou já pode mandar os dados da fazenda pro bot do Gestão Pec.
+            </p>
+          )}
           {tipo === "tecnico" && (
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Depois, peça ao produtor de cada fazenda (ou ao gestor do programa) pra liberar seu
@@ -179,7 +184,10 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
                 <label htmlFor="whatsapp" className={LABEL_CLASSES}>
                   WhatsApp
                 </label>
-                <CampoTelefone id="whatsapp" name="whatsapp" className={CAMPO_CLASSES} />
+                <CampoTelefone id="whatsapp" name="whatsapp" required className={CAMPO_CLASSES} />
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                  É desse número que você vai mandar os dados pro bot do Gestão Pec.
+                </span>
               </div>
             </div>
           </>
