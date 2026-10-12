@@ -60,20 +60,23 @@ export async function cadastrarNovaFazenda(
   return resultadoCadastro(data, error);
 }
 
-// Conta sem fazenda: sem nome_propriedade no metadata o trigger de 0013 não cria propriedade. O
-// acesso às fazendas vem depois, pelo produtor ou pelo gestor (0023_acesso_tecnicos.sql).
-export async function cadastrarTecnico(
+// Conta sem fazenda: sem nome_propriedade no metadata o trigger de 0013 não cria propriedade. Serve
+// pro técnico (acesso dado pelo produtor ou pelo gestor, 0023) e pro produtor cuja fazenda já usa o
+// bot pelo WhatsApp (o gestor liga a conta à fazenda existente como produtor, 0044) — antes ele
+// usava "Sou produtor" e ganhava uma segunda fazenda vazia.
+export async function cadastrarSemFazenda(
   _state: CadastroState,
   formData: FormData,
 ): Promise<CadastroState> {
   const nome = String(formData.get("nome") ?? "").trim();
   if (!nome) return { error: "Informe seu nome." };
+  const perfil = formData.get("perfil") === "produtor" ? "produtor" : "tecnico";
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email: formData.get("email") as string,
     password: formData.get("password") as string,
-    options: { data: { nome, perfil: "tecnico" } },
+    options: { data: { nome, perfil } },
   });
 
   return resultadoCadastro(data, error);

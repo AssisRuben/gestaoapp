@@ -1433,6 +1433,65 @@ begin
     raise exception 'FALHOU [indicadores_periodo]: período invertido deveria voltar vazio';
   end if;
 
+  -- ============================================================
+  -- gestor cadastra fazenda e libera produtor (0044)
+  -- ============================================================
+
+  declare
+    v_faz uuid;
+    v_tec uuid := (select id from auth.users where email = '__tecnico_teste__@exemplo.invalid');
+  begin
+    -- quem não é gestor não cadastra (a seção 0037 tirou o usuário de teste dos gestores)
+    begin
+      perform gestor_criar_fazenda('__faz_gestor__', 'Fulano');
+      raise exception 'FALHOU [gestor_criar_fazenda]: não gestor deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%Só o gestor%' then raise exception 'FALHOU [gestor_criar_fazenda]: erro inesperado: %', sqlerrm; end if;
+    end;
+
+    insert into gestores (usuario_id) values (v_usuario_id) on conflict do nothing;
+    delete from gestores where usuario_id = v_tec; -- virou gestor no teste de 0037
+    v_faz := gestor_criar_fazenda(' __faz_gestor__ ', 'Fulano', 'Quixadá', 'ce', null, '(85) 99777-1234');
+    if (select estado from propriedades where id = v_faz) <> 'CE'
+       or (select telefone from usuarios_whatsapp where propriedade_id = v_faz) <> '5585997771234' then
+      raise exception 'FALHOU [gestor_criar_fazenda]: fazenda/WhatsApp não gravados direito';
+    end if;
+
+    begin
+      perform gestor_criar_fazenda('__FAZ_GESTOR__', 'Outro', 'quixadá');
+      raise exception 'FALHOU [gestor_criar_fazenda]: nome repetido no mesmo município deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%Já existe a fazenda%' then raise exception 'FALHOU [gestor_criar_fazenda]: erro inesperado: %', sqlerrm; end if;
+    end;
+
+    begin
+      perform gestor_criar_fazenda('__faz_sem_zap__', 'Beltrano', null, null, null, '123');
+      raise exception 'FALHOU [gestor_criar_fazenda]: WhatsApp inválido deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%WhatsApp inválido%' then raise exception 'FALHOU [gestor_criar_fazenda]: erro inesperado: %', sqlerrm; end if;
+    end;
+    if exists (select 1 from propriedades where nome_propriedade = '__faz_sem_zap__') then
+      raise exception 'FALHOU [gestor_criar_fazenda]: com WhatsApp inválido a fazenda não deveria ficar criada';
+    end if;
+
+    -- técnico vira produtor da fazenda nova; liberar de novo é recusado; gestor remove
+    perform vincular_tecnico(v_faz, '__tecnico_teste__@exemplo.invalid');
+    perform vincular_produtor(v_faz, '__TECNICO_TESTE__@exemplo.invalid');
+    if (select papel from usuarios_propriedades where usuario_id = v_tec and propriedade_id = v_faz) <> 'produtor' then
+      raise exception 'FALHOU [vincular_produtor]: técnico deveria passar a produtor';
+    end if;
+    begin
+      perform vincular_produtor(v_faz, '__tecnico_teste__@exemplo.invalid');
+      raise exception 'FALHOU [vincular_produtor]: liberar de novo deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%já é produtor%' then raise exception 'FALHOU [vincular_produtor]: erro inesperado: %', sqlerrm; end if;
+    end;
+    perform desvincular_produtor(v_faz, v_tec);
+    if exists (select 1 from usuarios_propriedades where usuario_id = v_tec and propriedade_id = v_faz) then
+      raise exception 'FALHOU [desvincular_produtor]: o vínculo deveria sair';
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

@@ -2,9 +2,9 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { vincularTecnicoGestor, desvincularTecnicoGestor } from "./actions";
+import { vincularTecnicoGestor, desvincularTecnicoGestor, criarFazendaGestor } from "./actions";
 import { useSuccessToast, SuccessToast } from "../../(app)/toast";
-import { CAMPO_CLASSES, BOTAO_PRIMARIO, Campo } from "../programa/ui";
+import { CAMPO_CLASSES, BOTAO_PRIMARIO, BOTAO_SECUNDARIO, Campo } from "../programa/ui";
 
 export type AcessoFazenda = {
   propriedade_id: string;
@@ -19,7 +19,84 @@ export type FazendaOpcao = { id: string; nome: string };
 
 const PAPEL_LABEL: Record<string, string> = { produtor: "Produtor", tecnico: "Técnico" };
 
-function RemoverAcesso({ propriedadeId, usuarioId }: { propriedadeId: string; usuarioId: string }) {
+// Cadastro de fazenda pelo gestor (0044): o produtor já usa o bot pelo WhatsApp informado, sem
+// conta no site. Conta do site, se ele quiser, é ligada depois em "Dar acesso ao site" → Produtor.
+function CadastrarFazenda() {
+  const [aberto, setAberto] = useState(false);
+  const [state, action, pending] = useActionState(criarFazendaGestor, undefined);
+  const formRef = useRef<HTMLFormElement>(null);
+  const { mensagemToast, mostrarToast } = useSuccessToast();
+
+  useEffect(() => {
+    if (state?.success) {
+      queueMicrotask(() => {
+        formRef.current?.reset();
+        mostrarToast("Fazenda cadastrada! O produtor já pode usar o bot.");
+      });
+    }
+  }, [state, mostrarToast]);
+
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl border border-black/[.08] bg-surface p-4 dark:border-white/[.145]">
+      <SuccessToast mensagem={mensagemToast} />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Cadastrar fazenda</h2>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Pra fazenda que vai usar o bot. Com o WhatsApp do produtor, ele já pode mandar mensagem pro
+            bot na hora — sem conta no site.
+          </p>
+        </div>
+        {!aberto && (
+          <button type="button" onClick={() => setAberto(true)} className={BOTAO_PRIMARIO}>
+            + Nova fazenda
+          </button>
+        )}
+      </div>
+
+      {aberto && (
+        <form ref={formRef} action={action} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Campo id="nf_nome" label="Nome da fazenda">
+            <input id="nf_nome" name="nome_propriedade" required className={CAMPO_CLASSES} />
+          </Campo>
+          <Campo id="nf_produtor" label="Nome do produtor">
+            <input id="nf_produtor" name="nome_produtor" required className={CAMPO_CLASSES} />
+          </Campo>
+          <Campo id="nf_whatsapp" label="WhatsApp do produtor">
+            <input
+              id="nf_whatsapp"
+              name="whatsapp"
+              type="tel"
+              inputMode="tel"
+              placeholder="(85) 99999-9999"
+              className={CAMPO_CLASSES}
+            />
+          </Campo>
+          <Campo id="nf_tecnico" label="Técnico responsável (opcional)">
+            <input id="nf_tecnico" name="tecnico_responsavel" className={CAMPO_CLASSES} />
+          </Campo>
+          <Campo id="nf_municipio" label="Município">
+            <input id="nf_municipio" name="municipio" className={CAMPO_CLASSES} />
+          </Campo>
+          <Campo id="nf_estado" label="UF">
+            <input id="nf_estado" name="estado" maxLength={2} defaultValue="CE" className={`uppercase ${CAMPO_CLASSES}`} />
+          </Campo>
+          {state?.error && <p className="text-sm text-red-600 sm:col-span-2 dark:text-red-400">{state.error}</p>}
+          <div className="flex gap-2 sm:col-span-2">
+            <button type="button" onClick={() => setAberto(false)} className={`flex-1 ${BOTAO_SECUNDARIO}`}>
+              Fechar
+            </button>
+            <button type="submit" disabled={pending} className={`flex-1 ${BOTAO_PRIMARIO}`}>
+              {pending ? "Cadastrando..." : "Cadastrar fazenda"}
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
+
+function RemoverAcesso({ propriedadeId, usuarioId, papel }: { propriedadeId: string; usuarioId: string; papel: string }) {
   const [confirmando, setConfirmando] = useState(false);
   const [state, action, pending] = useActionState(desvincularTecnicoGestor, undefined);
 
@@ -39,6 +116,7 @@ function RemoverAcesso({ propriedadeId, usuarioId }: { propriedadeId: string; us
     <form action={action} className="flex flex-col items-end gap-1">
       <input type="hidden" name="propriedade_id" value={propriedadeId} />
       <input type="hidden" name="usuario_id" value={usuarioId} />
+      <input type="hidden" name="papel" value={papel} />
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -128,15 +206,18 @@ export function TecnicosClient({
     <div className="flex flex-1 flex-col gap-6">
       <SuccessToast mensagem={mensagemToast} />
 
+      <CadastrarFazenda />
+
       <section className="flex flex-col gap-3 rounded-2xl border border-black/[.08] bg-surface p-4 dark:border-white/[.145]">
         <div className="flex flex-col gap-0.5">
-          <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Dar acesso a um técnico</h2>
+          <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Dar acesso ao site</h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            O técnico cria a conta no site (Cadastre-se → Sou técnico) e passa a ver e lançar os
-            dados das fazendas liberadas aqui. O produtor também pode liberar pelo menu da fazenda.
+            A pessoa cria a conta antes: o técnico em Cadastre-se → Sou técnico; o produtor que já usa
+            o bot em Cadastre-se → Sou produtor → &quot;minha fazenda já usa o WhatsApp&quot;. Depois libere
+            aqui pelo e-mail. O produtor também pode liberar técnicos pelo menu da fazenda.
           </p>
         </div>
-        <form ref={formRef} action={vincularAction} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+        <form ref={formRef} action={vincularAction} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr_auto] sm:items-end">
           <Campo id="tec_fazenda" label="Fazenda">
             <select id="tec_fazenda" name="propriedade_id" required defaultValue="" className={CAMPO_CLASSES}>
               <option value="" disabled>
@@ -149,7 +230,13 @@ export function TecnicosClient({
               ))}
             </select>
           </Campo>
-          <Campo id="tec_email" label="E-mail do técnico">
+          <Campo id="tec_papel" label="Como">
+            <select id="tec_papel" name="papel" defaultValue="tecnico" className={CAMPO_CLASSES}>
+              <option value="tecnico">Técnico</option>
+              <option value="produtor">Produtor</option>
+            </select>
+          </Campo>
+          <Campo id="tec_email" label="E-mail da conta">
             <input id="tec_email" name="email" type="email" required className={CAMPO_CLASSES} />
           </Campo>
           <button type="submit" disabled={vincularPending} className={`${BOTAO_PRIMARIO} py-3`}>
@@ -225,9 +312,7 @@ export function TecnicosClient({
                             {a.nome ? ` · ${a.email}` : ""}
                           </span>
                         </div>
-                        {a.papel === "tecnico" && (
-                          <RemoverAcesso propriedadeId={f.id} usuarioId={a.usuario_id} />
-                        )}
+                        <RemoverAcesso propriedadeId={f.id} usuarioId={a.usuario_id} papel={a.papel} />
                       </li>
                     ))}
                   </ul>

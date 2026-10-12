@@ -480,6 +480,16 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   dias, secagem/parto atrasados, vazia +120 dias em lactação, doses sem confirmação +7 dias. O
   botão de documento de cada alerta abre o resumo da fazenda.
 
+## Entrada de fazendas e produtores (0044_gestor_cria_fazenda.sql)
+
+- Gestor → Acessos → **Cadastrar fazenda** (`gestor_criar_fazenda`): fazenda + WhatsApp do
+  produtor numa transação; o produtor já usa o bot sem conta no site.
+- Conta do site de quem já usa o bot: cadastro "Sou produtor" com **"Minha fazenda já usa o
+  Gestão Pec pelo WhatsApp"** cria a conta SEM fazenda (metadata `perfil='produtor'`), e o gestor
+  (ou o produtor dono) liga pelo e-mail em "Dar acesso ao site" → Produtor (`vincular_produtor`;
+  técnico da fazenda vira produtor). Só o gestor remove produtor (`desvincular_produtor`).
+  Sem isso o "Sou produtor" criava uma segunda fazenda vazia.
+
 ## Cobertura atual (0038_cobertura_atual.sql)
 
 - "Pra secar", "partos previstos" e "aguardando diagnóstico" usam só a **cobertura atual** de cada
