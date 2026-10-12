@@ -302,6 +302,10 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - Entidade tem CNPJ (0050, dígitos verificadores em `_cnpj_valido`, único). Cadastro/edição na aba
   Entidades (`gestor_editar_entidade`) ou dentro da entrega (`gestor_salvar_entidade`: acha pelo
   CNPJ, senão pelo nome).
+- Fazenda "participa" do programa = tem alguma linha em `entregas_doses`. Sem isso, o site do
+  produtor/técnico não mostra nada do programa (catálogo de touros e dose na cobertura, Reprodução
+  e Lançar no campo; bloco "Programa de sêmen" nos Índices). A comparação com a linha de base da
+  adesão fica só no painel do gestor (aba Programa).
 - `baixas_doses` (0021): dose que sai do saldo sem virar inseminação (perda, descarte,
   transferência). A fazenda registra/desfaz via `registrar_baixa_doses`/`deletar_baixa_doses`.
 - Coberturas do bot gastam dose desde 0022 (ver seção do bot abaixo).
@@ -486,8 +490,8 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - **Índices da fazenda pro produtor** (12/10/2026): `carregarIndicadoresFazenda`
   (`src/lib/indicadores-fazenda.ts`) + `IndicadoresFazendaView` — L/vaca/dia, produção/dia,
   receita e despesa por mês, custo por litro, receita por litro (receita ÷ litros do mês) e sobra
-  por litro; comparação com a adesão ao programa quando existe; taxa de concepção, doses por
-  prenhez, gestações e nascidos do programa de sêmen. Aparece no Início, no relatório da visita e
+  por litro; taxa de concepção, doses por prenhez, gestações e nascidos do programa de sêmen (só
+  pra fazenda que participa). Sem comparação com a adesão (12/10/2026: fica só no gestor). Aparece no Início, no relatório da visita e
   no resumo do gestor — mesmos números do ranking.
 - `carregarResumoFazenda` (`src/lib/resumo-fazenda.ts`) + `ResumoFazendaView`
   (`src/app/resumo-fazenda-view.tsx`): rebanho, médias (produção/dia, L/vaca/dia, projeção 305,

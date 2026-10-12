@@ -208,16 +208,18 @@ export function CampoClient({
               <label htmlFor="campo_touro" className={ROTULO}>
                 Touro / sêmen
               </label>
-              <select id="campo_touro" value={touroId} onChange={(e) => { setTouroId(e.target.value); setDosePrograma(false); }} className={CAMPO}>
-                <option value="">Outro / não sei (escrever)</option>
-                {touros.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.nome}
-                    {t.codigo ? ` (${t.codigo})` : ""}
-                    {t.saldo > 0 ? ` — ${t.saldo} dose${t.saldo === 1 ? "" : "s"} do programa` : ""}
-                  </option>
-                ))}
-              </select>
+              {touros.length > 0 && (
+                <select id="campo_touro" value={touroId} onChange={(e) => { setTouroId(e.target.value); setDosePrograma(false); }} className={CAMPO}>
+                  <option value="">Outro / não sei (escrever)</option>
+                  {touros.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.nome}
+                      {t.codigo ? ` (${t.codigo})` : ""}
+                      {t.saldo > 0 ? ` — ${t.saldo} dose${t.saldo === 1 ? "" : "s"} do programa` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
               {!touroId && (
                 <input
                   type="text"

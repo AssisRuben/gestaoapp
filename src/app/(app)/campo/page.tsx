@@ -1,5 +1,5 @@
 import { getPropriedadeAtual } from "@/lib/propriedade";
-import { getVacasCache, getTourosCache, getSaldoDosesCache } from "@/lib/cached-data";
+import { getVacasCache, getTourosCache, getSaldoDosesCache, getEntregasDosesCache } from "@/lib/cached-data";
 import type { Touro, SaldoDoses } from "@/lib/programa";
 import { SemPropriedade } from "../sem-propriedade";
 import { CampoClient, type VacaCampo } from "./campo-client";
@@ -10,11 +10,14 @@ export default async function CampoPage() {
   const propriedadeAtual = await getPropriedadeAtual();
   if (!propriedadeAtual) return <SemPropriedade />;
 
-  const [vacasData, tourosData, saldosData] = await Promise.all([
+  const [vacasData, tourosData, saldosData, entregasData] = await Promise.all([
     getVacasCache(propriedadeAtual.id),
     getTourosCache(),
     getSaldoDosesCache(propriedadeAtual.id),
+    getEntregasDosesCache(propriedadeAtual.id),
   ]);
+  // catálogo de touros só pra fazenda do programa de sêmen (já recebeu alguma entrega)
+  const participa = (entregasData as unknown[]).length > 0;
 
   const vacas: VacaCampo[] = (
     vacasData as unknown as { id: string; numero_identificacao: number; status_produtivo: string; status_reprodutivo: string }[]
@@ -23,7 +26,7 @@ export default async function CampoPage() {
     .sort((a, b) => a.numero - b.numero);
 
   const saldo = new Map((saldosData as unknown as SaldoDoses[]).map((s) => [s.touro_id, Number(s.saldo)]));
-  const touros = (tourosData as unknown as Touro[])
+  const touros = (participa ? (tourosData as unknown as Touro[]) : [])
     .filter((t) => t.ativo || (saldo.get(t.id) ?? 0) > 0)
     .map((t) => ({ id: t.id, nome: t.nome, codigo: t.codigo, saldo: saldo.get(t.id) ?? 0 }));
 

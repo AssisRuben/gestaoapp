@@ -75,6 +75,7 @@ export function ReproducaoClient({
   baixas: BaixaDoses[];
   nomes?: Record<string, string>;
 }) {
+  const participa = entregas.length > 0; // fazenda no programa de sêmen
   const [busca, setBusca] = useState("");
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [coberturaEmEdicao, setCoberturaEmEdicao] = useState<Cobertura | null>(null);
@@ -636,7 +637,7 @@ export function ReproducaoClient({
               />
             </div>
 
-            <CamposTouro touros={touros} saldos={saldos} />
+            <CamposTouro touros={touros} saldos={saldos} participa={participa} />
 
             {criarState?.error && (
               <p className="text-sm text-red-600 dark:text-red-400">{criarState.error}</p>
@@ -694,6 +695,7 @@ export function ReproducaoClient({
             <CamposTouro
               touros={touros}
               saldos={saldos}
+              participa={participa}
               touroIdInicial={coberturaEmEdicao.touro_id ?? ""}
               doseProgramaInicial={coberturaEmEdicao.dose_programa}
               touroSemenInicial={coberturaEmEdicao.touro_id ? "" : (coberturaEmEdicao.touro_semen ?? "")}

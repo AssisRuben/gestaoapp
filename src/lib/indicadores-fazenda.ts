@@ -3,9 +3,9 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { hojeBrasil } from "@/lib/datas";
 
 // Índices da fazenda pro PRÓPRIO produtor (Início e relatório da visita) — os mesmos números que o
-// gestor vê no ranking e na linha de base: calcular_indicadores (0019) é a régua única. Inclui a
-// linha de base da adesão (pra comparar "antes × hoje") e os índices reprodutivos do programa de
-// sêmen (0021), quando a fazenda participa. Service role: quem chama já validou o acesso à fazenda.
+// gestor vê no ranking e na linha de base: calcular_indicadores (0019) é a régua única. Inclui os
+// índices reprodutivos do programa de sêmen (0021), quando a fazenda participa (tem entrega de doses). A comparação com a
+// linha de base da adesão fica só no painel do gestor. Service role: quem chama já validou o acesso à fazenda.
 
 export type Indicadores = {
   litrosVacaDia: number | null;
@@ -20,7 +20,6 @@ export type Indicadores = {
 
 export type IndicadoresFazenda = {
   hoje: Indicadores;
-  adesao: (Indicadores & { data: string }) | null;
   programa: {
     taxaConcepcao: number | null;
     dosesPorPrenhez: number | null;
@@ -53,16 +52,16 @@ function montar(l: Linha | null | undefined): Indicadores {
 
 export async function carregarIndicadoresFazenda(propriedadeId: string): Promise<IndicadoresFazenda> {
   const supabase = createServiceClient();
-  const [{ data: hoje }, { data: adesao }, { data: programa }] = await Promise.all([
+  const [{ data: hoje }, { count: entregas }, { data: programa }] = await Promise.all([
     supabase.rpc("calcular_indicadores", { p_propriedade_id: propriedadeId, p_data: hojeBrasil() }).maybeSingle(),
-    supabase.from("adesoes_programa").select("*").eq("propriedade_id", propriedadeId).maybeSingle(),
+    supabase.from("entregas_doses").select("id", { count: "exact", head: true }).eq("propriedade_id", propriedadeId),
     supabase.from("indicadores_reprodutivos_programa").select("*").eq("propriedade_id", propriedadeId).maybeSingle(),
   ]);
 
-  const p = programa as Linha | null;
+  // programa de sêmen só pra fazenda que participa (já recebeu alguma entrega de doses)
+  const p = entregas ? (programa as Linha | null) : null;
   return {
     hoje: montar(hoje as Linha | null),
-    adesao: adesao ? { ...montar(adesao as Linha), data: String((adesao as Linha).data_adesao) } : null,
     programa: p
       ? {
           taxaConcepcao: num(p.taxa_concepcao),

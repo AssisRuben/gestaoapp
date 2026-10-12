@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS, ACCENT_ACTIVE_CLASSES, hrefAtivo, type NavItem } from "./nav-items";
@@ -10,6 +10,30 @@ import { NAV_ITEMS, ACCENT_ACTIVE_CLASSES, hrefAtivo, type NavItem } from "./nav
 export function BottomNav({ items = NAV_ITEMS, principais }: { items?: NavItem[]; principais?: number }) {
   const pathname = usePathname();
   const [maisAberto, setMaisAberto] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const botaoRef = useRef<HTMLButtonElement>(null);
+
+  // fecha ao tocar fora (inclusive noutra aba da barra), com Esc e ao trocar de página
+  useEffect(() => {
+    if (!maisAberto) return;
+    const fora = (e: PointerEvent) => {
+      const alvo = e.target as Node;
+      if (!menuRef.current?.contains(alvo) && !botaoRef.current?.contains(alvo)) setMaisAberto(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setMaisAberto(false);
+    document.addEventListener("pointerdown", fora);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", fora);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [maisAberto]);
+
+  const [paginaAnterior, setPaginaAnterior] = useState(pathname);
+  if (pathname !== paginaAnterior) {
+    setPaginaAnterior(pathname);
+    setMaisAberto(false);
+  }
 
   if (items.length === 0) return null;
   const ativoHref = hrefAtivo(items, pathname);
@@ -25,10 +49,10 @@ export function BottomNav({ items = NAV_ITEMS, principais }: { items?: NavItem[]
   return (
     <>
       {maisAberto && extras.length > 0 && (
-        <div className="fixed inset-0 z-40 sm:hidden print:hidden" onClick={() => setMaisAberto(false)}>
+        <div className="fixed inset-0 z-[45] bg-black/20 sm:hidden print:hidden">
           <div
+            ref={menuRef}
             className="absolute inset-x-2 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] flex flex-col gap-1 rounded-2xl border border-black/[.08] bg-white p-2 shadow-lg dark:border-white/[.145] dark:bg-zinc-950"
-            onClick={(e) => e.stopPropagation()}
           >
             {extras.map((item) => {
               const Icon = item.icon;
@@ -51,7 +75,7 @@ export function BottomNav({ items = NAV_ITEMS, principais }: { items?: NavItem[]
         </div>
       )}
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex gap-1 print:hidden border-t border-black/[.08] bg-white px-2 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] sm:hidden dark:border-white/[.145] dark:bg-zinc-950">
+      <nav className="fixed inset-x-0 bottom-0 z-50 flex gap-1 print:hidden border-t border-black/[.08] bg-white px-2 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] sm:hidden dark:border-white/[.145] dark:bg-zinc-950">
         {visiveis.map((item) => {
           const Icon = item.icon;
           return (
@@ -63,6 +87,7 @@ export function BottomNav({ items = NAV_ITEMS, principais }: { items?: NavItem[]
         })}
         {extras.length > 0 && (
           <button
+            ref={botaoRef}
             type="button"
             onClick={() => setMaisAberto((v) => !v)}
             aria-expanded={maisAberto}

@@ -364,15 +364,18 @@ function BaixaModal({
 // Campos de touro do formulário de cobertura (nova e edição): touro do catálogo, "usou dose do
 // programa" e, quando nenhum touro do catálogo é escolhido, o texto livre de antes. Com touro do
 // catálogo o texto livre não é enviado — o banco grava o nome do touro em touro_semen.
+// Fazenda fora do programa (nenhuma entrega de doses) vê só o texto livre.
 export function CamposTouro({
   touros,
   saldos,
+  participa,
   touroIdInicial = "",
   doseProgramaInicial = false,
   touroSemenInicial = "",
 }: {
   touros: Touro[];
   saldos: SaldoDoses[];
+  participa: boolean;
   touroIdInicial?: string;
   doseProgramaInicial?: boolean;
   touroSemenInicial?: string;
@@ -387,6 +390,17 @@ export function CamposTouro({
   const podeUsarDose = !!touroId && saldoDisponivel > 0;
 
   const opcoes = touros.filter((t) => t.ativo || t.id === touroIdInicial);
+
+  if (!participa && !touroIdInicial) {
+    return (
+      <div className="flex flex-col gap-1">
+        <label htmlFor="touro_semen" className={LABEL_CLASSES}>
+          Touro/Sêmen (opcional)
+        </label>
+        <input id="touro_semen" name="touro_semen" type="text" defaultValue={touroSemenInicial} className={CAMPO_CLASSES} />
+      </div>
+    );
+  }
 
   return (
     <>

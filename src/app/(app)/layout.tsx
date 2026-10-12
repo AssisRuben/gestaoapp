@@ -73,7 +73,8 @@ export default async function AppLayout({
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col pb-16 sm:pb-0">{children}</main>
 
-      <BottomNav />
+      {/* 6 abas apertam no celular: 4 na barra + "Mais" (Bezerros, Financeiro), como no gestor */}
+      <BottomNav principais={4} />
       <RegistrarOffline />
     </div>
   );
