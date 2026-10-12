@@ -49,10 +49,11 @@ Compartilhar da página antes de mandar o link).
 6. **Acesso ao site** (opcional, quando a pessoa quiser usar o site):
    - **Técnico**: cria a conta (Cadastre-se → Sou técnico); você libera em Acessos → Dar acesso ao
      site → **Técnico**, com o e-mail dele e a fazenda.
-   - **Produtor que já usa o bot**: cria a conta em Cadastre-se → Sou produtor → marca **"Minha
-     fazenda já usa o Gestão Pec pelo WhatsApp"**; você libera em Dar acesso ao site → **Produtor**.
-     Se ele esquecer de marcar, o sistema cria uma fazenda vazia em nome dele — nesse caso me avise
-     pra remover.
+   - **Produtor**: cria a conta em Cadastre-se → Sou produtor, **com o mesmo WhatsApp que você
+     cadastrou na fazenda**. O site percebe que a fazenda já existe e não cria outra; a conta fica
+     esperando. Você libera em Dar acesso ao site → **Produtor**, com o e-mail dele e a fazenda.
+     Se ele usar outro número (ou deixar o WhatsApp vazio), o site cria uma fazenda nova vazia em
+     nome dele — nesse caso me avise pra remover.
 7. **Conferir no painel**:
    - Visão Geral / Ranking: a fazenda aparece (os números aparecem com as primeiras pesagens).
    - Acessos: técnico e produtor ligados na fazenda certa.
@@ -74,7 +75,7 @@ Compartilhar da página antes de mandar o link).
   o nono dígito não importa) ou ele está num grupo.
 - **"Não registrei o leite… não tem parto ativo"** — falta o parto da vaca (passo 5).
 - **"Essa vaca está seca"** — a vaca está como seca; se voltou a produzir, registre o parto novo.
-- **Produtor criou conta e caiu numa fazenda vazia** — ele não marcou "já uso pelo WhatsApp";
-  libere a fazenda certa pra ele e peça a remoção da vazia.
+- **Produtor criou conta e caiu numa fazenda vazia** — ele se cadastrou com um WhatsApp diferente do
+  da fazenda (ou sem WhatsApp); libere a fazenda certa pra ele e peça a remoção da vazia.
 - **"Esse e-mail já tem conta"** no cadastro — a pessoa já se cadastrou antes; use "Esqueci minha
   senha".

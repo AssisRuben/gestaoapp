@@ -1557,6 +1557,33 @@ begin
     end if;
   end;
 
+  -- ============================================================
+  -- cadastro "Sou produtor" com WhatsApp que já é de uma fazenda (0046)
+  -- ============================================================
+
+  declare
+    v_conta uuid;
+  begin
+    -- 85 99777-1234 é da fazenda criada pelo gestor no teste de 0044 (sem o 9 também tem que bater)
+    insert into auth.users (email, raw_user_meta_data)
+    values ('__produtor_zap__@exemplo.invalid',
+            '{"nome_propriedade": "__duplicada__", "nome_produtor": "Fulano", "whatsapp": "(85) 9777-1234"}')
+    returning id into v_conta;
+    if exists (select 1 from propriedades where nome_propriedade = '__duplicada__')
+       or exists (select 1 from usuarios_propriedades where usuario_id = v_conta) then
+      raise exception 'FALHOU [cadastro com WhatsApp existente]: não deveria criar outra fazenda';
+    end if;
+
+    insert into auth.users (email, raw_user_meta_data)
+    values ('__produtor_novo__@exemplo.invalid',
+            '{"nome_propriedade": "__fazenda_nova__", "nome_produtor": "Beltrano", "whatsapp": "(88) 99555-0000"}')
+    returning id into v_conta;
+    if not exists (select 1 from usuarios_propriedades up join propriedades p on p.id = up.propriedade_id
+                   where up.usuario_id = v_conta and p.nome_propriedade = '__fazenda_nova__') then
+      raise exception 'FALHOU [cadastro de produtor novo]: deveria criar a fazenda';
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

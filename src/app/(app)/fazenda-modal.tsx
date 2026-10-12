@@ -14,6 +14,7 @@ import {
 import { logout } from "./actions";
 import { useSuccessToast, SuccessToast } from "./toast";
 import { formatarTelefoneBR } from "./format";
+import { CampoTelefone } from "../campo-telefone";
 
 const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
@@ -131,12 +132,9 @@ function DadosGeraisForm({
           <label htmlFor="whatsapp_telefone" className={LABEL_CLASSES}>
             WhatsApp
           </label>
-          <input
+          <CampoTelefone
             id="whatsapp_telefone"
             name="whatsapp_telefone"
-            type="tel"
-            inputMode="tel"
-            placeholder="(85) 99999-9999"
             defaultValue={usuarioWhatsapp ? formatarTelefoneBR(usuarioWhatsapp.telefone) : ""}
             className={CAMPO_CLASSES}
           />

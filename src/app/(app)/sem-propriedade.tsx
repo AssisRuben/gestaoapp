@@ -10,8 +10,9 @@ export async function SemPropriedade() {
     data: { user },
   } = await supabase.auth.getUser();
   const email = user?.email ?? null;
-  // produtor cuja fazenda já usa o bot (cadastro "minha fazenda já usa o WhatsApp", 0044)
-  const produtor = user?.user_metadata?.perfil === "produtor";
+  // produtor que se cadastrou com o WhatsApp de uma fazenda que já existe: o banco não criou outra
+  // (0046) e a conta espera o gestor ligar
+  const produtor = user?.user_metadata?.perfil === "produtor" || !!user?.user_metadata?.nome_propriedade;
 
   return (
     <div className="flex flex-1 items-start justify-center p-4 sm:items-center sm:p-16">
@@ -34,11 +35,17 @@ export async function SemPropriedade() {
         )}
 
         {produtor ? (
+          <>
+          <p className="text-base text-zinc-600 dark:text-zinc-400">
+            Se o seu WhatsApp já está cadastrado numa fazenda do Gestão Pec, não criamos outra: o gestor liga
+            esta conta à fazenda que já existe.
+          </p>
           <ol className="flex list-decimal flex-col gap-1.5 pl-5 text-base text-black dark:text-zinc-50">
             <li>Mande esse e-mail pro gestor do programa (pode ser pelo WhatsApp).</li>
             <li>Ele liga esta conta à sua fazenda — os dados que você já mandou pro bot aparecem aqui.</li>
             <li>Depois que ele avisar, toque no botão abaixo.</li>
           </ol>
+          </>
         ) : (
           <ol className="flex list-decimal flex-col gap-1.5 pl-5 text-base text-black dark:text-zinc-50">
             <li>Mande esse e-mail pro produtor da fazenda (ou pro gestor do programa).</li>

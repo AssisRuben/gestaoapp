@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { cadastrarNovaFazenda, cadastrarSemFazenda } from "./cadastro-actions";
+import { CampoTelefone } from "../campo-telefone";
 
 const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
@@ -62,12 +63,12 @@ function Botoes({ onClose, pending }: { onClose: () => void; pending: boolean })
 
 export function CadastroModal({ onClose }: { onClose: () => void }) {
   const [tipo, setTipo] = useState<TipoCadastro>("produtor");
-  // produtor cuja fazenda já usa o bot: conta SEM fazenda nova; o gestor liga à fazenda existente
-  const [jaUsaWhatsapp, setJaUsaWhatsapp] = useState(false);
   const [fazendaState, fazendaAction, fazendaPending] = useActionState(cadastrarNovaFazenda, undefined);
   const [semFazendaState, semFazendaAction, semFazendaPending] = useActionState(cadastrarSemFazenda, undefined);
 
-  const semFazenda = tipo === "tecnico" || jaUsaWhatsapp;
+  // técnico: conta sem fazenda. Produtor cuja fazenda já foi cadastrada pelo gestor: o banco percebe
+  // pelo WhatsApp e não cria outra (0046)
+  const semFazenda = tipo === "tecnico";
   const state = semFazenda ? semFazendaState : fazendaState;
 
   if (state?.success) {
@@ -83,12 +84,6 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Depois, peça ao produtor de cada fazenda (ou ao gestor do programa) pra liberar seu
               acesso usando este e-mail.
-            </p>
-          )}
-          {tipo === "produtor" && jaUsaWhatsapp && (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Depois, mande este e-mail pro gestor do programa: ele liga a sua conta à fazenda que já
-              usa o WhatsApp, com todos os dados que você já lançou.
             </p>
           )}
           <button
@@ -107,7 +102,7 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <form
-        key={`${tipo}-${jaUsaWhatsapp}`}
+        key={tipo}
         action={semFazenda ? semFazendaAction : fazendaAction}
         className="relative flex max-h-[90vh] w-full max-w-lg flex-col gap-4 overflow-y-auto rounded-lg bg-white p-6 dark:bg-zinc-950"
       >
@@ -146,27 +141,7 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
           ))}
         </div>
 
-        {tipo === "produtor" && (
-          <label className="flex items-start gap-3 rounded-xl border border-black/[.08] p-3 dark:border-white/[.145]">
-            <input
-              type="checkbox"
-              checked={jaUsaWhatsapp}
-              onChange={(e) => setJaUsaWhatsapp(e.target.checked)}
-              className="mt-1 h-5 w-5 accent-brand-green"
-            />
-            <span className="flex flex-col gap-0.5">
-              <span className="text-base font-medium text-black dark:text-zinc-50">
-                Minha fazenda já usa o Gestão Pec pelo WhatsApp
-              </span>
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                Marque se você já manda os dados pro bot. Assim a conta é ligada à sua fazenda, sem criar
-                outra vazia.
-              </span>
-            </span>
-          </label>
-        )}
-
-        {tipo === "produtor" && !jaUsaWhatsapp ? (
+        {tipo === "produtor" ? (
           <>
             <h3 className="text-base font-semibold text-black dark:text-zinc-50">Dados da fazenda</h3>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -204,14 +179,7 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
                 <label htmlFor="whatsapp" className={LABEL_CLASSES}>
                   WhatsApp
                 </label>
-                <input
-                  id="whatsapp"
-                  name="whatsapp"
-                  type="tel"
-                  inputMode="tel"
-                  placeholder="(85) 99999-9999"
-                  className={CAMPO_CLASSES}
-                />
+                <CampoTelefone id="whatsapp" name="whatsapp" className={CAMPO_CLASSES} />
               </div>
             </div>
           </>

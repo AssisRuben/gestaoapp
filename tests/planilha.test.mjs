@@ -45,4 +45,13 @@ ok(p.abaPeloCabecalho(["Número", "Sexo", "Nascimento"]) === "bezerros", "aba de
 ok(p.abaPeloCabecalho(["Número", "Situação"]) === "vacas", "aba de vacas pelo cabeçalho");
 ok(p.abaPeloNome("Pesagens") === "leite" && p.abaPeloNome("Bezerros") === "bezerros", "aba pelo nome");
 
+// máscara do WhatsApp (src/lib/telefone.ts)
+const t = await carregar("telefone");
+ok(t.mascaraTelefone("85999991234") === "(85) 99999-1234", "celular com 11 dígitos");
+ok(t.mascaraTelefone("8599991234") === "(85) 9999-1234", "número com 10 dígitos");
+ok(t.mascaraTelefone("+55 (85) 99999-1234") === "(85) 99999-1234", "colado com +55");
+ok(t.mascaraTelefone("859") === "(85) 9", "enquanto digita");
+ok(t.mascaraTelefone("8599999123456") === "(85) 99999-1234", "corta dígitos a mais");
+ok(t.mascaraTelefone("") === "", "vazio");
+
 terminar("planilha");

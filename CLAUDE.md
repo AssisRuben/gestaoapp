@@ -484,11 +484,13 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 
 - Gestor → Acessos → **Cadastrar fazenda** (`gestor_criar_fazenda`): fazenda + WhatsApp do
   produtor numa transação; o produtor já usa o bot sem conta no site.
-- Conta do site de quem já usa o bot: cadastro "Sou produtor" com **"Minha fazenda já usa o
-  Gestão Pec pelo WhatsApp"** cria a conta SEM fazenda (metadata `perfil='produtor'`), e o gestor
-  (ou o produtor dono) liga pelo e-mail em "Dar acesso ao site" → Produtor (`vincular_produtor`;
-  técnico da fazenda vira produtor). Só o gestor remove produtor (`desvincular_produtor`).
-  Sem isso o "Sou produtor" criava uma segunda fazenda vazia.
+- Conta do site de quem já usa o bot: o produtor se cadastra normal em "Sou produtor" com o
+  WhatsApp da fazenda; o trigger de cadastro (`handle_new_user_signup`, 0046) vê que o número já é
+  de uma fazenda (`_telefone_chave`) e NÃO cria outra — a conta fica sem fazenda e a tela "Falta
+  liberar seu acesso" explica. O gestor (ou o produtor dono) liga pelo e-mail em "Dar acesso ao
+  site" → Produtor (`vincular_produtor`; técnico da fazenda vira produtor). Nunca liga sozinho pelo
+  número (bastaria digitar o de outra pessoa). Só o gestor remove produtor (`desvincular_produtor`).
+- Campos de WhatsApp usam `CampoTelefone` (`src/app/campo-telefone.tsx`): máscara (85) 99999-9999.
 
 ## Importar rebanho por planilha (0045_importar_rebanho.sql)
 

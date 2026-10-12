@@ -5,6 +5,7 @@ import Link from "next/link";
 import { vincularTecnicoGestor, desvincularTecnicoGestor, criarFazendaGestor } from "./actions";
 import { useSuccessToast, SuccessToast } from "../../(app)/toast";
 import { CAMPO_CLASSES, BOTAO_PRIMARIO, BOTAO_SECUNDARIO, Campo } from "../programa/ui";
+import { CampoTelefone } from "../../campo-telefone";
 
 export type AcessoFazenda = {
   propriedade_id: string;
@@ -23,14 +24,15 @@ const PAPEL_LABEL: Record<string, string> = { produtor: "Produtor", tecnico: "T�
 // conta no site. Conta do site, se ele quiser, é ligada depois em "Dar acesso ao site" → Produtor.
 function CadastrarFazenda() {
   const [aberto, setAberto] = useState(false);
+  // versão do formulário: depois de cadastrar, remonta (limpa também o WhatsApp, que tem estado próprio)
+  const [versao, setVersao] = useState(0);
   const [state, action, pending] = useActionState(criarFazendaGestor, undefined);
-  const formRef = useRef<HTMLFormElement>(null);
   const { mensagemToast, mostrarToast } = useSuccessToast();
 
   useEffect(() => {
     if (state?.success) {
       queueMicrotask(() => {
-        formRef.current?.reset();
+        setVersao((v) => v + 1);
         mostrarToast("Fazenda cadastrada! O produtor já pode usar o bot.");
       });
     }
@@ -55,7 +57,7 @@ function CadastrarFazenda() {
       </div>
 
       {aberto && (
-        <form ref={formRef} action={action} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <form key={versao} action={action} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Campo id="nf_nome" label="Nome da fazenda">
             <input id="nf_nome" name="nome_propriedade" required className={CAMPO_CLASSES} />
           </Campo>
@@ -63,14 +65,7 @@ function CadastrarFazenda() {
             <input id="nf_produtor" name="nome_produtor" required className={CAMPO_CLASSES} />
           </Campo>
           <Campo id="nf_whatsapp" label="WhatsApp do produtor">
-            <input
-              id="nf_whatsapp"
-              name="whatsapp"
-              type="tel"
-              inputMode="tel"
-              placeholder="(85) 99999-9999"
-              className={CAMPO_CLASSES}
-            />
+            <CampoTelefone id="nf_whatsapp" name="whatsapp" className={CAMPO_CLASSES} />
           </Campo>
           <Campo id="nf_tecnico" label="Técnico responsável (opcional)">
             <input id="nf_tecnico" name="tecnico_responsavel" className={CAMPO_CLASSES} />
@@ -212,9 +207,10 @@ export function TecnicosClient({
         <div className="flex flex-col gap-0.5">
           <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Dar acesso ao site</h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            A pessoa cria a conta antes: o técnico em Cadastre-se → Sou técnico; o produtor que já usa
-            o bot em Cadastre-se → Sou produtor → &quot;minha fazenda já usa o WhatsApp&quot;. Depois libere
-            aqui pelo e-mail. O produtor também pode liberar técnicos pelo menu da fazenda.
+            A pessoa cria a conta antes: o técnico em Cadastre-se → Sou técnico; o produtor em
+            Cadastre-se → Sou produtor, com o WhatsApp da fazenda (o site percebe que a fazenda já existe e
+            não cria outra). Depois libere aqui pelo e-mail. O produtor também pode liberar técnicos pelo
+            menu da fazenda.
           </p>
         </div>
         <form ref={formRef} action={vincularAction} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr_auto] sm:items-end">
