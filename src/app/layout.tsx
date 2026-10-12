@@ -16,7 +16,15 @@ export const metadata: Metadata = {
   title: "Gestão Pec",
   description: "Sistema de gestão para fazenda leiteira",
   manifest: "/manifest.json",
+  // ícone da aba: logo com fundo branco (o transparente sumia na aba escura); gerado de
+  // public/gestao-pec-logo.png
   icons: {
+    icon: [
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/favicon-48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icons/favicon-96.png", sizes: "96x96", type: "image/png" },
+    ],
+    shortcut: "/icons/favicon-32.png",
     apple: "/apple-touch-icon.png",
   },
 };
