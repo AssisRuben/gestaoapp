@@ -14,5 +14,6 @@ export function GestorTopNav() {
 }
 
 export function GestorBottomNav() {
-  return <BottomNav items={GESTOR_NAV_ITEMS} />;
+  // 7 abas não cabem no celular: 4 na barra + "Mais" (Acessos, Alertas, Agente)
+  return <BottomNav items={GESTOR_NAV_ITEMS} principais={4} />;
 }

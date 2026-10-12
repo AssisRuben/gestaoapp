@@ -137,7 +137,7 @@ export function GestorDashboardClient({
       </div>
 
       <div className="flex flex-row items-end gap-3">
-        <div className="flex flex-1 flex-col gap-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <label htmlFor="gestor_inicio" className={LABEL_CLASSES}>
             De
           </label>
@@ -146,10 +146,10 @@ export function GestorDashboardClient({
             type="date"
             value={inicio}
             onChange={(e) => setInicio(e.target.value)}
-            className={`w-full ${CAMPO_CLASSES}`}
+            className={`w-full min-w-0 ${CAMPO_CLASSES}`}
           />
         </div>
-        <div className="flex flex-1 flex-col gap-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <label htmlFor="gestor_fim" className={LABEL_CLASSES}>
             Até
           </label>
@@ -158,27 +158,27 @@ export function GestorDashboardClient({
             type="date"
             value={fim}
             onChange={(e) => setFim(e.target.value)}
-            className={`w-full ${CAMPO_CLASSES}`}
+            className={`w-full min-w-0 ${CAMPO_CLASSES}`}
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <div className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border bg-surface border-black/[.08] p-3 text-center sm:p-5 dark:border-white/[.145]">
-          <p className="w-full truncate text-center font-mono text-xl font-bold tabular-nums sm:text-2xl text-black dark:text-zinc-50">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+        <div className="flex flex-row items-center justify-between gap-3 rounded-2xl border bg-surface border-black/[.08] px-4 py-3 text-left sm:flex-col sm:justify-center sm:gap-1.5 sm:p-5 sm:text-center dark:border-white/[.145]">
+          <p className="order-last shrink-0 font-mono text-lg font-bold tabular-nums sm:order-none sm:w-full sm:truncate sm:text-center sm:text-2xl text-black dark:text-zinc-50">
             {fazendas.length}
           </p>
           <p className="text-base text-zinc-600 dark:text-zinc-400">Fazendas</p>
         </div>
-        <div className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border bg-surface border-black/[.08] p-3 text-center sm:p-5 dark:border-white/[.145]">
-          <p className="w-full truncate text-center font-mono text-xl font-bold tabular-nums sm:text-2xl text-black dark:text-zinc-50">
+        <div className="flex flex-row items-center justify-between gap-3 rounded-2xl border bg-surface border-black/[.08] px-4 py-3 text-left sm:flex-col sm:justify-center sm:gap-1.5 sm:p-5 sm:text-center dark:border-white/[.145]">
+          <p className="order-last shrink-0 font-mono text-lg font-bold tabular-nums sm:order-none sm:w-full sm:truncate sm:text-center sm:text-2xl text-black dark:text-zinc-50">
             {formatarLitros(litrosTotal)}
           </p>
           <p className="text-base text-zinc-600 dark:text-zinc-400">Litros no período (soma)</p>
         </div>
-        <div className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border bg-surface border-black/[.08] p-3 text-center sm:p-5 dark:border-white/[.145]">
+        <div className="flex flex-row items-center justify-between gap-3 rounded-2xl border bg-surface border-black/[.08] px-4 py-3 text-left sm:flex-col sm:justify-center sm:gap-1.5 sm:p-5 sm:text-center dark:border-white/[.145]">
           <p
-            className={`w-full truncate text-center font-mono text-xl font-bold tabular-nums sm:text-2xl ${saldoTotal >= 0 ? "text-brand-green" : "text-red-600 dark:text-red-400"}`}
+            className={`order-last shrink-0 font-mono text-lg font-bold tabular-nums sm:order-none sm:w-full sm:truncate sm:text-center sm:text-2xl ${saldoTotal >= 0 ? "text-brand-green" : "text-red-600 dark:text-red-400"}`}
           >
             {formatarMoeda(saldoTotal)}
           </p>
@@ -188,51 +188,51 @@ export function GestorDashboardClient({
 
       <div className="flex flex-col gap-3">
         <p className="text-base font-semibold text-black dark:text-zinc-50">Médias entre fazendas</p>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border bg-surface border-black/[.08] p-3 text-center sm:p-5 dark:border-white/[.145]">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-vacas-tint">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+          <div className="flex flex-row items-center justify-between gap-3 rounded-2xl border bg-surface border-black/[.08] px-4 py-3 text-left sm:flex-col sm:justify-center sm:gap-1.5 sm:p-5 sm:text-center dark:border-white/[.145]">
+            <span className="hidden h-10 w-10 items-center justify-center rounded-full sm:flex bg-vacas-tint">
               <TagIcon className="h-5 w-5 text-vacas-ink" />
             </span>
-            <p className="w-full truncate text-center font-mono text-xl font-bold tabular-nums sm:text-2xl text-black dark:text-zinc-50">
+            <p className="order-last shrink-0 font-mono text-lg font-bold tabular-nums sm:order-none sm:w-full sm:truncate sm:text-center sm:text-2xl text-black dark:text-zinc-50">
               {mediaVacasPorFazenda.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}
             </p>
             <p className="text-base text-zinc-600 dark:text-zinc-400">Vacas por fazenda</p>
           </div>
-          <div className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border bg-surface border-black/[.08] p-3 text-center sm:p-5 dark:border-white/[.145]">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-leite-tint">
+          <div className="flex flex-row items-center justify-between gap-3 rounded-2xl border bg-surface border-black/[.08] px-4 py-3 text-left sm:flex-col sm:justify-center sm:gap-1.5 sm:p-5 sm:text-center dark:border-white/[.145]">
+            <span className="hidden h-10 w-10 items-center justify-center rounded-full sm:flex bg-leite-tint">
               <MilkIcon className="h-5 w-5 text-leite-ink" />
             </span>
-            <p className="w-full truncate text-center font-mono text-xl font-bold tabular-nums sm:text-2xl text-black dark:text-zinc-50">
+            <p className="order-last shrink-0 font-mono text-lg font-bold tabular-nums sm:order-none sm:w-full sm:truncate sm:text-center sm:text-2xl text-black dark:text-zinc-50">
               {formatarLitros(mediaLitrosPorFazenda)}
             </p>
             <p className="text-base text-zinc-600 dark:text-zinc-400">Litros por fazenda</p>
           </div>
-          <div className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border bg-surface border-black/[.08] p-3 text-center sm:p-5 dark:border-white/[.145]">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-financeiro-tint">
+          <div className="flex flex-row items-center justify-between gap-3 rounded-2xl border bg-surface border-black/[.08] px-4 py-3 text-left sm:flex-col sm:justify-center sm:gap-1.5 sm:p-5 sm:text-center dark:border-white/[.145]">
+            <span className="hidden h-10 w-10 items-center justify-center rounded-full sm:flex bg-financeiro-tint">
               <MoneyIcon className="h-5 w-5 text-financeiro-ink" />
             </span>
             <p
-              className={`w-full truncate text-center font-mono text-xl font-bold tabular-nums sm:text-2xl ${mediaSaldoPorFazenda >= 0 ? "text-brand-green" : "text-red-600 dark:text-red-400"}`}
+              className={`order-last shrink-0 font-mono text-lg font-bold tabular-nums sm:order-none sm:w-full sm:truncate sm:text-center sm:text-2xl ${mediaSaldoPorFazenda >= 0 ? "text-brand-green" : "text-red-600 dark:text-red-400"}`}
             >
               {formatarMoeda(mediaSaldoPorFazenda)}
             </p>
             <p className="text-base text-zinc-600 dark:text-zinc-400">Saldo por fazenda</p>
           </div>
-          <div className="col-span-3 sm:col-span-1 flex flex-col items-center justify-center gap-1.5 rounded-2xl border bg-surface border-black/[.08] p-3 text-center sm:p-5 dark:border-white/[.145]">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-leite-tint">
+          <div className="col-span-3 sm:col-span-1 flex flex-row items-center justify-between gap-3 rounded-2xl border bg-surface border-black/[.08] px-4 py-3 text-left sm:flex-col sm:justify-center sm:gap-1.5 sm:p-5 sm:text-center dark:border-white/[.145]">
+            <span className="hidden h-10 w-10 items-center justify-center rounded-full sm:flex bg-leite-tint">
               <MilkIcon className="h-5 w-5 text-leite-ink" />
             </span>
-            <p className="w-full truncate text-center font-mono text-xl font-bold tabular-nums sm:text-2xl text-black dark:text-zinc-50">
+            <p className="order-last shrink-0 font-mono text-lg font-bold tabular-nums sm:order-none sm:w-full sm:truncate sm:text-center sm:text-2xl text-black dark:text-zinc-50">
               {producaoMediaPorVacaDia.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}
               <span className="text-base font-semibold"> L</span>
             </p>
             <p className="text-base text-zinc-600 dark:text-zinc-400">Produção por vaca/dia</p>
           </div>
-          <div className="col-span-3 sm:col-span-1 flex flex-col items-center justify-center gap-1.5 rounded-2xl border bg-surface border-black/[.08] p-3 text-center sm:p-5 dark:border-white/[.145]">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-reproducao-tint">
+          <div className="col-span-3 sm:col-span-1 flex flex-row items-center justify-between gap-3 rounded-2xl border bg-surface border-black/[.08] px-4 py-3 text-left sm:flex-col sm:justify-center sm:gap-1.5 sm:p-5 sm:text-center dark:border-white/[.145]">
+            <span className="hidden h-10 w-10 items-center justify-center rounded-full sm:flex bg-reproducao-tint">
               <CycleIcon className="h-5 w-5 text-reproducao-ink" />
             </span>
-            <p className="w-full truncate text-center font-mono text-xl font-bold tabular-nums sm:text-2xl text-black dark:text-zinc-50">
+            <p className="order-last shrink-0 font-mono text-lg font-bold tabular-nums sm:order-none sm:w-full sm:truncate sm:text-center sm:text-2xl text-black dark:text-zinc-50">
               {iepMedio !== null ? Math.round(iepMedio) : "—"}
               {iepMedio !== null && <span className="text-base font-semibold"> dias</span>}
             </p>
