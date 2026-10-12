@@ -292,6 +292,11 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   `entidades` com nome/responsável/telefone, achada ou criada pelo nome em
   `gestor_salvar_entidade`) e a quantidade de kits (`entregas_doses.kits`). O produtor vê "retirar
   com <entidade> · responsável · telefone" na entrega pendente.
+- **Performance por entidade** (0049, aba Entidades do gestor): a fazenda conta em toda entidade
+  por onde recebeu doses (vínculo pelas entregas — decisão do usuário; sem entrega, fica fora).
+  `indicadores_entidades_fazendas()` (uma linha por entidade × fazenda, régua de
+  calcular_indicadores) e `indicadores_entidades()` (somas e médias ponderadas: produção, L/vaca/dia,
+  custo/receita por litro sobre o total de litros, IEP, doses/kits, concepção). Só gestor vê.
 - `baixas_doses` (0021): dose que sai do saldo sem virar inseminação (perda, descarte,
   transferência). A fazenda registra/desfaz via `registrar_baixa_doses`/`deletar_baixa_doses`.
 - Coberturas do bot gastam dose desde 0022 (ver seção do bot abaixo).
