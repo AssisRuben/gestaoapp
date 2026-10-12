@@ -351,7 +351,9 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   mensagens que ELA recebia (2026-10-11). Trocou a instância? Mude ali também. Desativado recebe aviso; número não cadastrado é
   ignorado em silêncio (a instância pode ser um número pessoal).
 - Falha no bot: o nó "Guardar Remetente (Erro)" grava no Redis (`exec_remetente:<execução>`, 15
-  min) quem mandou a mensagem; o workflow `fazenda-leite-erros.json` (Error Trigger) lê isso,
+  min) quem mandou a mensagem — ele tem que ficar ACIMA do "É Áudio?" na tela: com executionOrder
+  v1 o n8n roda os ramos da mesma saída um por vez, o mais alto primeiro; abaixo, o erro parava a
+  execução antes de gravar (teste 9.8); o workflow `fazenda-leite-erros.json` (Error Trigger) lê isso,
   avisa o produtor que a mensagem pode não ter sido registrada e grava `intencao_detectada='erro'`
   em interacoes_log. Precisa estar selecionado em Settings → Error workflow do workflow principal,
   e o workflow de erros precisa estar **publicado** (não só salvo) pra aparecer nessa lista.
