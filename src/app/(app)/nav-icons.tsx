@@ -17,6 +17,20 @@ export function HomeIcon({ className }: { className?: string }) {
   );
 }
 
+// prédio com colunas — entidades (associação, cooperativa) no painel do gestor
+export function EntidadeIcon({ className }: { className?: string }) {
+  return (
+    <svg {...commonProps} className={className}>
+      <polyline points="3 9 12 4 21 9" />
+      <line x1="4" y1="20" x2="20" y2="20" />
+      <line x1="6" y1="10" x2="6" y2="17" />
+      <line x1="10" y1="10" x2="10" y2="17" />
+      <line x1="14" y1="10" x2="14" y2="17" />
+      <line x1="18" y1="10" x2="18" y2="17" />
+    </svg>
+  );
+}
+
 export function TagIcon({ className }: { className?: string }) {
   return (
     <svg {...commonProps} className={className}>

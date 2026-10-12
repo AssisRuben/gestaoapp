@@ -1634,6 +1634,17 @@ begin
     values ('__produtor_gps__@exemplo.invalid',
             '{"nome_propriedade": "__com_gps__", "nome_produtor": "X", "whatsapp": "(88) 97777-6666", "latitude": "-5.123456", "longitude": "abc"}')
     returning id into v_conta;
+    -- índices por entidade (0049): a fazenda de teste recebe 10 doses (2 kits) pela associação
+    insert into entregas_doses (propriedade_id, touro_id, quantidade, data_entrega, entidade_id, kits, recebido_em)
+    values (v_propriedade_id, v_touro_id, 10, _hoje_fazenda(), v_ent, 2, now());
+    if (select fazendas from indicadores_entidades() where entidade_id = v_ent) <> 1
+       or (select doses_recebidas from indicadores_entidades() where entidade_id = v_ent) <> 10
+       or (select kits from indicadores_entidades() where entidade_id = v_ent) <> 2
+       or (select producao_dia from indicadores_entidades() where entidade_id = v_ent)
+          is distinct from (select round(producao_dia, 1) from calcular_indicadores(v_propriedade_id, _hoje_fazenda())) then
+      raise exception 'FALHOU [indicadores_entidades]: veio %', (select row_to_json(x) from indicadores_entidades() x where entidade_id = v_ent);
+    end if;
+
     if (select latitude from propriedades where nome_propriedade = '__com_gps__') <> -5.123456
        or (select longitude from propriedades where nome_propriedade = '__com_gps__') is not null then
       raise exception 'FALHOU [cadastro com localização]: latitude deveria gravar e longitude inválida ficar vazia';

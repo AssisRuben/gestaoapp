@@ -7,6 +7,7 @@ import { BotaoImprimir } from "../../../botao-imprimir";
 // "Voltar" leva pra aba de onde a fazenda foi aberta (?de=...); sem origem, Visão geral.
 const ORIGENS: Record<string, { href: string; rotulo: string }> = {
   ranking: { href: "/gestor/ranking", rotulo: "Ranking" },
+  entidades: { href: "/gestor/entidades", rotulo: "Entidades" },
   alertas: { href: "/gestor/alertas", rotulo: "Alertas" },
   acessos: { href: "/gestor/tecnicos", rotulo: "Acessos" },
 };
