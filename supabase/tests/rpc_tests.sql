@@ -1492,6 +1492,71 @@ begin
     end if;
   end;
 
+  -- ============================================================
+  -- importação do rebanho por planilha (0045)
+  -- ============================================================
+
+  declare
+    v_imp uuid;
+    v_res jsonb;
+    v_dados jsonb;
+    v_h date := _hoje_fazenda();
+  begin
+    insert into propriedades (nome_propriedade, nome_produtor) values ('__importacao__', 'x') returning id into v_imp;
+    insert into usuarios_propriedades (usuario_id, propriedade_id, papel) values (v_usuario_id, v_imp, 'produtor');
+
+    v_dados := jsonb_build_object(
+      'vacas', jsonb_build_array(
+        -- a mãe (2) vem DEPOIS da filha na planilha
+        jsonb_build_object('linha', 2, 'numero', '1', 'nome', 'Mimosa', 'situacao', 'lactacao', 'numero_mae', '2',
+          'data_parto', (v_h - 100)::text, 'bezerro_numero', '500', 'bezerro_sexo', 'femea',
+          'data_cobertura', (v_h - 40)::text, 'touro', 'Tarzan', 'diagnostico', 'positivo'),
+        jsonb_build_object('linha', 3, 'numero', '2', 'situacao', 'seca', 'data_parto', (v_h - 400)::text),
+        jsonb_build_object('linha', 4, 'numero', '3', 'situacao', 'lactacao'),                       -- sem parto
+        jsonb_build_object('linha', 5, 'numero', '1', 'situacao', 'novilha'),                        -- repetida
+        jsonb_build_object('linha', 6, 'numero', '4', 'situacao', 'novilha', 'diagnostico', 'positivo') -- prenhe sem cobertura
+      ),
+      'bezerros', jsonb_build_array(
+        jsonb_build_object('linha', 2, 'numero', '600', 'sexo', 'macho', 'data_nascimento', (v_h - 30)::text, 'numero_mae', '2'),
+        jsonb_build_object('linha', 3, 'numero', '500', 'sexo', 'femea', 'data_nascimento', (v_h - 30)::text) -- número já usado
+      ),
+      'leite', jsonb_build_array(
+        jsonb_build_object('linha', 2, 'numero_vaca', '1', 'data', (v_h - 5)::text, 'litros', '18.5', 'ordenha', 'manha'),
+        jsonb_build_object('linha', 3, 'numero_vaca', '1', 'data', (v_h - 200)::text, 'litros', '10'),   -- antes do parto
+        jsonb_build_object('linha', 4, 'numero_vaca', '1', 'data', (v_h - 5)::text, 'litros', '17', 'ordenha', 'manha') -- repetida
+      )
+    );
+
+    v_res := importar_rebanho(v_imp, v_dados, 'validar');
+    if (v_res->>'importado')::boolean or jsonb_array_length(v_res->'erros') <> 6
+       or (v_res->'contagem'->>'vacas')::integer <> 2 or (v_res->'contagem'->>'leite')::integer <> 1 then
+      raise exception 'FALHOU [importar_rebanho validar]: esperava 6 erros, 2 vacas e 1 leite ok (veio %)', v_res;
+    end if;
+    if exists (select 1 from vacas where propriedade_id = v_imp) then
+      raise exception 'FALHOU [importar_rebanho validar]: a conferência não pode gravar nada';
+    end if;
+
+    v_res := importar_rebanho(v_imp, v_dados, 'importar');
+    if (v_res->>'importado')::boolean or exists (select 1 from vacas where propriedade_id = v_imp) then
+      raise exception 'FALHOU [importar_rebanho importar]: com erro, nada deveria ser gravado (veio %)', v_res;
+    end if;
+
+    v_res := importar_rebanho(v_imp, v_dados, 'importar_ok');
+    if not (v_res->>'importado')::boolean then
+      raise exception 'FALHOU [importar_rebanho importar_ok]: deveria gravar as linhas certas (veio %)', v_res;
+    end if;
+    if (select count(*) from vacas where propriedade_id = v_imp) <> 2
+       or (select nome from vacas where propriedade_id = v_imp and numero_identificacao = 1) <> 'Mimosa'
+       or (select status_reprodutivo from vacas where propriedade_id = v_imp and numero_identificacao = 1) <> 'prenhe'
+       or (select m.numero_identificacao from vacas f join vacas m on m.id = f.mae_id
+           where f.propriedade_id = v_imp and f.numero_identificacao = 1) <> 2
+       or not exists (select 1 from bezerros where propriedade_id = v_imp and numero_identificacao = 500 and parto_id is not null)
+       or not exists (select 1 from bezerros where propriedade_id = v_imp and numero_identificacao = 600)
+       or (select count(*) from controle_leite c join vacas v on v.id = c.vaca_id where v.propriedade_id = v_imp) <> 1 then
+      raise exception 'FALHOU [importar_rebanho importar_ok]: dados gravados errados';
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

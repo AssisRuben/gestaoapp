@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cadastrarVaca, atualizarVaca, deletarVaca } from "./actions";
 import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../mobile-list";
@@ -36,11 +37,17 @@ const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
 const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
 
+// "12 · Mimosa" quando a vaca tem nome; só o número quando não tem
+function rotuloVaca(v: { numero_identificacao: number; nome?: string | null }) {
+  return v.nome ? `${v.numero_identificacao} · ${v.nome}` : String(v.numero_identificacao);
+}
+
 function CamposVaca({
   vacas,
   excludeId,
   numeroObrigatorio,
   defaultNumero,
+  defaultNome,
   defaultMaeId,
   defaultStatusProdutivo,
   defaultStatusReprodutivo,
@@ -49,6 +56,7 @@ function CamposVaca({
   excludeId?: string;
   numeroObrigatorio?: boolean;
   defaultNumero?: number;
+  defaultNome?: string;
   defaultMaeId?: string;
   defaultStatusProdutivo?: string;
   defaultStatusReprodutivo?: string;
@@ -71,6 +79,21 @@ function CamposVaca({
       </div>
 
       <div className="flex flex-col gap-1">
+        <label htmlFor="nome" className={LABEL_CLASSES}>
+          Nome (opcional)
+        </label>
+        <input
+          id="nome"
+          name="nome"
+          type="text"
+          maxLength={60}
+          placeholder="ex.: Mimosa"
+          defaultValue={defaultNome}
+          className={CAMPO_CLASSES}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
         <label htmlFor="mae_id" className={LABEL_CLASSES}>
           Mãe (opcional)
         </label>
@@ -80,7 +103,7 @@ function CamposVaca({
             .filter((v) => v.id !== excludeId)
             .map((v) => (
               <option key={v.id} value={v.id}>
-                {v.numero_identificacao}
+                {rotuloVaca(v)}
               </option>
             ))}
         </select>
@@ -178,7 +201,12 @@ export function VacasClient({ vacas, editarId }: { vacas: Vaca[]; editarId?: str
     let lista = vacas;
     if (filtroCenso.produtivo) lista = lista.filter((v) => chaveProdutivo(v) === filtroCenso.produtivo);
     if (filtroCenso.reprodutivo) lista = lista.filter((v) => chaveReprodutivo(v) === filtroCenso.reprodutivo);
-    if (busca.trim()) lista = lista.filter((v) => String(v.numero_identificacao) === busca.trim());
+    const termo = busca.trim().toLocaleLowerCase("pt-BR");
+    if (termo) {
+      lista = lista.filter(
+        (v) => String(v.numero_identificacao) === termo || (v.nome ?? "").toLocaleLowerCase("pt-BR").includes(termo),
+      );
+    }
     return lista;
   }, [vacas, busca, filtroCenso]);
 
@@ -193,18 +221,26 @@ export function VacasClient({ vacas, editarId }: { vacas: Vaca[]; editarId?: str
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <input
           type="text"
-          placeholder="Buscar por número..."
+          placeholder="Buscar por número ou nome..."
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           className={`w-full sm:max-w-xs ${CAMPO_CLASSES}`}
         />
-        <button
-          type="button"
-          onClick={() => setDrawerAberto(true)}
-          className="hidden whitespace-nowrap rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark sm:inline-flex"
-        >
-          Nova vaca
-        </button>
+        <div className="flex gap-2">
+          <Link
+            href="/vacas/importar"
+            className="whitespace-nowrap rounded-full border border-black/[.08] px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
+          >
+            Importar planilha
+          </Link>
+          <button
+            type="button"
+            onClick={() => setDrawerAberto(true)}
+            className="hidden whitespace-nowrap rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark sm:inline-flex"
+          >
+            Nova vaca
+          </button>
+        </div>
       </div>
 
       {rotuloCenso && (
@@ -230,6 +266,7 @@ export function VacasClient({ vacas, editarId }: { vacas: Vaca[]; editarId?: str
           <thead>
             <tr className="border-b border-black/[.08] text-zinc-600 dark:border-white/[.145] dark:text-zinc-400">
               <th className="px-4 py-2 font-medium">Número</th>
+              <th className="px-4 py-2 font-medium">Nome</th>
               <th className="px-4 py-2 font-medium">Status produtivo</th>
               <th className="px-4 py-2 font-medium">Status reprodutivo</th>
               <th className="px-4 py-2 font-medium">Mãe</th>
@@ -247,6 +284,7 @@ export function VacasClient({ vacas, editarId }: { vacas: Vaca[]; editarId?: str
                 <td className="px-4 py-2 text-black dark:text-zinc-50">
                   {vaca.numero_identificacao}
                 </td>
+                <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">{vaca.nome ?? "—"}</td>
                 <td className="px-4 py-2 text-black dark:text-zinc-50">
                   {STATUS_PRODUTIVO_LABEL[vaca.status_produtivo] ?? vaca.status_produtivo}
                 </td>
@@ -260,7 +298,7 @@ export function VacasClient({ vacas, editarId }: { vacas: Vaca[]; editarId?: str
             ))}
             {vacasFiltradas.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-zinc-600 dark:text-zinc-400">
+                <td colSpan={5} className="px-4 py-6 text-center text-zinc-600 dark:text-zinc-400">
                   Nenhuma vaca cadastrada ainda.
                 </td>
               </tr>
@@ -273,7 +311,7 @@ export function VacasClient({ vacas, editarId }: { vacas: Vaca[]; editarId?: str
         {vacasFiltradas.map((vaca) => (
           <MobileCard key={vaca.id} onClick={() => router.push(`/vacas/${vaca.id}`)}>
             <CardHeader
-              title={`Vaca ${vaca.numero_identificacao}`}
+              title={`Vaca ${rotuloVaca(vaca)}`}
               accentClassName="bg-vacas"
               badge={
                 <span
@@ -358,6 +396,7 @@ export function VacasClient({ vacas, editarId }: { vacas: Vaca[]; editarId?: str
               excludeId={vacaEmEdicao.id}
               numeroObrigatorio
               defaultNumero={vacaEmEdicao.numero_identificacao}
+              defaultNome={vacaEmEdicao.nome ?? ""}
               defaultMaeId={vacaEmEdicao.mae_id ?? ""}
               defaultStatusProdutivo={vacaEmEdicao.status_produtivo}
               defaultStatusReprodutivo={vacaEmEdicao.status_reprodutivo}

@@ -33,10 +33,14 @@ Compartilhar da página antes de mandar o link).
 3. **Primeira mensagem de teste**: peça pro produtor mandar `quantas vacas eu tenho?`. Resposta com
    0 vacas = número reconhecido. Sem resposta = WhatsApp digitado errado (corrija no cadastro) ou o
    produtor mandou de outro número.
-4. **Cadastrar o rebanho** — quem tem acesso ao site da fazenda (o técnico que atende, depois do
-   passo 6, ou o próprio produtor com conta) cadastra as vacas na tela **Vacas**. Pelo bot também dá
-   (`cadastra a vaca 12`), uma por mensagem. O gestor não lança dados da fazenda.
-5. **Situação de cada vaca** — sem isto o bot recusa leite e os relatórios ficam vazios:
+4. **Cadastrar o rebanho pela planilha** — quem tem acesso ao site da fazenda (o técnico que
+   atende, depois do passo 6, ou o próprio produtor com conta) vai em **Vacas → Importar
+   planilha**, baixa o modelo, preenche (vacas com parto/cobertura/diagnóstico, bezerros e, se
+   tiver, as pesagens da lactação atual) e carrega. A tela confere linha por linha e só grava depois
+   de confirmar. Também dá pela tela Vacas uma a uma, ou pelo bot (`cadastra a vaca 12`). O gestor
+   não lança dados da fazenda.
+5. **Situação de cada vaca** (a planilha já cobre isto) — sem isto o bot recusa leite e os
+   relatórios ficam vazios:
    - **Em lactação** → registrar o **parto** (Reprodução → Parto), com a data aproximada se não
      souber a exata. Leite só é aceito de vaca com parto registrado.
    - **Seca** → marcar o status como seca (não recebe leite).

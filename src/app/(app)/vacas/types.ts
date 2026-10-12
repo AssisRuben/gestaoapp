@@ -6,6 +6,7 @@ export type Vaca = {
   propriedade_id: string;
   mae_id: string | null;
   numero_identificacao: number;
+  nome: string | null; // opcional (0045); o número continua sendo a identificação no bot
   status_produtivo: StatusProdutivo;
   status_reprodutivo: StatusReprodutivo;
   data_parto: string | null;

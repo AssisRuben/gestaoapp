@@ -25,6 +25,7 @@ import { formatarDataBR } from "../../format";
 type Vaca = {
   id: string;
   numero_identificacao: number;
+  nome?: string | null;
   status_produtivo: string;
   status_reprodutivo: string;
   mae: { id: string; numero_identificacao: number } | null;
@@ -138,7 +139,10 @@ export default async function FichaVacaPage({ params }: { params: Promise<{ id: 
           ← Vacas
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold text-black dark:text-zinc-50">Vaca {vaca.numero_identificacao}</h1>
+          <h1 className="text-2xl font-bold text-black dark:text-zinc-50">
+            Vaca {vaca.numero_identificacao}
+            {vaca.nome && <span className="font-normal text-zinc-600 dark:text-zinc-400"> · {vaca.nome}</span>}
+          </h1>
           <Link
             href={`/vacas?editar=${vaca.id}`}
             className="rounded-full border border-black/[.08] px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"

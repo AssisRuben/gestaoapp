@@ -11,7 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit -p .",
-    "test": "node tests/indicadores.test.mjs && node tests/csv.test.mjs && node tests/offline.test.mjs && node tests/banco.test.mjs",
+    "test": "node tests/indicadores.test.mjs && node tests/csv.test.mjs && node tests/planilha.test.mjs && node tests/offline.test.mjs && node tests/banco.test.mjs",
     "test:db": "node scripts/run-db-tests.js"
   },
   "dependencies": {
@@ -21,7 +21,8 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "server-only": "^0.0.1",
-    "sharp": "^0.35.5"
+    "sharp": "^0.35.5",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",

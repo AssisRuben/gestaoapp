@@ -19,7 +19,7 @@ export async function cadastrarVaca(
   const maeIdRaw = formData.get("mae_id") as string;
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("cadastrar_vaca", {
+  const { data, error } = await supabase.rpc("cadastrar_vaca", {
     p_propriedade_id: propriedadeAtual.id,
     p_numero_identificacao: numeroRaw ? Number(numeroRaw) : null,
     p_mae_id: maeIdRaw || null,
@@ -29,6 +29,13 @@ export async function cadastrarVaca(
 
   if (error) {
     return { error: error.message };
+  }
+
+  const nome = String(formData.get("nome") ?? "").trim();
+  const vacaId = (data as { id?: string } | null)?.id;
+  if (nome && vacaId) {
+    const { error: erroNome } = await supabase.rpc("definir_nome_vaca", { p_vaca_id: vacaId, p_nome: nome });
+    if (erroNome) return { error: `Vaca cadastrada, mas o nome não foi salvo: ${erroNome.message}` };
   }
 
   revalidatePath("/vacas");
@@ -79,7 +86,47 @@ export async function atualizarVaca(
     return { error: error.message };
   }
 
+  if (formData.has("nome")) {
+    const { error: erroNome } = await supabase.rpc("definir_nome_vaca", {
+      p_vaca_id: vacaId,
+      p_nome: String(formData.get("nome") ?? ""),
+    });
+    if (erroNome) return { error: erroNome.message };
+  }
+
   revalidatePath("/vacas");
   updateTag("vacas");
   return { success: true };
+}
+
+// Importação por planilha (0045). A leitura do arquivo é no navegador (src/lib/planilha-rebanho.ts);
+// conferência e gravação são do banco: modo "validar" roda tudo e desfaz, pra prévia.
+export type ResultadoImportacao = {
+  ok: boolean;
+  importado: boolean;
+  erros: { aba: string; linha: number; mensagem: string }[];
+  contagem: { vacas: number; bezerros: number; leite: number };
+};
+
+export async function importarRebanho(
+  dados: unknown,
+  modo: "validar" | "importar" | "importar_ok",
+): Promise<{ resultado?: ResultadoImportacao; error?: string }> {
+  const propriedadeAtual = await getPropriedadeAtual();
+  if (!propriedadeAtual) return { error: "Nenhuma propriedade vinculada à sua conta." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("importar_rebanho", {
+    p_propriedade_id: propriedadeAtual.id,
+    p_dados: dados,
+    p_modo: modo,
+  });
+  if (error) return { error: error.message };
+
+  const resultado = data as ResultadoImportacao;
+  if (resultado.importado) {
+    for (const tag of ["vacas", "partos", "coberturas", "bezerros", "leite", "propriedades"]) updateTag(tag);
+    revalidatePath("/", "layout");
+  }
+  return { resultado };
 }

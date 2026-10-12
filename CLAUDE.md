@@ -490,6 +490,19 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   técnico da fazenda vira produtor). Só o gestor remove produtor (`desvincular_produtor`).
   Sem isso o "Sou produtor" criava uma segunda fazenda vazia.
 
+## Importar rebanho por planilha (0045_importar_rebanho.sql)
+
+- Vacas → **Importar planilha** (`/vacas/importar`, produtor/técnico da fazenda). Abas Vacas
+  (número, nome, situação, mãe, último parto, bezerro do parto, última cobertura, touro,
+  diagnóstico), Bezerros e Leite (só da lactação atual). Modelo .xlsx gerado na própria tela.
+- Leitura no navegador (`src/lib/planilha-rebanho.ts`, SheetJS do cdn.sheetjs.com — a versão do
+  npm é antiga e vulnerável): só FORMATO (colunas com outros nomes, datas, variações de escrita).
+  Regras e gravação no banco: `importar_rebanho(propriedade, dados, modo)` — 'validar' faz tudo e
+  desfaz (a prévia é exatamente o que a importação faria), 'importar' é tudo ou nada,
+  'importar_ok' grava só as linhas certas. Cada linha num bloco próprio.
+- Bezerro do parto só é criado se a planilha informar. `vacas.nome` é opcional (aparece no site);
+  o bot continua só pelo número.
+
 ## Cobertura atual (0038_cobertura_atual.sql)
 
 - "Pra secar", "partos previstos" e "aguardando diagnóstico" usam só a **cobertura atual** de cada
