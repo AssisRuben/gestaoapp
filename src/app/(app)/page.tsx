@@ -11,6 +11,8 @@ import {
 import { DashboardClient } from "./dashboard-client";
 import { hojeBrasil, somarDias } from "@/lib/datas";
 import { coberturaAtualPorVaca } from "@/lib/indicadores";
+import { carregarIndicadoresFazenda } from "@/lib/indicadores-fazenda";
+import { IndicadoresFazendaView } from "../indicadores-fazenda-view";
 
 export default async function DashboardPage() {
   const propriedadeAtual = await getPropriedadeAtual();
@@ -21,13 +23,14 @@ export default async function DashboardPage() {
 
   const hoje = hojeBrasil();
 
-  const [vacasData, leiteData, financeiroData, coberturasData, bezerrosData, partosData] = await Promise.all([
+  const [vacasData, leiteData, financeiroData, coberturasData, bezerrosData, partosData, indicadores] = await Promise.all([
     getVacasCache(propriedadeAtual.id),
     getControleLeiteCache(propriedadeAtual.id),
     getFinanceiroCache(propriedadeAtual.id),
     getCoberturasCache(propriedadeAtual.id),
     getBezerrosCache(propriedadeAtual.id),
     getPartosCache(propriedadeAtual.id),
+    carregarIndicadoresFazenda(propriedadeAtual.id),
   ]);
 
   const vacas = vacasData as unknown as { id: string; status_produtivo: string }[];
@@ -111,6 +114,7 @@ export default async function DashboardPage() {
       lancamentos={lancamentos}
       vacasPraSecar={vacasPraSecar}
       diagnosticosPendentes={diagnosticosPendentes}
+      indicadores={<IndicadoresFazendaView indicadores={indicadores} />}
     />
   );
 }

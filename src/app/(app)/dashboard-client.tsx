@@ -185,7 +185,9 @@ export function DashboardClient({
   lancamentos,
   vacasPraSecar,
   diagnosticosPendentes,
+  indicadores,
 }: {
+  indicadores?: React.ReactNode;
   propriedadeAtual: Propriedade;
   vacasEmLactacao: number;
   vacasTotal: number;
@@ -328,6 +330,9 @@ export function DashboardClient({
           <p className="text-base text-zinc-600 dark:text-zinc-400">Saldo no período</p>
         </Link>
       </div>
+
+      {/* custo por litro e demais índices da fazenda (renderizado no servidor) */}
+      {indicadores}
 
       <Link
         href="/vacas"

@@ -468,6 +468,12 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 
 - Produção/dia e L/vaca/dia do resumo vêm de `calcular_indicadores` (mesma régua do ranking e da
   linha de base) — não da média do total diário da fazenda, que subestima com pesagem espalhada.
+- **Índices da fazenda pro produtor** (12/10/2026): `carregarIndicadoresFazenda`
+  (`src/lib/indicadores-fazenda.ts`) + `IndicadoresFazendaView` — L/vaca/dia, produção/dia,
+  receita e despesa por mês, custo por litro, receita por litro (receita ÷ litros do mês) e sobra
+  por litro; comparação com a adesão ao programa quando existe; taxa de concepção, doses por
+  prenhez, gestações e nascidos do programa de sêmen. Aparece no Início, no relatório da visita e
+  no resumo do gestor — mesmos números do ranking.
 - `carregarResumoFazenda` (`src/lib/resumo-fazenda.ts`) + `ResumoFazendaView`
   (`src/app/resumo-fazenda-view.tsx`): rebanho, médias (produção/dia, L/vaca/dia, projeção 305,
   IEP, dias em aberto), pendências (secar, diagnóstico, partos previstos), tabela das lactações

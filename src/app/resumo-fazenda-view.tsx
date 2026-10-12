@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ResumoFazenda } from "@/lib/resumo-fazenda";
 import { ProducaoLeiteChart } from "./(app)/producao-leite-chart";
 import { formatarDataBR, formatarTelefoneBR } from "./(app)/format";
+import { IndicadoresFazendaView } from "./indicadores-fazenda-view";
 
 // Visão do resumo da fazenda (gestor e relatório de visita). Server component; linkVaca devolve a
 // rota da ficha da vaca quando quem está vendo pode abrir (produtor/técnico), ou null (gestor).
@@ -69,6 +70,9 @@ export function ResumoFazendaView({
         <Numero rotulo="IEP médio" valor={m.iep === null ? "—" : `${n0(m.iep)} dias`} />
         <Numero rotulo="Dias em aberto (média)" valor={n0(m.diasEmAberto)} detalhe={`${r.prenhes} prenhes · ${r.emServico} em serviço · ${r.vazias} vazias`} />
       </section>
+
+      {/* custo/receita/sobra por litro, adesão ao programa e índices do programa de sêmen */}
+      <IndicadoresFazendaView indicadores={resumo.indicadores} mostrarProducao={false} />
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3 print:grid-cols-3">
         <div className={`p-4 ${CARTAO}`}>

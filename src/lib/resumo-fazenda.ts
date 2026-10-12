@@ -10,6 +10,7 @@ import {
   getLeiteDiarioTodasCache,
 } from "@/lib/cached-data";
 import { normalizarLeite } from "@/lib/gestor";
+import { carregarIndicadoresFazenda, type IndicadoresFazenda } from "@/lib/indicadores-fazenda";
 import { hojeBrasil, somarDias } from "@/lib/datas";
 import {
   indicadoresLactacao,
@@ -102,6 +103,7 @@ export type ResumoFazenda = {
   financeiroMeses: { mes: string; receita: number; despesa: number }[];
   visitas: VisitaResumo[];
   recomendacoesAbertas: RecomendacaoResumo[];
+  indicadores: IndicadoresFazenda;
 };
 
 type LinhaVisita = { id: string; data_visita: string; observacoes: string | null; autor_id: string | null; autor_nome: string | null };
@@ -267,12 +269,10 @@ export async function carregarResumoFazenda(propriedadeId: string): Promise<Resu
   // 0019): média por vaca pesada nos últimos 30 dias × vacas em lactação. A conta antiga (média do
   // total da fazenda nos dias com pesagem) dava número baixo quando cada vaca é pesada num dia —
   // 72 L/dia no resumo contra 348 no ranking pra mesma fazenda (teste 8.2).
-  const { data: indD } = await supabase
-    .rpc("calcular_indicadores", { p_propriedade_id: propriedadeId, p_data: hoje })
-    .maybeSingle();
-  const ind = indD as { litros_vaca_dia: number | string | null; producao_dia: number | string | null } | null;
-  const litrosVacaDia = ind?.litros_vaca_dia != null ? Number(ind.litros_vaca_dia) : null;
-  const producaoDia = ind?.producao_dia != null ? Number(ind.producao_dia) : null;
+  // (inclui custo/receita/sobra por litro, adesão ao programa e índices reprodutivos do programa)
+  const indicadores = await carregarIndicadoresFazenda(propriedadeId);
+  const litrosVacaDia = indicadores.hoje.litrosVacaDia;
+  const producaoDia = indicadores.hoje.producaoDia;
 
   // financeiro: últimos 6 meses (inclui o atual)
   const meses: string[] = [];
@@ -327,5 +327,6 @@ export async function carregarResumoFazenda(propriedadeId: string): Promise<Resu
     financeiroMeses,
     visitas: visitasD.visitas,
     recomendacoesAbertas: visitasD.abertas,
+    indicadores,
   };
 }
