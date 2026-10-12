@@ -2,6 +2,10 @@
 
 import { useActionState } from "react";
 import { redefinirSenha } from "./actions";
+import { CampoSenha } from "../campo-senha";
+
+const CAMPO =
+  "rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/40";
 
 export default function RedefinirSenhaPage() {
   const [state, formAction, pending] = useActionState(redefinirSenha, undefined);
@@ -25,30 +29,14 @@ export default function RedefinirSenhaPage() {
           <label htmlFor="password" className="text-sm font-medium text-black dark:text-zinc-50">
             Nova senha
           </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            className="rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/40"
-          />
+          <CampoSenha id="password" name="password" className={CAMPO} />
         </div>
 
         <div className="flex flex-col gap-1">
           <label htmlFor="confirmacao" className="text-sm font-medium text-black dark:text-zinc-50">
             Confirmar nova senha
           </label>
-          <input
-            id="confirmacao"
-            name="confirmacao"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            className="rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/40"
-          />
+          <CampoSenha id="confirmacao" name="confirmacao" className={CAMPO} />
         </div>
 
         {state?.error && (

@@ -15,6 +15,7 @@ import { logout } from "./actions";
 import { useSuccessToast, SuccessToast } from "./toast";
 import { formatarTelefoneBR } from "./format";
 import { CampoTelefone } from "../campo-telefone";
+import { CampoLocalizacao } from "../campo-localizacao";
 
 const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
@@ -139,34 +140,16 @@ function DadosGeraisForm({
             className={CAMPO_CLASSES}
           />
         </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="latitude" className={LABEL_CLASSES}>
-            Latitude (opcional)
-          </label>
-          <input
-            id="latitude"
-            name="latitude"
-            type="number"
-            step="any"
-            placeholder="ex.: -5.1234"
-            defaultValue={propriedade.latitude ?? undefined}
-            className={CAMPO_CLASSES}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="longitude" className={LABEL_CLASSES}>
-            Longitude (opcional)
-          </label>
-          <input
-            id="longitude"
-            name="longitude"
-            type="number"
-            step="any"
-            placeholder="ex.: -39.1234"
-            defaultValue={propriedade.longitude ?? undefined}
-            className={CAMPO_CLASSES}
-          />
-        </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <span className={LABEL_CLASSES}>Localização da fazenda</span>
+        <CampoLocalizacao
+          latitudeInicial={propriedade.latitude}
+          longitudeInicial={propriedade.longitude}
+          classeCampo={CAMPO_CLASSES}
+          mostrarCampos
+        />
       </div>
 
       {LEMBRETES_WHATSAPP_DISPONIVEL && lembretes !== null && (

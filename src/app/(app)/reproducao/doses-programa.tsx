@@ -67,12 +67,23 @@ export function DosesPrograma({
           className="flex flex-col gap-2 rounded-xl bg-financeiro-tint p-3 sm:flex-row sm:items-center sm:justify-between"
         >
           <input type="hidden" name="entrega_id" value={entrega.id} />
-          <p className="text-base text-financeiro-ink">
-            <span className="font-semibold">
-              {entrega.quantidade} {entrega.quantidade === 1 ? "dose" : "doses"}
-            </span>{" "}
-            de {rotuloTouro(entrega.touro)} enviadas em {formatarDataBR(entrega.data_entrega)}
-            {entrega.observacao ? ` — ${entrega.observacao}` : ""}
+          <p className="flex flex-col gap-0.5 text-base text-financeiro-ink">
+            <span>
+              <span className="font-semibold">
+                {entrega.quantidade} {entrega.quantidade === 1 ? "dose" : "doses"}
+              </span>{" "}
+              de {rotuloTouro(entrega.touro)}
+              {entrega.kits ? ` (${entrega.kits} ${entrega.kits === 1 ? "kit" : "kits"})` : ""} enviadas em{" "}
+              {formatarDataBR(entrega.data_entrega)}
+              {entrega.observacao ? ` — ${entrega.observacao}` : ""}
+            </span>
+            {entrega.entidade && (
+              <span className="text-sm">
+                Retirar com {entrega.entidade.nome}
+                {entrega.entidade.responsavel ? ` · ${entrega.entidade.responsavel}` : ""}
+                {entrega.entidade.telefone ? ` · ${entrega.entidade.telefone}` : ""}
+              </span>
+            )}
           </p>
           <button
             type="submit"

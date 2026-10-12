@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { login } from "./actions";
 import { CadastroModal } from "./cadastro-modal";
+import { CampoSenha } from "../campo-senha";
 import { GoogleIcon } from "./google-icon";
 import { createClient } from "@/lib/supabase/client";
 import { LimparOffline } from "../(app)/registrar-offline";
@@ -68,12 +69,11 @@ export default function LoginPage() {
               Esqueci minha senha
             </Link>
           </div>
-          <input
+          <CampoSenha
             id="password"
             name="password"
-            type="password"
-            required
             autoComplete="current-password"
+            minLength={0}
             className="rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/40"
           />
         </div>

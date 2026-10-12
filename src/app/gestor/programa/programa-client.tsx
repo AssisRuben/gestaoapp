@@ -27,6 +27,7 @@ import {
   BotaoExcluir,
 } from "./ui";
 import { hojeBrasil } from "@/lib/datas";
+import { mascaraTelefone } from "@/lib/telefone";
 
 type Propriedade = { id: string; nome_propriedade: string };
 
@@ -210,8 +211,14 @@ export function ProgramaClient({
                   )
                 }
               />
+              {e.entidade && (
+                <CardRow
+                  label="Entidade"
+                  value={[e.entidade.nome, e.entidade.responsavel].filter(Boolean).join(" · ")}
+                />
+              )}
               <CardRow label="Touro" value={rotuloTouro(e.touro)} />
-              <CardRow label="Doses" value={e.quantidade} />
+              <CardRow label="Doses" value={e.kits ? `${e.quantidade} (${e.kits} ${e.kits === 1 ? "kit" : "kits"})` : e.quantidade} />
               <CardRow label="Enviada em" value={formatarDataBR(e.data_entrega)} />
               {e.recebido_em && (
                 <CardRow label="Recebida em" value={formatarDataBR(e.recebido_em.slice(0, 10))} />
@@ -271,6 +278,7 @@ export function ProgramaClient({
           entrega={entregaAberta}
           propriedades={propriedades}
           touros={touros}
+          entidades={entidadesConhecidas(entregas)}
           onFechar={() => setEntregaAberta(null)}
           onSucesso={(msg) => {
             setEntregaAberta(null);
@@ -369,14 +377,88 @@ function TouroModal({
   );
 }
 
+type EntidadeOpcao = { nome: string; responsavel: string | null; telefone: string | null };
+
+// Entidades já usadas em entregas (pra sugerir e preencher responsável/telefone ao escolher).
+function entidadesConhecidas(entregas: EntregaDoses[]): EntidadeOpcao[] {
+  const mapa = new Map<string, EntidadeOpcao>();
+  for (const e of entregas) if (e.entidade) mapa.set(e.entidade.nome.trim().toLowerCase(), e.entidade);
+  return [...mapa.values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+// Entidade beneficiada (associação, cooperativa…) por onde a fazenda recebe — 0048. Digitar um
+// nome já usado preenche responsável e telefone.
+function CamposEntidade({ entidades, inicial }: { entidades: EntidadeOpcao[]; inicial: EntidadeOpcao | null }) {
+  const [nome, setNome] = useState(inicial?.nome ?? "");
+  const [responsavel, setResponsavel] = useState(inicial?.responsavel ?? "");
+  const [telefone, setTelefone] = useState(inicial?.telefone ?? "");
+
+  function escolher(valor: string) {
+    setNome(valor);
+    const conhecida = entidades.find((e) => e.nome.trim().toLowerCase() === valor.trim().toLowerCase());
+    if (conhecida) {
+      setResponsavel(conhecida.responsavel ?? "");
+      setTelefone(conhecida.telefone ?? "");
+    }
+  }
+
+  return (
+    <fieldset className="flex flex-col gap-3 rounded-xl border border-black/[.08] p-3 dark:border-white/[.145]">
+      <legend className="px-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">Entidade beneficiada</legend>
+      <Campo id="entidade_nome" label="Nome da entidade">
+        <input
+          id="entidade_nome"
+          name="entidade_nome"
+          required
+          list="entidades_conhecidas"
+          placeholder="ex.: Associação dos Produtores do Riacho"
+          value={nome}
+          onChange={(e) => escolher(e.target.value)}
+          className={CAMPO_CLASSES}
+        />
+        <datalist id="entidades_conhecidas">
+          {entidades.map((e) => (
+            <option key={e.nome} value={e.nome} />
+          ))}
+        </datalist>
+      </Campo>
+      <Campo id="entidade_responsavel" label="Responsável">
+        <input
+          id="entidade_responsavel"
+          name="entidade_responsavel"
+          required
+          value={responsavel}
+          onChange={(e) => setResponsavel(e.target.value)}
+          className={CAMPO_CLASSES}
+        />
+      </Campo>
+      <Campo id="entidade_telefone" label="Telefone do responsável">
+        <input
+          id="entidade_telefone"
+          name="entidade_telefone"
+          type="tel"
+          inputMode="tel"
+          required
+          placeholder="(85) 99999-9999"
+          value={telefone}
+          onChange={(e) => setTelefone(mascaraTelefone(e.target.value))}
+          className={CAMPO_CLASSES}
+        />
+      </Campo>
+    </fieldset>
+  );
+}
+
 function EntregaModal({
   entrega,
   propriedades,
   touros,
+  entidades,
   onFechar,
   onSucesso,
 }: {
   entrega: Partial<EntregaDoses>;
+  entidades: EntidadeOpcao[];
   propriedades: Propriedade[];
   touros: Touro[];
   onFechar: () => void;
@@ -409,7 +491,9 @@ function EntregaModal({
           entrega pode ser corrigida ou excluída.
         </p>
 
-        <Campo id="propriedade_id" label="Fazenda">
+        <CamposEntidade entidades={entidades} inicial={entrega.entidade ?? null} />
+
+        <Campo id="propriedade_id" label="Fazenda que recebe">
           <select
             id="propriedade_id"
             name="propriedade_id"
@@ -456,6 +540,19 @@ function EntregaModal({
             step={1}
             required
             defaultValue={entrega.quantidade ?? ""}
+            className={CAMPO_CLASSES}
+          />
+        </Campo>
+
+        <Campo id="kits" label="Quantidade de kits">
+          <input
+            id="kits"
+            name="kits"
+            type="number"
+            min={1}
+            step={1}
+            required
+            defaultValue={entrega.kits ?? ""}
             className={CAMPO_CLASSES}
           />
         </Campo>

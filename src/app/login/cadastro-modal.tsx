@@ -3,6 +3,8 @@
 import { useActionState, useState } from "react";
 import { cadastrarNovaFazenda, cadastrarSemFazenda } from "./cadastro-actions";
 import { CampoTelefone } from "../campo-telefone";
+import { CampoSenha } from "../campo-senha";
+import { CampoLocalizacao } from "../campo-localizacao";
 
 const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
@@ -25,15 +27,14 @@ function CamposAcesso() {
           <label htmlFor="password" className={LABEL_CLASSES}>
             Senha
           </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            className={CAMPO_CLASSES}
-          />
+          <CampoSenha id="password" name="password" className={CAMPO_CLASSES} />
+          <span className="text-sm text-zinc-600 dark:text-zinc-400">Pelo menos 8 caracteres.</span>
+        </div>
+        <div className="flex flex-col gap-1 sm:col-start-2">
+          <label htmlFor="confirmar_senha" className={LABEL_CLASSES}>
+            Confirmar senha
+          </label>
+          <CampoSenha id="confirmar_senha" name="confirmar_senha" className={CAMPO_CLASSES} />
         </div>
       </div>
     </>
@@ -189,6 +190,13 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
                   É desse número que você vai mandar os dados pro bot do Gestão Pec.
                 </span>
               </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className={LABEL_CLASSES}>Localização da fazenda (opcional)</span>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                Se estiver na fazenda, toque no botão pra marcar o ponto no mapa.
+              </span>
+              <CampoLocalizacao />
             </div>
           </>
         ) : (

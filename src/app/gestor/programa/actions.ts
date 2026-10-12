@@ -98,15 +98,30 @@ export async function salvarEntrega(
     return { error: "A quantidade deve ser um número inteiro maior que zero." };
   }
 
+  const kits = Number(formData.get("kits"));
+  if (!Number.isInteger(kits) || kits <= 0) {
+    return { error: "Informe quantos kits a fazenda vai receber (número inteiro maior que zero)." };
+  }
+
+  const supabase = await createClient();
+
+  // a fazenda recebe pela entidade (0048): acha pelo nome ou cria, e atualiza responsável/telefone
+  const { data: entidadeId, error: erroEntidade } = await supabase.rpc("gestor_salvar_entidade", {
+    p_nome: String(formData.get("entidade_nome") ?? ""),
+    p_responsavel: textoOuNull(formData.get("entidade_responsavel")),
+    p_telefone: textoOuNull(formData.get("entidade_telefone")),
+  });
+  if (erroEntidade) return { error: erroEntidade.message };
+
   const dados = {
     propriedade_id: formData.get("propriedade_id") as string,
     touro_id: formData.get("touro_id") as string,
     quantidade,
+    kits,
+    entidade_id: entidadeId as string,
     data_entrega: formData.get("data_entrega") as string,
     observacao: textoOuNull(formData.get("observacao")),
   };
-
-  const supabase = await createClient();
 
   if (id) {
     // a policy só deixa alterar entrega ainda não confirmada — nesse caso o update não acha

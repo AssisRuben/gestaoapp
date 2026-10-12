@@ -287,6 +287,11 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - Saldo (view `saldo_doses`) é sempre calculado: recebidas − coberturas com `dose_programa` −
   baixas, **somando `coberturas_historico`** (registrar_parto arquiva coberturas; sem o histórico a
   dose "voltaria" a cada parto). Excluir a cobertura devolve a dose.
+- **Entidade beneficiada** (0048): a fazenda recebe as doses por uma entidade (associação,
+  cooperativa…). Cada entrega tem a fazenda E a entidade (`entregas_doses.entidade_id`, tabela
+  `entidades` com nome/responsável/telefone, achada ou criada pelo nome em
+  `gestor_salvar_entidade`) e a quantidade de kits (`entregas_doses.kits`). O produtor vê "retirar
+  com <entidade> · responsável · telefone" na entrega pendente.
 - `baixas_doses` (0021): dose que sai do saldo sem virar inseminação (perda, descarte,
   transferência). A fazenda registra/desfaz via `registrar_baixa_doses`/`deletar_baixa_doses`.
 - Coberturas do bot gastam dose desde 0022 (ver seção do bot abaixo).
@@ -503,6 +508,11 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   site" → Produtor (`vincular_produtor`; técnico da fazenda vira produtor). Nunca liga sozinho pelo
   número (bastaria digitar o de outra pessoa). Só o gestor remove produtor (`desvincular_produtor`).
 - Campos de WhatsApp usam `CampoTelefone` (`src/app/campo-telefone.tsx`): máscara (85) 99999-9999.
+- Senha com olho (`CampoSenha`) no login, cadastro e nova senha; cadastro pede "Confirmar senha"
+  (conferido também no servidor).
+- Localização da fazenda: `CampoLocalizacao` ("Usar minha localização" pelo GPS + "Ver no mapa")
+  no cadastro, no "cadastrar minha fazenda" e no modal da fazenda; o cadastro grava
+  latitude/longitude do metadata (trigger, 0048) — é o ponto do mapa do gestor.
 
 ## Importar rebanho por planilha (0045_importar_rebanho.sql)
 

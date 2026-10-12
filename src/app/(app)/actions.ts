@@ -26,6 +26,9 @@ export async function criarMinhaFazenda(_state: CriarFazendaState, formData: For
     p_municipio: texto("municipio"),
     p_estado: texto("estado"),
     p_tecnico_responsavel: null,
+    // marcada por "Usar minha localização" (0048); fora do limite o banco descarta
+    p_latitude: Number.isFinite(Number(texto("latitude"))) && texto("latitude") ? Number(texto("latitude")) : null,
+    p_longitude: Number.isFinite(Number(texto("longitude"))) && texto("longitude") ? Number(texto("longitude")) : null,
   });
   if (error) return { error: error.message };
 

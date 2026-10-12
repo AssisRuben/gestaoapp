@@ -1613,6 +1613,33 @@ begin
     perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
   end;
 
+  -- ============================================================
+  -- entidades das entregas e localização no cadastro (0048)
+  -- ============================================================
+
+  declare
+    v_ent uuid;
+    v_conta uuid;
+  begin
+    -- o usuário de teste voltou a ser gestor no teste de 0044
+    v_ent := gestor_salvar_entidade('  Associação do Riacho ', 'Maria', '(88) 99999-0000');
+    if gestor_salvar_entidade('associação do riacho', null, '(88) 98888-1111') <> v_ent then
+      raise exception 'FALHOU [gestor_salvar_entidade]: mesmo nome deveria achar a entidade existente';
+    end if;
+    if (select responsavel || '|' || telefone from entidades where id = v_ent) <> 'Maria|(88) 98888-1111' then
+      raise exception 'FALHOU [gestor_salvar_entidade]: telefone novo deveria atualizar e responsável vazio manter';
+    end if;
+
+    insert into auth.users (email, raw_user_meta_data)
+    values ('__produtor_gps__@exemplo.invalid',
+            '{"nome_propriedade": "__com_gps__", "nome_produtor": "X", "whatsapp": "(88) 97777-6666", "latitude": "-5.123456", "longitude": "abc"}')
+    returning id into v_conta;
+    if (select latitude from propriedades where nome_propriedade = '__com_gps__') <> -5.123456
+       or (select longitude from propriedades where nome_propriedade = '__com_gps__') is not null then
+      raise exception 'FALHOU [cadastro com localização]: latitude deveria gravar e longitude inválida ficar vazia';
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

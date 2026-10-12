@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { criarMinhaFazenda } from "./actions";
 import { CampoTelefone } from "../campo-telefone";
+import { CampoLocalizacao } from "../campo-localizacao";
 
 const CAMPO =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
@@ -53,6 +54,10 @@ export function CadastrarMinhaFazenda() {
           <span className={ROTULO}>UF</span>
           <input id="mf_estado" name="estado" maxLength={2} defaultValue="CE" className={`uppercase ${CAMPO}`} />
         </label>
+      </div>
+      <div className="flex flex-col gap-1">
+        <span className={ROTULO}>Localização da fazenda (opcional)</span>
+        <CampoLocalizacao />
       </div>
       {state?.error && <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
       <div className="flex gap-2">

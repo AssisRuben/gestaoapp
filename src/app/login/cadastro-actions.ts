@@ -4,6 +4,20 @@ import { createClient } from "@/lib/supabase/server";
 
 export type CadastroState = { error?: string; success?: boolean } | undefined;
 
+// latitude/longitude vindas do botão "Usar minha localização": número dentro do limite, senão nada
+function coordenada(valor: FormDataEntryValue | null, limite: number): number | null {
+  const n = Number(String(valor ?? "").trim());
+  return String(valor ?? "").trim() !== "" && Number.isFinite(n) && Math.abs(n) <= limite ? n : null;
+}
+
+// senha e "confirmar senha" do formulário de cadastro
+function erroSenha(formData: FormData): string | null {
+  const senha = String(formData.get("password") ?? "");
+  if (senha.length < 8) return "A senha precisa ter pelo menos 8 caracteres.";
+  if (senha !== String(formData.get("confirmar_senha") ?? "")) return "As senhas não são iguais. Digite de novo.";
+  return null;
+}
+
 const JA_CADASTRADO =
   "Esse e-mail já tem conta no Gestão Pec. Entre com ele na tela de login (ou use \"Esqueci minha senha\"). Pra uma conta nova, use outro e-mail.";
 
@@ -34,6 +48,8 @@ export async function cadastrarNovaFazenda(
 ): Promise<CadastroState> {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+  const problemaSenha = erroSenha(formData);
+  if (problemaSenha) return { error: problemaSenha };
 
   // obrigatório: o cadastro no site é o que libera o número pro bot de WhatsApp
   const whatsapp = String(formData.get("whatsapp") ?? "").trim();
@@ -57,6 +73,9 @@ export async function cadastrarNovaFazenda(
         estado: (formData.get("estado") as string) || null,
         tecnico_responsavel: (formData.get("tecnico_responsavel") as string) || null,
         whatsapp: whatsapp || null,
+        // localização marcada pelo celular (opcional) — vai pro mapa do gestor (0048)
+        latitude: coordenada(formData.get("latitude"), 90),
+        longitude: coordenada(formData.get("longitude"), 180),
       },
     },
   });
@@ -74,6 +93,8 @@ export async function cadastrarSemFazenda(
 ): Promise<CadastroState> {
   const nome = String(formData.get("nome") ?? "").trim();
   if (!nome) return { error: "Informe seu nome." };
+  const problemaSenha = erroSenha(formData);
+  if (problemaSenha) return { error: problemaSenha };
   const perfil = formData.get("perfil") === "produtor" ? "produtor" : "tecnico";
 
   const supabase = await createClient();
