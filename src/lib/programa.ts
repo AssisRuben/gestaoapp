@@ -24,7 +24,7 @@ export type EntregaDoses = {
   // a fazenda recebe pela entidade (associação, cooperativa…) — 0048
   entidade_id?: string | null;
   kits?: number | null;
-  entidade?: { nome: string; responsavel: string | null; telefone: string | null } | null;
+  entidade?: { nome: string; cnpj?: string | null; responsavel: string | null; telefone: string | null } | null;
 };
 
 export type SaldoDoses = {

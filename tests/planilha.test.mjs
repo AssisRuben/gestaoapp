@@ -54,4 +54,10 @@ ok(t.mascaraTelefone("859") === "(85) 9", "enquanto digita");
 ok(t.mascaraTelefone("8599999123456") === "(85) 99999-1234", "corta dígitos a mais");
 ok(t.mascaraTelefone("") === "", "vazio");
 
+// máscara do CNPJ (src/lib/cnpj.ts)
+const c = await carregar("cnpj");
+ok(c.mascaraCnpj("11222333000181") === "11.222.333/0001-81", "CNPJ completo");
+ok(c.mascaraCnpj("112223") === "11.222.3", "CNPJ enquanto digita");
+ok(c.mascaraCnpj("11.222.333/0001-81999") === "11.222.333/0001-81", "corta dígitos a mais");
+
 terminar("planilha");

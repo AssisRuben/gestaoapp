@@ -295,8 +295,13 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - **Performance por entidade** (0049, aba Entidades do gestor): a fazenda conta em toda entidade
   por onde recebeu doses (vínculo pelas entregas — decisão do usuário; sem entrega, fica fora).
   `indicadores_entidades_fazendas()` (uma linha por entidade × fazenda, régua de
-  calcular_indicadores) e `indicadores_entidades()` (somas e médias ponderadas: produção, L/vaca/dia,
-  custo/receita por litro sobre o total de litros, IEP, doses/kits, concepção). Só gestor vê.
+  calcular_indicadores) e `indicadores_entidades()` — desde 0050 em **MÉDIA POR FAZENDA**
+  (faturamento, despesa, custo/receita/sobra por litro, produção, L/vaca/dia, IEP, concepção):
+  a ideia é comparar eficiência entre entidades; só doses/kits/gestações/nascidos são totais. A tela
+  mostra a "Média geral" (cada fazenda uma vez) e pinta verde/vermelho contra ela. Só gestor vê.
+- Entidade tem CNPJ (0050, dígitos verificadores em `_cnpj_valido`, único). Cadastro/edição na aba
+  Entidades (`gestor_editar_entidade`) ou dentro da entrega (`gestor_salvar_entidade`: acha pelo
+  CNPJ, senão pelo nome).
 - `baixas_doses` (0021): dose que sai do saldo sem virar inseminação (perda, descarte,
   transferência). A fazenda registra/desfaz via `registrar_baixa_doses`/`deletar_baixa_doses`.
 - Coberturas do bot gastam dose desde 0022 (ver seção do bot abaixo).

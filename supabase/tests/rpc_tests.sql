@@ -1640,9 +1640,34 @@ begin
     if (select fazendas from indicadores_entidades() where entidade_id = v_ent) <> 1
        or (select doses_recebidas from indicadores_entidades() where entidade_id = v_ent) <> 10
        or (select kits from indicadores_entidades() where entidade_id = v_ent) <> 2
-       or (select producao_dia from indicadores_entidades() where entidade_id = v_ent)
+       or (select producao_dia_media from indicadores_entidades() where entidade_id = v_ent)
           is distinct from (select round(producao_dia, 1) from calcular_indicadores(v_propriedade_id, _hoje_fazenda())) then
       raise exception 'FALHOU [indicadores_entidades]: veio %', (select row_to_json(x) from indicadores_entidades() x where entidade_id = v_ent);
+    end if;
+
+    -- CNPJ (0050): dígitos verificadores, sem repetir; entidade sem fazenda aparece com 0
+    begin
+      perform gestor_editar_entidade(null, 'Cooperativa Errada', '11.222.333/0001-80', null, null);
+      raise exception 'FALHOU [cnpj]: dígito verificador errado deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%dígitos verificadores%' then raise exception 'FALHOU [cnpj]: erro inesperado: %', sqlerrm; end if;
+    end;
+    perform gestor_editar_entidade(v_ent, 'Associação do Riacho', '11.222.333/0001-81', 'Maria', '(88) 98888-1111');
+    if (select cnpj from entidades where id = v_ent) <> '11222333000181' then
+      raise exception 'FALHOU [cnpj]: deveria gravar só os dígitos';
+    end if;
+    begin
+      perform gestor_editar_entidade(null, 'Outra', '11222333000181', null, null);
+      raise exception 'FALHOU [cnpj]: CNPJ repetido deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%já está cadastrado%' then raise exception 'FALHOU [cnpj]: erro inesperado: %', sqlerrm; end if;
+    end;
+    if gestor_salvar_entidade('nome diferente', null, null, '11222333000181') <> v_ent then
+      raise exception 'FALHOU [gestor_salvar_entidade]: deveria achar a entidade pelo CNPJ';
+    end if;
+    perform gestor_editar_entidade(null, 'Sindicato Sem Fazenda', null, null, null);
+    if (select fazendas from indicadores_entidades() where entidade_nome = 'Sindicato Sem Fazenda') <> 0 then
+      raise exception 'FALHOU [indicadores_entidades]: entidade sem fazenda deveria aparecer com 0';
     end if;
 
     if (select latitude from propriedades where nome_propriedade = '__com_gps__') <> -5.123456

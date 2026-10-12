@@ -110,6 +110,7 @@ export async function salvarEntrega(
     p_nome: String(formData.get("entidade_nome") ?? ""),
     p_responsavel: textoOuNull(formData.get("entidade_responsavel")),
     p_telefone: textoOuNull(formData.get("entidade_telefone")),
+    p_cnpj: textoOuNull(formData.get("entidade_cnpj")),
   });
   if (erroEntidade) return { error: erroEntidade.message };
 

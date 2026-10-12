@@ -28,6 +28,7 @@ import {
 } from "./ui";
 import { hojeBrasil } from "@/lib/datas";
 import { mascaraTelefone } from "@/lib/telefone";
+import { mascaraCnpj } from "@/lib/cnpj";
 
 type Propriedade = { id: string; nome_propriedade: string };
 
@@ -377,7 +378,7 @@ function TouroModal({
   );
 }
 
-type EntidadeOpcao = { nome: string; responsavel: string | null; telefone: string | null };
+type EntidadeOpcao = { nome: string; cnpj?: string | null; responsavel: string | null; telefone: string | null };
 
 // Entidades já usadas em entregas (pra sugerir e preencher responsável/telefone ao escolher).
 function entidadesConhecidas(entregas: EntregaDoses[]): EntidadeOpcao[] {
@@ -392,6 +393,7 @@ function CamposEntidade({ entidades, inicial }: { entidades: EntidadeOpcao[]; in
   const [nome, setNome] = useState(inicial?.nome ?? "");
   const [responsavel, setResponsavel] = useState(inicial?.responsavel ?? "");
   const [telefone, setTelefone] = useState(inicial?.telefone ?? "");
+  const [cnpj, setCnpj] = useState(inicial?.cnpj ? mascaraCnpj(inicial.cnpj) : "");
 
   function escolher(valor: string) {
     setNome(valor);
@@ -399,6 +401,7 @@ function CamposEntidade({ entidades, inicial }: { entidades: EntidadeOpcao[]; in
     if (conhecida) {
       setResponsavel(conhecida.responsavel ?? "");
       setTelefone(conhecida.telefone ?? "");
+      setCnpj(conhecida.cnpj ? mascaraCnpj(conhecida.cnpj) : "");
     }
   }
 
@@ -421,6 +424,17 @@ function CamposEntidade({ entidades, inicial }: { entidades: EntidadeOpcao[]; in
             <option key={e.nome} value={e.nome} />
           ))}
         </datalist>
+      </Campo>
+      <Campo id="entidade_cnpj" label="CNPJ">
+        <input
+          id="entidade_cnpj"
+          name="entidade_cnpj"
+          inputMode="numeric"
+          placeholder="00.000.000/0000-00"
+          value={cnpj}
+          onChange={(e) => setCnpj(mascaraCnpj(e.target.value))}
+          className={CAMPO_CLASSES}
+        />
       </Campo>
       <Campo id="entidade_responsavel" label="Responsável">
         <input

@@ -158,7 +158,7 @@ export const getEntregasDosesCache = unstable_cache(
     return buscarTodasPaginas((de, ate) =>
       supabase
         .from("entregas_doses")
-        .select("*, touro:touro_id(id, nome, codigo), entidade:entidade_id(nome, responsavel, telefone)")
+        .select("*, touro:touro_id(id, nome, codigo), entidade:entidade_id(nome, cnpj, responsavel, telefone)")
         .eq("propriedade_id", propriedadeId)
         .order("data_entrega", { ascending: false })
         .order("id")
@@ -324,7 +324,7 @@ export const getEntregasDosesTodasCache = unstable_cache(
       supabase
         .from("entregas_doses")
         .select(
-          "*, touro:touro_id(id, nome, codigo), propriedade:propriedade_id(id, nome_propriedade), entidade:entidade_id(nome, responsavel, telefone)",
+          "*, touro:touro_id(id, nome, codigo), propriedade:propriedade_id(id, nome_propriedade), entidade:entidade_id(nome, cnpj, responsavel, telefone)",
         )
         .order("data_entrega", { ascending: false })
         .order("id")
