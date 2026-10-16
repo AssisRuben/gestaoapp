@@ -1676,6 +1676,37 @@ begin
     end if;
   end;
 
+  -- diagnóstico só na cobertura atual (0051): cobertura que já virou parto ou com o parto previsto
+  -- no passado não recebe positivo
+  declare
+    v_vaca_a uuid;
+    v_vaca_b uuid;
+    v_cob uuid;
+    v_r jsonb;
+  begin
+    insert into vacas (propriedade_id, numero_identificacao, status_produtivo)
+      values (v_propriedade_id, 91001, 'lactacao') returning id into v_vaca_a;
+    insert into coberturas (vaca_id, data_cobertura) values (v_vaca_a, _hoje_fazenda() - 400) returning id into v_cob;
+    insert into partos (vaca_id, data_parto) values (v_vaca_a, _hoje_fazenda() - 117);
+    v_r := bot_diagnosticar_prenhez('5500000000001', 91001, 'positivo');
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%depois do último parto%'
+       or (select diagnostico_prenhez from coberturas where id = v_cob) <> 'pendente' then
+      raise exception 'FALHOU [diagnóstico 0051]: cobertura de antes do parto não pode ser diagnosticada (veio %)', v_r;
+    end if;
+
+    insert into vacas (propriedade_id, numero_identificacao, status_produtivo)
+      values (v_propriedade_id, 91002, 'novilha') returning id into v_vaca_b;
+    insert into coberturas (vaca_id, data_cobertura) values (v_vaca_b, _hoje_fazenda() - 360);
+    v_r := bot_diagnosticar_prenhez('5500000000001', 91002, 'positivo');
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%já teria sido%' then
+      raise exception 'FALHOU [diagnóstico 0051]: positivo com parto previsto no passado deveria ser recusado (veio %)', v_r;
+    end if;
+    v_r := bot_diagnosticar_prenhez('5500000000001', 91002, 'negativo');
+    if not (v_r->>'ok')::boolean or (select status_reprodutivo from vacas where id = v_vaca_b) <> 'vazia' then
+      raise exception 'FALHOU [diagnóstico 0051]: negativo na cobertura atual deveria valer (veio %)', v_r;
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

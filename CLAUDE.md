@@ -549,6 +549,10 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   já virou parto. Banco: view `coberturas_atuais` (bot, lembretes, alertas do gestor). Site:
   `coberturaAtualPorVaca` em `src/lib/indicadores.ts` (Início e resumo da fazenda). Positiva de
   antes do parto atual, sem vínculo, é gestação que já terminou — não vira "secagem atrasada".
+- **Diagnóstico** (0051, `_diagnosticar_cobertura_atual`, bot e Lançar no campo): vai só na cobertura
+  atual. Sem ela (a última já virou parto), recusa e pede a cobertura nova; positivo com parto previsto
+  (cobertura + 283) já no passado também é recusado. Antes gravava na cobertura mais recente da vaca,
+  mesmo de lactação anterior (vaca 10 da Fazenda Teste, 15/10/2026).
 
 ## Leite da lactação e parto duplicado (0039)
 
