@@ -553,6 +553,11 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   atual. Sem ela (a última já virou parto), recusa e pede a cobertura nova; positivo com parto previsto
   (cobertura + 283) já no passado também é recusado. Antes gravava na cobertura mais recente da vaca,
   mesmo de lactação anterior (vaca 10 da Fazenda Teste, 15/10/2026).
+- **Datas do ciclo** (0052, em `_registrar_cobertura`/`_registrar_parto` — site, bot e campo):
+  cobertura no futuro, antes do parto ativo ou em vaca prenhe (cobertura atual positiva) é recusada;
+  parto no futuro ou não posterior ao parto ativo é recusado; o parto só liga cobertura positiva
+  depois do parto anterior e com 240 a 310 dias de gestação (fora disso fica sem cobertura, e o bot
+  avisa). A importação de planilha grava direto e tem as próprias conferências (0045).
 
 ## Leite da lactação e parto duplicado (0039)
 

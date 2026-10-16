@@ -127,7 +127,8 @@ begin
 
   -- cobertura que resultou no primeiro parto — fica fora de qualquer janela de arquivamento
   -- (a janela só cobre o período ENTRE dois partos), deve continuar viva pra sempre
-  perform registrar_cobertura(v_vaca_filha_id, current_date - 400, 'touro-teste-1');
+  -- 280 dias antes do parto: gestação plausível (0052 só liga cobertura com 240 a 310 dias)
+  perform registrar_cobertura(v_vaca_filha_id, current_date - 580, 'touro-teste-1');
   select id into v_cobertura_a from coberturas where vaca_id = v_vaca_filha_id order by data_cobertura desc limit 1;
   perform confirmar_diagnostico(v_cobertura_a, 'positivo');
 
@@ -151,13 +152,13 @@ begin
 
   -- tentativa de cobertura que falhou durante a lactação — deve ser arquivada junto quando a
   -- lactação fechar
-  perform registrar_cobertura(v_vaca_filha_id, current_date - 150, 'touro-teste-2');
-  select id into v_cobertura_c from coberturas where vaca_id = v_vaca_filha_id and data_cobertura = current_date - 150;
+  perform registrar_cobertura(v_vaca_filha_id, current_date - 290, 'touro-teste-2');
+  select id into v_cobertura_c from coberturas where vaca_id = v_vaca_filha_id and data_cobertura = current_date - 290;
   perform confirmar_diagnostico(v_cobertura_c, 'negativo');
 
   -- cobertura que emplacou — vira cobertura_id do próximo parto, deve continuar viva
-  perform registrar_cobertura(v_vaca_filha_id, current_date - 60, 'touro-teste-3');
-  select id into v_cobertura_b from coberturas where vaca_id = v_vaca_filha_id and data_cobertura = current_date - 60;
+  perform registrar_cobertura(v_vaca_filha_id, current_date - 280, 'touro-teste-3');
+  select id into v_cobertura_b from coberturas where vaca_id = v_vaca_filha_id and data_cobertura = current_date - 280;
   perform confirmar_diagnostico(v_cobertura_b, 'positivo');
 
   v_parto_2 := registrar_parto(v_vaca_filha_id, current_date, 102, 'macho');
@@ -283,7 +284,7 @@ begin
     end if;
   end;
 
-  v_cob_prog_1 := (registrar_cobertura(v_vaca_prog_id, current_date - 400, null, v_touro_id, true)).id;
+  v_cob_prog_1 := (registrar_cobertura(v_vaca_prog_id, current_date - 580, null, v_touro_id, true)).id;
   if (select touro_semen from coberturas where id = v_cob_prog_1) is distinct from '__touro_teste__' then
     raise exception 'FALHOU [programa]: touro_semen deveria receber o nome do touro do catálogo';
   end if;
@@ -1189,6 +1190,14 @@ begin
   -- lançamentos do campo sem internet (0035) — reenvio não duplica
   -- ============================================================
 
+  -- vaca prenhe não recebe cobertura nova (0052): primeiro o diagnóstico negativo
+  v_bot := registrar_lancamento_campo(gen_random_uuid(), v_propriedade_id, 'cobertura',
+    jsonb_build_object('vaca_id', v_vaca_bot, 'data', _hoje_fazenda() - 1, 'touro_texto', 'Touro Campo'));
+  if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%está prenhe%' then
+    raise exception 'FALHOU [0052]: cobertura em vaca prenhe deveria ser recusada (veio %)', v_bot;
+  end if;
+  perform bot_diagnosticar_prenhez('5500000000001', 90002, 'negativo');
+
   v_qtd := (select count(*) from coberturas where vaca_id = v_vaca_bot);
   v_cob_status := gen_random_uuid();
   v_bot := registrar_lancamento_campo(v_cob_status, v_propriedade_id, 'cobertura',
@@ -1704,6 +1713,55 @@ begin
     v_r := bot_diagnosticar_prenhez('5500000000001', 91002, 'negativo');
     if not (v_r->>'ok')::boolean or (select status_reprodutivo from vacas where id = v_vaca_b) <> 'vazia' then
       raise exception 'FALHOU [diagnóstico 0051]: negativo na cobertura atual deveria valer (veio %)', v_r;
+    end if;
+  end;
+
+  -- datas do ciclo conferidas ao gravar (0052)
+  declare
+    v_vaca_c uuid;
+    v_vaca_d uuid;
+    v_vaca_e uuid;
+    v_r jsonb;
+  begin
+    insert into vacas (propriedade_id, numero_identificacao, status_produtivo)
+      values (v_propriedade_id, 91003, 'lactacao') returning id into v_vaca_c;
+    insert into partos (vaca_id, data_parto) values (v_vaca_c, _hoje_fazenda() - 100);
+
+    v_r := bot_registrar_cobertura('5500000000001', 91003, _hoje_fazenda() + 5, null);
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%no futuro%' then
+      raise exception 'FALHOU [0052]: cobertura no futuro deveria ser recusada (veio %)', v_r;
+    end if;
+    v_r := bot_registrar_cobertura('5500000000001', 91003, _hoje_fazenda() - 200, null);
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%antes do último parto%' then
+      raise exception 'FALHOU [0052]: cobertura antes do parto ativo deveria ser recusada (veio %)', v_r;
+    end if;
+
+    -- cobertura positiva antiga, solta, de antes do parto atual: o próximo parto não pode herdá-la
+    insert into vacas (propriedade_id, numero_identificacao, status_produtivo)
+      values (v_propriedade_id, 91004, 'lactacao') returning id into v_vaca_d;
+    insert into coberturas (vaca_id, data_cobertura, diagnostico_prenhez) values (v_vaca_d, _hoje_fazenda() - 700, 'positivo');
+    insert into partos (vaca_id, data_parto) values (v_vaca_d, _hoje_fazenda() - 400);
+    v_r := bot_registrar_parto('5500000000001', 91004, _hoje_fazenda(), null, 'femea');
+    if not (v_r->>'ok')::boolean or (select cobertura_id from partos where vaca_id = v_vaca_d and ativa) is not null then
+      raise exception 'FALHOU [0052]: parto não deveria ligar cobertura de antes do parto anterior (veio %)', v_r;
+    end if;
+
+    -- positiva com intervalo curto demais: parto aceito, sem ligar, com aviso
+    insert into vacas (propriedade_id, numero_identificacao, status_produtivo)
+      values (v_propriedade_id, 91005, 'novilha') returning id into v_vaca_e;
+    insert into coberturas (vaca_id, data_cobertura, diagnostico_prenhez) values (v_vaca_e, _hoje_fazenda() - 100, 'positivo');
+    v_r := bot_registrar_parto('5500000000001', 91005, _hoje_fazenda() + 3, null, 'macho');
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%no futuro%' then
+      raise exception 'FALHOU [0052]: parto no futuro deveria ser recusado (veio %)', v_r;
+    end if;
+    v_r := bot_registrar_parto('5500000000001', 91005, _hoje_fazenda(), null, 'macho');
+    if not (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%Atenção%'
+       or (select cobertura_id from partos where vaca_id = v_vaca_e and ativa) is not null then
+      raise exception 'FALHOU [0052]: gestação de 100 dias deveria registrar o parto sem ligar e avisar (veio %)', v_r;
+    end if;
+    v_r := bot_registrar_parto('5500000000001', 91005, _hoje_fazenda() - 10, null, 'macho');
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%não é depois do último parto%' then
+      raise exception 'FALHOU [0052]: parto antes do parto ativo deveria ser recusado (veio %)', v_r;
     end if;
   end;
 
