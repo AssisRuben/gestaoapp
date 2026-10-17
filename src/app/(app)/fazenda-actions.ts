@@ -4,6 +4,8 @@ import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPropriedadeAtual, getPropriedadesDoUsuario } from "@/lib/propriedade";
 import type { UsuarioWhatsapp, PatrimonioItem, Acesso } from "./fazenda-types";
+import { COLUNAS_PERFIL, type PerfilFazenda } from "@/lib/perfil-fazenda";
+import { perfilDoFormulario } from "@/lib/perfil-fazenda-form";
 
 type ActionState = { error?: string; success?: boolean } | undefined;
 export type AcessoActionState = { error?: string; success?: boolean; acessos?: Acesso[] } | undefined;
@@ -14,17 +16,27 @@ export async function getFazendaData(): Promise<{
   acessos: Acesso[];
   podeGerenciarAcessos: boolean;
   lembretes: boolean | null;
+  perfil: PerfilFazenda | null;
+  perfilDisponivel: boolean;
 }> {
   const propriedadeAtual = await getPropriedadeAtual();
   if (!propriedadeAtual) {
-    return { usuarioWhatsapp: null, patrimonios: [], acessos: [], podeGerenciarAcessos: false, lembretes: null };
+    return {
+      usuarioWhatsapp: null,
+      patrimonios: [],
+      acessos: [],
+      podeGerenciarAcessos: false,
+      lembretes: null,
+      perfil: null,
+      perfilDisponivel: false,
+    };
   }
 
   const vinculos = await getPropriedadesDoUsuario();
   const papel = vinculos.find((v) => v.propriedade.id === propriedadeAtual.id)?.papel;
 
   const supabase = await createClient();
-  const [{ data: whatsappData }, { data: patrimonioData }, { data: acessosData }, { data: lembretesData }] = await Promise.all([
+  const [{ data: whatsappData }, { data: patrimonioData }, { data: acessosData }, { data: lembretesData }, perfilRes] = await Promise.all([
     supabase
       .from("usuarios_whatsapp")
       .select("id, propriedade_id, telefone, papel, ativo, created_at")
@@ -32,12 +44,15 @@ export async function getFazendaData(): Promise<{
       .order("created_at"),
     supabase
       .from("patrimonio")
-      .select("id, propriedade_id, tipo_ativo, valor_total, taxa_juros, vida_util, created_at")
+      // "*": as colunas de autoria (0053) entram quando existirem, sem quebrar antes da migration
+      .select("*")
       .eq("propriedade_id", propriedadeAtual.id)
       .order("created_at"),
     supabase.rpc("listar_acessos_propriedade", { p_propriedade_id: propriedadeAtual.id }),
     // coluna de 0031; se ainda não existir, a chave de lembretes some em vez de quebrar o modal
     supabase.from("propriedades").select("lembretes_whatsapp").eq("id", propriedadeAtual.id).maybeSingle(),
+    // perfil da fazenda (0053); sem a migration, a seção some em vez de quebrar o modal
+    supabase.from("perfil_fazenda_atual").select(COLUNAS_PERFIL).eq("propriedade_id", propriedadeAtual.id).maybeSingle(),
   ]);
 
   return {
@@ -46,7 +61,30 @@ export async function getFazendaData(): Promise<{
     acessos: (acessosData ?? []) as Acesso[],
     podeGerenciarAcessos: papel === "produtor",
     lembretes: (lembretesData as { lembretes_whatsapp?: boolean } | null)?.lembretes_whatsapp ?? null,
+    perfil: (perfilRes.data as PerfilFazenda | null) ?? null,
+    perfilDisponivel: !perfilRes.error,
   };
+}
+
+export type PerfilActionState = { error?: string; success?: boolean; perfil?: PerfilFazenda } | undefined;
+
+// Perfil da fazenda (0053): grava só o que mudou, com a data de hoje — o histórico fica no banco.
+export async function salvarPerfilFazenda(_state: PerfilActionState, formData: FormData): Promise<PerfilActionState> {
+  const propriedadeAtual = await getPropriedadeAtual();
+  if (!propriedadeAtual) {
+    return { error: "Nenhuma propriedade vinculada à sua conta." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("salvar_perfil_fazenda", {
+    p_propriedade_id: propriedadeAtual.id,
+    p_dados: perfilDoFormulario(formData),
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/");
+  revalidatePath("/relatorio");
+  return { success: true, perfil: data as PerfilFazenda };
 }
 
 async function acessosAtualizados(propriedadeId: string): Promise<AcessoActionState> {

@@ -13,6 +13,9 @@ import { hojeBrasil, somarDias } from "@/lib/datas";
 import { coberturaAtualPorVaca } from "@/lib/indicadores";
 import { carregarIndicadoresFazenda } from "@/lib/indicadores-fazenda";
 import { IndicadoresFazendaView } from "../indicadores-fazenda-view";
+import { createClient } from "@/lib/supabase/server";
+import { COLUNAS_PERFIL, perguntasFaltando, type PerfilFazenda } from "@/lib/perfil-fazenda";
+import { LembretePerfil } from "./lembrete-perfil";
 
 export default async function DashboardPage() {
   const propriedadeAtual = await getPropriedadeAtual();
@@ -23,7 +26,8 @@ export default async function DashboardPage() {
 
   const hoje = hojeBrasil();
 
-  const [vacasData, leiteData, financeiroData, coberturasData, bezerrosData, partosData, indicadores] = await Promise.all([
+  const supabase = await createClient();
+  const [vacasData, leiteData, financeiroData, coberturasData, bezerrosData, partosData, indicadores, perfilRes] = await Promise.all([
     getVacasCache(propriedadeAtual.id),
     getControleLeiteCache(propriedadeAtual.id),
     getFinanceiroCache(propriedadeAtual.id),
@@ -31,7 +35,10 @@ export default async function DashboardPage() {
     getBezerrosCache(propriedadeAtual.id),
     getPartosCache(propriedadeAtual.id),
     carregarIndicadoresFazenda(propriedadeAtual.id),
+    supabase.from("perfil_fazenda_atual").select(COLUNAS_PERFIL).eq("propriedade_id", propriedadeAtual.id).maybeSingle(),
   ]);
+  // perfil da fazenda (0053): lembrete enquanto faltar resposta; sem a migration, nada aparece
+  const perguntasPerfil = perfilRes.error ? 0 : perguntasFaltando(perfilRes.data as PerfilFazenda | null);
 
   const vacas = vacasData as unknown as { id: string; status_produtivo: string }[];
   const bezerros = bezerrosData as unknown as {
@@ -114,7 +121,12 @@ export default async function DashboardPage() {
       lancamentos={lancamentos}
       vacasPraSecar={vacasPraSecar}
       diagnosticosPendentes={diagnosticosPendentes}
-      indicadores={<IndicadoresFazendaView indicadores={indicadores} />}
+      indicadores={
+        <>
+          {perguntasPerfil > 0 && <LembretePerfil faltam={perguntasPerfil} />}
+          <IndicadoresFazendaView indicadores={indicadores} />
+        </>
+      }
     />
   );
 }

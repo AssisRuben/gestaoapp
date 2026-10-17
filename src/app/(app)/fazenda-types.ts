@@ -23,4 +23,9 @@ export type PatrimonioItem = {
   taxa_juros: number | null;
   vida_util: number | null;
   created_at: string;
+  // data e autor de quando foi salvo (trigger de autoria, 0053)
+  criado_por?: string | null;
+  criado_via?: string | null;
+  atualizado_por?: string | null;
+  atualizado_em?: string | null;
 };

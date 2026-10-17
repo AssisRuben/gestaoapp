@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { criarMinhaFazenda } from "./actions";
 import { CampoTelefone } from "../campo-telefone";
 import { CampoLocalizacao } from "../campo-localizacao";
+import { CamposPerfilCadastro } from "../campos-perfil";
 
 const CAMPO =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-base text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
@@ -59,6 +60,7 @@ export function CadastrarMinhaFazenda() {
         <span className={ROTULO}>Localização da fazenda (opcional)</span>
         <CampoLocalizacao />
       </div>
+      <CamposPerfilCadastro classes={{ campo: CAMPO, rotulo: ROTULO }} />
       {state?.error && <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
       <div className="flex gap-2">
         <button

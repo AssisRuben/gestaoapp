@@ -11,6 +11,7 @@ import {
 } from "@/lib/cached-data";
 import { normalizarLeite } from "@/lib/gestor";
 import { carregarIndicadoresFazenda, type IndicadoresFazenda } from "@/lib/indicadores-fazenda";
+import { COLUNAS_PERFIL, type PerfilFazenda } from "@/lib/perfil-fazenda";
 import { hojeBrasil, somarDias } from "@/lib/datas";
 import {
   indicadoresLactacao,
@@ -104,6 +105,8 @@ export type ResumoFazenda = {
   visitas: VisitaResumo[];
   recomendacoesAbertas: RecomendacaoResumo[];
   indicadores: IndicadoresFazenda;
+  // perfil da fazenda de hoje (0053); null = ainda não respondido (ou migration não rodada)
+  perfil: PerfilFazenda | null;
 };
 
 type LinhaVisita = { id: string; data_visita: string; observacoes: string | null; autor_id: string | null; autor_nome: string | null };
@@ -290,6 +293,12 @@ export async function carregarResumoFazenda(propriedadeId: string): Promise<Resu
     };
   });
 
+  const { data: perfil } = await supabase
+    .from("perfil_fazenda_atual")
+    .select(COLUNAS_PERFIL)
+    .eq("propriedade_id", propriedadeId)
+    .maybeSingle();
+
   const ativas = lactacoes.filter((l) => !l.seca);
   return {
     hoje,
@@ -328,5 +337,6 @@ export async function carregarResumoFazenda(propriedadeId: string): Promise<Resu
     visitas: visitasD.visitas,
     recomendacoesAbertas: visitasD.abertas,
     indicadores,
+    perfil: (perfil as PerfilFazenda | null) ?? null,
   };
 }

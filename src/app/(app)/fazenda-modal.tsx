@@ -10,7 +10,12 @@ import {
   deletarPatrimonio,
   vincularTecnico,
   desvincularTecnico,
+  salvarPerfilFazenda,
 } from "./fazenda-actions";
+import { perguntasFaltando, type PerfilFazenda } from "@/lib/perfil-fazenda";
+import { CamposPerfilCompleto } from "../campos-perfil";
+import { Autoria } from "./autoria";
+import { formatarDataBR } from "./format";
 import { logout } from "./actions";
 import { useSuccessToast, SuccessToast } from "./toast";
 import { formatarTelefoneBR } from "./format";
@@ -189,6 +194,66 @@ function DadosGeraisForm({
   );
 }
 
+// Perfil da fazenda (0053): cada vez que muda, o banco guarda com a data — os relatórios comparam
+// o antes e o depois (começou a irrigar, trocou a genética...).
+function PerfilSecao({
+  perfilInicial,
+  irParaPerfil,
+  onSuccess,
+}: {
+  perfilInicial: PerfilFazenda | null;
+  irParaPerfil: boolean;
+  onSuccess: (mensagem: string) => void;
+}) {
+  const [state, action, pending] = useActionState(salvarPerfilFazenda, undefined);
+  const perfil = state?.perfil ?? perfilInicial;
+  const faltam = perguntasFaltando(perfil);
+  const secaoRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (irParaPerfil) secaoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [irParaPerfil]);
+
+  useEffect(() => {
+    if (state?.success) onSuccess("Perfil da fazenda salvo!");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
+
+  return (
+    <form ref={secaoRef} action={action} className="flex scroll-mt-4 flex-col gap-3">
+      <div className="flex flex-col gap-0.5">
+        <h3 className="text-base font-semibold text-black dark:text-zinc-50">Perfil da fazenda</h3>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Respostas que entram nos relatórios (produção por hectare, por pessoa, por raça...). Cada mudança
+          fica guardada com a data, pra comparar o antes e o depois.
+        </p>
+        {perfil?.data_referencia && (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Atualizado em {formatarDataBR(perfil.data_referencia)}
+            {perfil.registrado_por_nome && ` por ${perfil.registrado_por_nome}`}
+            {faltam > 0 && ` · faltam ${faltam} ${faltam === 1 ? "resposta" : "respostas"}`}
+          </p>
+        )}
+      </div>
+
+      <CamposPerfilCompleto key={perfil?.data_referencia ?? "novo"} perfil={perfil} classes={{ campo: CAMPO_CLASSES, rotulo: LABEL_CLASSES }} />
+
+      {state?.error && <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
+
+      <button
+        type="submit"
+        disabled={pending}
+        className="self-start rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark disabled:opacity-50"
+      >
+        {pending ? "Salvando..." : "Salvar perfil"}
+      </button>
+    </form>
+  );
+}
+
+// data em que o item foi salvo (ou alterado pela última vez), no fuso da fazenda
+const diaSalvo = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Fortaleza", day: "2-digit", month: "2-digit", year: "numeric" });
+
 function formatarMoeda(valor: number | null) {
   if (valor === null) return "—";
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor);
@@ -196,9 +261,11 @@ function formatarMoeda(valor: number | null) {
 
 function PatrimonioSecao({
   itens,
+  nomes,
   onSuccess,
 }: {
   itens: PatrimonioItem[];
+  nomes: Record<string, string>;
   onSuccess: (mensagem: string) => void;
 }) {
   const [drawerAberto, setDrawerAberto] = useState(false);
@@ -249,6 +316,7 @@ function PatrimonioSecao({
               <th className="px-3 py-2 font-medium">Valor total</th>
               <th className="px-3 py-2 font-medium">Taxa de juros</th>
               <th className="px-3 py-2 font-medium">Vida útil (anos)</th>
+              <th className="px-3 py-2 font-medium">Salvo em</th>
             </tr>
           </thead>
           <tbody>
@@ -268,11 +336,14 @@ function PatrimonioSecao({
                     : "—"}
                 </td>
                 <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{p.vida_util ?? "—"}</td>
+                <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">
+                  {p.atualizado_em || p.created_at ? diaSalvo.format(new Date(p.atualizado_em ?? p.created_at)) : "—"}
+                </td>
               </tr>
             ))}
             {itens.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-3 py-4 text-center text-zinc-600 dark:text-zinc-400">
+                <td colSpan={5} className="px-3 py-4 text-center text-zinc-600 dark:text-zinc-400">
                   Nenhum item cadastrado.
                 </td>
               </tr>
@@ -345,6 +416,7 @@ function PatrimonioSecao({
           >
             <input type="hidden" name="id" value={emEdicao.id} />
             <h4 className="text-base font-semibold text-black dark:text-zinc-50">Editar item de patrimônio</h4>
+            <Autoria registro={emEdicao} nomes={nomes} />
             <div className="flex flex-col gap-1">
               <label htmlFor="ep_tipo_ativo" className={LABEL_CLASSES}>
                 Ativo
@@ -634,9 +706,15 @@ export function FazendaModal({
   acessos,
   podeGerenciarAcessos,
   lembretes,
+  perfil,
+  perfilDisponivel,
+  irParaPerfil,
   onAcessosChange,
   onClose,
 }: {
+  perfil: PerfilFazenda | null;
+  perfilDisponivel: boolean;
+  irParaPerfil: boolean;
   propriedade: Propriedade;
   usuarioWhatsapp: UsuarioWhatsapp | null;
   patrimonios: PatrimonioItem[];
@@ -647,6 +725,8 @@ export function FazendaModal({
   onClose: () => void;
 }) {
   const { mensagemToast, mostrarToast } = useSuccessToast();
+  // nomes de quem tem acesso, pra linha "Lançado por ..." do patrimônio
+  const nomes = Object.fromEntries(acessos.map((a) => [a.usuario_id, a.nome ?? a.email]));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -671,7 +751,8 @@ export function FazendaModal({
           lembretes={lembretes}
           onSuccess={mostrarToast}
         />
-        <PatrimonioSecao itens={patrimonios} onSuccess={mostrarToast} />
+        {perfilDisponivel && <PerfilSecao perfilInicial={perfil} irParaPerfil={irParaPerfil} onSuccess={mostrarToast} />}
+        <PatrimonioSecao itens={patrimonios} nomes={nomes} onSuccess={mostrarToast} />
         <AcessosSecao
           acessos={acessos}
           podeGerenciar={podeGerenciarAcessos}

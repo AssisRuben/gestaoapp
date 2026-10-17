@@ -529,6 +529,23 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   no cadastro, no "cadastrar minha fazenda" e no modal da fazenda; o cadastro grava
   latitude/longitude do metadata (trigger, 0048) — é o ponto do mapa do gestor.
 
+## Perfil da fazenda (0053_perfil_fazenda.sql)
+
+- Perguntas pros relatórios: área total e usada pro leite (ha), pasto irrigado (+ ha), raça
+  predominante, inseminação (desde quando), mão de obra (+ nº de pessoas), ordenha (manual/mecânica,
+  1–3 por dia), destino do leite, tanque. Opções e rótulos em `src/lib/perfil-fazenda.ts`; campos do
+  formulário em `src/app/campos-perfil.tsx` (nomes `perfil_<campo>`, lidos por `perfilDoFormulario`).
+- **Histórico com data**: `perfis_fazenda` (uma linha por dia em que mudou; mudança no mesmo dia
+  corrige a linha do dia; sem mudança não grava). Perfil de hoje: view `perfil_fazenda_atual`. Escrita
+  só por `salvar_perfil_fazenda` (vínculo da fazenda) → `_salvar_perfil_fazenda`, que recebe só os
+  campos respondidos (o resto continua). É o que deixa o relatório mostrar antes × depois.
+- Cadastro "Sou produtor" e "cadastrar minha fazenda" pedem só 3 (área pro leite, irrigação, raça);
+  vão no metadata `perfil` (o trigger de cadastro grava) ou pela RPC. O resto: modal da fazenda →
+  Perfil da fazenda. Enquanto faltar resposta, o Início mostra "Complete o perfil" (abre o modal na
+  seção pelo evento `gestaopec:abrir-perfil`). O resumo da fazenda (relatório e gestor) mostra o perfil.
+- Patrimônio tem data e autor de quando foi salvo (trigger de autoria de 0030, colunas novas em
+  `patrimonio`): coluna "Salvo em" e linha "Lançado por" — o usuário não digita data.
+
 ## Importar rebanho por planilha (0045_importar_rebanho.sql)
 
 - Vacas → **Importar planilha** (`/vacas/importar`, produtor/técnico da fazenda). Abas Vacas

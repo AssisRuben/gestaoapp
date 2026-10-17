@@ -1765,6 +1765,75 @@ begin
     end if;
   end;
 
+  -- perfil da fazenda (0053): histórico por data, campos parciais, conferências e cadastro
+  declare
+    v_perfil perfis_fazenda;
+    v_conta uuid;
+    v_pat uuid;
+  begin
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+
+    v_perfil := salvar_perfil_fazenda(v_propriedade_id,
+      '{"area_total_ha": "20,5", "area_leite_ha": "12", "irrigado": "true", "area_irrigada_ha": "3", "raca": "girolando"}');
+    if v_perfil.area_total_ha <> 20.5 or v_perfil.area_irrigada_ha <> 3 or v_perfil.raca <> 'girolando'
+       or v_perfil.data_referencia <> _hoje_fazenda() then
+      raise exception 'FALHOU [perfil]: primeira gravação errada (veio %)', row_to_json(v_perfil);
+    end if;
+
+    -- mesmo dia: corrige a linha do dia e mantém o que não veio
+    v_perfil := salvar_perfil_fazenda(v_propriedade_id, '{"pessoas": "2", "mao_de_obra": "familia"}');
+    if (select count(*) from perfis_fazenda where propriedade_id = v_propriedade_id) <> 1
+       or v_perfil.area_leite_ha <> 12 or v_perfil.pessoas <> 2 then
+      raise exception 'FALHOU [perfil]: no mesmo dia deveria corrigir a linha, sem perder campos (veio %)', row_to_json(v_perfil);
+    end if;
+
+    -- outro dia: linha nova, e o atual é o mais recente
+    update perfis_fazenda set data_referencia = _hoje_fazenda() - 40, registrado_em = now() - interval '40 days'
+    where propriedade_id = v_propriedade_id;
+    perform salvar_perfil_fazenda(v_propriedade_id, '{"raca": "jersey", "irrigado": "false"}');
+    if (select count(*) from perfis_fazenda where propriedade_id = v_propriedade_id) <> 2
+       or (select raca from perfil_fazenda_atual where propriedade_id = v_propriedade_id) <> 'jersey'
+       or (select area_irrigada_ha from perfil_fazenda_atual where propriedade_id = v_propriedade_id) is not null
+       or (select area_total_ha from perfil_fazenda_atual where propriedade_id = v_propriedade_id) <> 20.5 then
+      raise exception 'FALHOU [perfil]: mudança em outro dia deveria virar linha nova com o histórico';
+    end if;
+
+    -- sem mudança: não cria linha
+    perform salvar_perfil_fazenda(v_propriedade_id, '{"raca": "jersey"}');
+    if (select count(*) from perfis_fazenda where propriedade_id = v_propriedade_id) <> 2 then
+      raise exception 'FALHOU [perfil]: salvar sem mudança não deveria criar histórico';
+    end if;
+
+    begin
+      perform salvar_perfil_fazenda(v_propriedade_id, '{"area_leite_ha": "30"}');
+      raise exception 'FALHOU [perfil]: área do leite maior que a total deveria ser recusada';
+    exception when others then
+      if sqlerrm not ilike '%não pode ser maior que a área total%' then
+        raise exception 'FALHOU [perfil]: erro inesperado: %', sqlerrm;
+      end if;
+    end;
+
+    -- cadastro "Sou produtor" com as 3 perguntas
+    insert into auth.users (email, raw_user_meta_data)
+    values ('__produtor_perfil__@exemplo.invalid',
+            '{"nome_propriedade": "__com_perfil__", "nome_produtor": "Y", "whatsapp": "(88) 97777-5555",
+              "perfil": {"area_leite_ha": "8", "irrigado": "true", "area_irrigada_ha": "2", "raca": "gir"}}')
+    returning id into v_conta;
+    if (select raca from perfil_fazenda_atual pa join propriedades p on p.id = pa.propriedade_id
+        where p.nome_propriedade = '__com_perfil__') is distinct from 'gir' then
+      raise exception 'FALHOU [perfil no cadastro]: as perguntas do cadastro deveriam virar o perfil';
+    end if;
+
+    -- patrimônio: data e autor de quando foi salvo
+    insert into patrimonio (propriedade_id, tipo_ativo, valor_total) values (v_propriedade_id, 'Trator', 1000)
+    returning id into v_pat;
+    update patrimonio set valor_total = 900 where id = v_pat;
+    if (select criado_por from patrimonio where id = v_pat) is distinct from v_usuario_id
+       or (select atualizado_em from patrimonio where id = v_pat) is null then
+      raise exception 'FALHOU [patrimônio]: deveria gravar quem salvou e quando';
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

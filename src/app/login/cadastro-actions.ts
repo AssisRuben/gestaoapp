@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { perfilRespondido } from "@/lib/perfil-fazenda-form";
 
 export type CadastroState = { error?: string; success?: boolean } | undefined;
 
@@ -76,6 +77,8 @@ export async function cadastrarNovaFazenda(
         // localização marcada pelo celular (opcional) — vai pro mapa do gestor (0048)
         latitude: coordenada(formData.get("latitude"), 90),
         longitude: coordenada(formData.get("longitude"), 180),
+        // perguntas do perfil respondidas no cadastro — o trigger grava em perfis_fazenda (0053)
+        perfil: perfilRespondido(formData),
       },
     },
   });

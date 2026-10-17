@@ -5,6 +5,7 @@ import { cadastrarNovaFazenda, cadastrarSemFazenda } from "./cadastro-actions";
 import { CampoTelefone } from "../campo-telefone";
 import { CampoSenha } from "../campo-senha";
 import { CampoLocalizacao } from "../campo-localizacao";
+import { CamposPerfilCadastro } from "../campos-perfil";
 
 const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
@@ -198,6 +199,7 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
               </span>
               <CampoLocalizacao />
             </div>
+            <CamposPerfilCadastro classes={{ campo: CAMPO_CLASSES, rotulo: LABEL_CLASSES }} />
           </>
         ) : (
           <>

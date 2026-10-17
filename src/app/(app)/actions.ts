@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { PROPRIEDADE_COOKIE } from "@/lib/propriedade";
+import { perfilRespondido } from "@/lib/perfil-fazenda-form";
 
 export async function logout() {
   const supabase = await createClient();
@@ -31,6 +32,11 @@ export async function criarMinhaFazenda(_state: CriarFazendaState, formData: For
     p_longitude: Number.isFinite(Number(texto("longitude"))) && texto("longitude") ? Number(texto("longitude")) : null,
   });
   if (error) return { error: error.message };
+
+  // perguntas do perfil (0053): a fazenda já está criada, então uma resposta recusada não desfaz o
+  // cadastro — o produtor corrige depois no modal da fazenda
+  const perfil = perfilRespondido(formData);
+  if (perfil) await supabase.rpc("salvar_perfil_fazenda", { p_propriedade_id: data as string, p_dados: perfil });
 
   const cookieStore = await cookies();
   cookieStore.set(PROPRIEDADE_COOKIE, data as string, { path: "/" });

@@ -3,6 +3,7 @@ import type { ResumoFazenda } from "@/lib/resumo-fazenda";
 import { ProducaoLeiteChart } from "./(app)/producao-leite-chart";
 import { formatarDataBR, formatarTelefoneBR } from "./(app)/format";
 import { IndicadoresFazendaView } from "./indicadores-fazenda-view";
+import { linhasPerfil } from "@/lib/perfil-fazenda";
 
 // Visão do resumo da fazenda (gestor e relatório de visita). Server component; linkVaca devolve a
 // rota da ficha da vaca quando quem está vendo pode abrir (produtor/técnico), ou null (gestor).
@@ -61,6 +62,28 @@ export function ResumoFazendaView({
         </p>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">Situação em {formatarDataBR(resumo.hoje)}</p>
       </header>
+
+      {/* perfil da fazenda (0053) */}
+      <section className={`flex flex-col gap-2 p-4 ${CARTAO}`}>
+        <Titulo>Perfil da fazenda</Titulo>
+        {resumo.perfil && linhasPerfil(resumo.perfil).length > 0 ? (
+          <>
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-1 text-sm sm:grid-cols-2 print:grid-cols-2">
+              {linhasPerfil(resumo.perfil).map((l) => (
+                <div key={l.rotulo} className="flex gap-2">
+                  <dt className="text-zinc-600 dark:text-zinc-400">{l.rotulo}:</dt>
+                  <dd className="text-black dark:text-zinc-50">{l.valor}</dd>
+                </div>
+              ))}
+            </dl>
+            {resumo.perfil.data_referencia && (
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">Respostas de {formatarDataBR(resumo.perfil.data_referencia)}</p>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Ainda não preenchido (modal da fazenda → Perfil da fazenda).</p>
+        )}
+      </section>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 print:grid-cols-3">
         <Numero rotulo="Vacas em lactação" valor={`${r.lactacao} de ${r.vacas}`} detalhe={`${r.secas} secas · ${r.novilhas} novilhas`} />

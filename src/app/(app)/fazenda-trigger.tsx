@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { FazendaModal } from "./fazenda-modal";
 import { getFazendaData } from "./fazenda-actions";
@@ -18,6 +18,8 @@ export function FazendaTrigger({
   const [carregando, setCarregando] = useState(false);
   const [dados, setDados] = useState<Awaited<ReturnType<typeof getFazendaData>> | null>(null);
 
+  const [irParaPerfil, setIrParaPerfil] = useState(false);
+
   async function abrir() {
     setAberto(true);
     if (dados) return;
@@ -26,6 +28,16 @@ export function FazendaTrigger({
     setDados(data);
     setCarregando(false);
   }
+
+  // o lembrete "complete o perfil" do Início abre o modal já na seção do perfil
+  useEffect(() => {
+    const abrirPerfil = () => {
+      setIrParaPerfil(true);
+      void abrir();
+    };
+    window.addEventListener("gestaopec:abrir-perfil", abrirPerfil);
+    return () => window.removeEventListener("gestaopec:abrir-perfil", abrirPerfil);
+  });
 
   return (
     <>
@@ -59,9 +71,13 @@ export function FazendaTrigger({
           acessos={dados.acessos}
           podeGerenciarAcessos={dados.podeGerenciarAcessos}
           lembretes={dados.lembretes}
+          perfil={dados.perfil}
+          perfilDisponivel={dados.perfilDisponivel}
+          irParaPerfil={irParaPerfil}
           onAcessosChange={(acessos) => setDados({ ...dados, acessos })}
           onClose={() => {
             setAberto(false);
+            setIrParaPerfil(false);
             setDados(null);
           }}
         />
