@@ -379,8 +379,16 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   positivo → prenhe, negativo → vazia. Edição manual vale até a próxima mudança de cobertura.
 - Bot, nó "Acesso Liberado?": processa mensagem de usuário cadastrado e ativo (não grupo) ou a
   conversa do número consigo mesmo (teste), e só de eventos da instância do bot
-  (`body.instance === 'Assis Rubens'`) — outra instância com webhook pro mesmo n8n repassava as
-  mensagens que ELA recebia (2026-10-11). Trocou a instância? Mude ali também. Desativado recebe aviso; número não cadastrado é
+  (`body.instance === 'Gabriel Bandeira'` desde 04/11/2026; antes 'Assis Rubens') — outra instância com
+  webhook pro mesmo n8n repassava as mensagens que ELA recebia (2026-10-11). Trocou a instância? Mude
+  ali, no `instanceName` dos nós da Evolution e na credencial ("Evolution Gabriel").
+- **Modo teste** (04/11/2026): `const MODO_TESTE = true` dentro da expressão do "Acesso Liberado?" E do
+  "Avisar Acesso Bloqueado?" — com true, o bot só responde à conversa do número consigo mesmo (o
+  número do agente também é WhatsApp pessoal). Pra abrir pros produtores, trocar pra false nos dois.
+- **O workflow publicado precisa ser o do repo.** Em 04/11/2026 o n8n estava rodando outro workflow
+  ("AgenteGestãoPec", versão antiga que grava direto nas tabelas, sem as regras do banco, e com um
+  cadastro pelo WhatsApp chamando `bot_status_cadastro`/`bot_concluir_cadastro`, que não existem).
+  Mudança no n8n: exportar e trazer pro repo; não editar só na tela. Desativado recebe aviso; número não cadastrado é
   ignorado em silêncio (a instância pode ser um número pessoal).
 - Falha no bot: o nó "Guardar Remetente (Erro)" grava no Redis (`exec_remetente:<execução>`, 15
   min) quem mandou a mensagem — ele tem que ficar ACIMA do "É Áudio?" na tela: com executionOrder

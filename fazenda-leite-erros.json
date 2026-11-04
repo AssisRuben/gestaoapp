@@ -52,7 +52,7 @@
     {
       "parameters": {
         "resource": "messages-api",
-        "instanceName": "Assis Rubens",
+        "instanceName": "Gabriel Bandeira",
         "remoteJid": "={{ $json.remoteJid }}",
         "messageText": "={{ $json.resposta }}",
         "options_message": {}
@@ -67,8 +67,8 @@
       "name": "Avisar Produtor",
       "credentials": {
         "evolutionApi": {
-          "id": "4KHj6VZl0o9j7a3Y",
-          "name": "Evolution Assis"
+          "id": "gtlPdveg89MKtmGW",
+          "name": "Evolution Gabriel"
         }
       },
       "onError": "continueRegularOutput"

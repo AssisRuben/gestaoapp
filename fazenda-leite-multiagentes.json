@@ -453,7 +453,7 @@
     {
       "parameters": {
         "resource": "messages-api",
-        "instanceName": "Assis Rubens",
+        "instanceName": "Gabriel Bandeira",
         "remoteJid": "={{ $('Webhook').first().json.body.data.key.remoteJid }}",
         "messageText": "={{ $json.resposta_sugerida }}",
         "options_message": {}
@@ -468,8 +468,8 @@
       "name": "Enviar texto",
       "credentials": {
         "evolutionApi": {
-          "id": "4KHj6VZl0o9j7a3Y",
-          "name": "Evolution Assis"
+          "id": "gtlPdveg89MKtmGW",
+          "name": "Evolution Gabriel"
         }
       }
     },
@@ -1555,7 +1555,7 @@
     {
       "parameters": {
         "resource": "messages-api",
-        "instanceName": "Assis Rubens",
+        "instanceName": "Gabriel Bandeira",
         "remoteJid": "={{ $('Webhook').first().json.body.data.key.remoteJid }}",
         "messageText": "={{ $json.resposta_sugerida }}",
         "options_message": {}
@@ -1570,8 +1570,8 @@
       "name": "Enviar texto1",
       "credentials": {
         "evolutionApi": {
-          "id": "4KHj6VZl0o9j7a3Y",
-          "name": "Evolution Assis"
+          "id": "gtlPdveg89MKtmGW",
+          "name": "Evolution Gabriel"
         }
       }
     },
@@ -1732,7 +1732,7 @@
           "conditions": [
             {
               "id": "11b6b8d2-974e-43ed-8ddc-2e629f3d7c4b",
-              "leftValue": "={{ $('Webhook').item.json.body.instance === 'Assis Rubens' && !String($('Webhook').item.json.body.data.key.remoteJid).endsWith('@g.us') && ($('Webhook').item.json.body.data.key.fromMe !== true || $('Webhook').item.json.body.data.key.remoteJid === $('Webhook').item.json.body.sender) && $json.statusAcesso === 'ok' }}",
+              "leftValue": "={{ (() => { const MODO_TESTE = true; const b = $('Webhook').item.json.body; const k = b.data.key; const proprioNumero = k.fromMe === true && k.remoteJid === b.sender; const remetenteOk = MODO_TESTE ? proprioNumero : (k.fromMe !== true || proprioNumero); return b.instance === 'Gabriel Bandeira' && !String(k.remoteJid).endsWith('@g.us') && remetenteOk && $json.statusAcesso === 'ok'; })() }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -1975,7 +1975,7 @@
       "parameters": {
         "resource": "messages-api",
         "operation": "send-audio",
-        "instanceName": "Assis Rubens",
+        "instanceName": "Gabriel Bandeira",
         "remoteJid": "={{ $('Webhook').first().json.body.data.key.remoteJid }}",
         "media": "={{ $json.audioBase64 }}",
         "options_message": {}
@@ -1990,8 +1990,8 @@
       "name": "Enviar Áudio",
       "credentials": {
         "evolutionApi": {
-          "id": "4KHj6VZl0o9j7a3Y",
-          "name": "Evolution Assis"
+          "id": "gtlPdveg89MKtmGW",
+          "name": "Evolution Gabriel"
         }
       },
       "notes": "AJUSTAR: escolher a operation certa de enviar audio/voice, e apontar o campo de midia para o binario gerado no node anterior."
@@ -2111,7 +2111,7 @@
           "conditions": [
             {
               "id": "fbf85285-d73c-43c9-acd8-128cfd7e1ee8",
-              "leftValue": "={{ $('Verificar Status Usuário').item.json.statusAcesso === 'desativado' && $('Webhook').item.json.body.data.key.fromMe !== true && !String($('Webhook').item.json.body.data.key.remoteJid).endsWith('@g.us') }}",
+              "leftValue": "={{ (() => { const MODO_TESTE = true; return !MODO_TESTE && $('Verificar Status Usuário').item.json.statusAcesso === 'desativado' && $('Webhook').item.json.body.data.key.fromMe !== true && !String($('Webhook').item.json.body.data.key.remoteJid).endsWith('@g.us'); })() }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
