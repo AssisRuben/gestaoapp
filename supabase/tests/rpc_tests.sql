@@ -1834,6 +1834,14 @@ begin
     end if;
   end;
 
+  -- WhatsApp já cadastrado, conferido no cadastro antes de criar a conta (0054)
+  if not whatsapp_ja_cadastrado('(55) 0000-00001') and not whatsapp_ja_cadastrado('5500000000001') then
+    raise exception 'FALHOU [whatsapp_ja_cadastrado]: número de uma fazenda deveria dar sim';
+  end if;
+  if whatsapp_ja_cadastrado('(85) 91234-0000') or whatsapp_ja_cadastrado('123') or whatsapp_ja_cadastrado(null) then
+    raise exception 'FALHOU [whatsapp_ja_cadastrado]: número livre, curto ou vazio deveria dar não';
+  end if;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

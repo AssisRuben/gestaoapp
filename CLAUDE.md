@@ -522,6 +522,10 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   liberar seu acesso" explica. O gestor (ou o produtor dono) liga pelo e-mail em "Dar acesso ao
   site" → Produtor (`vincular_produtor`; técnico da fazenda vira produtor). Nunca liga sozinho pelo
   número (bastaria digitar o de outra pessoa). Só o gestor remove produtor (`desvincular_produtor`).
+- **Aviso antes de criar a conta** (0054, `whatsapp_ja_cadastrado`, chamada sem login, só sim/não):
+  ao sair do campo WhatsApp no "Sou produtor", o site confere o número; se já é de uma fazenda,
+  mostra o aviso e pede a caixinha "A fazenda é minha" pra seguir. A tela sem fazenda desse caso
+  diz "Sua fazenda já está no Gestão Pec" (não a de técnico) e oferece cadastrar com o número certo.
 - Campos de WhatsApp usam `CampoTelefone` (`src/app/campo-telefone.tsx`): máscara (85) 99999-9999.
 - Senha com olho (`CampoSenha`) no login, cadastro e nova senha; cadastro pede "Confirmar senha"
   (conferido também no servidor).

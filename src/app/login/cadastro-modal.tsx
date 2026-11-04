@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { cadastrarNovaFazenda, cadastrarSemFazenda } from "./cadastro-actions";
+import { cadastrarNovaFazenda, cadastrarSemFazenda, whatsappJaCadastrado } from "./cadastro-actions";
 import { CampoTelefone } from "../campo-telefone";
 import { CampoSenha } from "../campo-senha";
 import { CampoLocalizacao } from "../campo-localizacao";
@@ -67,6 +67,13 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
   const [tipo, setTipo] = useState<TipoCadastro>("produtor");
   const [fazendaState, fazendaAction, fazendaPending] = useActionState(cadastrarNovaFazenda, undefined);
   const [semFazendaState, semFazendaAction, semFazendaPending] = useActionState(cadastrarSemFazenda, undefined);
+  // WhatsApp que já é de uma fazenda (0054): avisa antes de criar a conta, em vez de o produtor cair
+  // depois numa tela de "falta liberar seu acesso" sem entender por quê
+  const [whatsappRepetido, setWhatsappRepetido] = useState(false);
+
+  async function conferirWhatsapp(numero: string) {
+    setWhatsappRepetido(await whatsappJaCadastrado(numero));
+  }
 
   // técnico: conta sem fazenda. Produtor cuja fazenda já foi cadastrada pelo gestor: o banco percebe
   // pelo WhatsApp e não cria outra (0046)
@@ -82,9 +89,15 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Confira seu e-mail e clique no link de confirmação pra ativar sua conta e poder entrar.
           </p>
-          {tipo === "produtor" && (
+          {tipo === "produtor" && !whatsappRepetido && (
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               O WhatsApp que você informou já pode mandar os dados da fazenda pro bot do Gestão Pec.
+            </p>
+          )}
+          {tipo === "produtor" && whatsappRepetido && (
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Depois de confirmar, mande o seu e-mail pro gestor do programa: ele liga esta conta à fazenda
+              que já está cadastrada com o seu WhatsApp.
             </p>
           )}
           {tipo === "tecnico" && (
@@ -182,7 +195,14 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
                 </label>
                 <input id="tecnico_responsavel" name="tecnico_responsavel" type="text" className={CAMPO_CLASSES} />
               </div>
-              <div className="flex flex-col gap-1">
+              <div
+                className="flex flex-col gap-1"
+                onBlurCapture={(e) => {
+                  const campo = e.target as HTMLInputElement;
+                  if (campo.name === "whatsapp") void conferirWhatsapp(campo.value);
+                }}
+                onChangeCapture={() => setWhatsappRepetido(false)}
+              >
                 <label htmlFor="whatsapp" className={LABEL_CLASSES}>
                   WhatsApp
                 </label>
@@ -192,6 +212,22 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
                 </span>
               </div>
             </div>
+            {whatsappRepetido && (
+              <div className="flex flex-col gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+                <p className="text-base font-semibold text-black dark:text-zinc-50">
+                  Este WhatsApp já é de uma fazenda do Gestão Pec.
+                </p>
+                <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                  Se digitou errado, corrija o número acima. Se a fazenda é sua (o gestor já cadastrou), pode
+                  continuar: a conta é criada e o gestor libera o seu acesso pelo e-mail. Não precisa
+                  cadastrar a fazenda de novo.
+                </p>
+                <label className="flex items-start gap-2 text-sm font-medium text-black dark:text-zinc-50">
+                  <input type="checkbox" required className="mt-0.5 h-5 w-5 shrink-0 accent-brand-green" />
+                  A fazenda é minha: criar a conta e pedir o acesso ao gestor
+                </label>
+              </div>
+            )}
             <div className="flex flex-col gap-1">
               <span className={LABEL_CLASSES}>Localização da fazenda (opcional)</span>
               <span className="text-sm text-zinc-600 dark:text-zinc-400">

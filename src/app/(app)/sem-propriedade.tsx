@@ -16,17 +16,22 @@ export async function SemPropriedade() {
   const email = user?.email ?? null;
   const tecnico = user?.user_metadata?.perfil === "tecnico";
   const whatsappJaCadastrado = !!user?.user_metadata?.nome_propriedade;
+  const whatsappInformado = (user?.user_metadata?.whatsapp as string | undefined) ?? null;
 
   return (
     <div className="flex flex-1 items-start justify-center p-4 sm:items-center sm:p-16">
       <div className="flex w-full max-w-md flex-col gap-5 rounded-2xl border border-black/[.08] bg-surface p-6 dark:border-white/[.145]">
         <div className="flex flex-col gap-1">
           <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
-            {tecnico || whatsappJaCadastrado ? "Falta liberar seu acesso" : "Sua conta ainda não tem fazenda"}
+            {whatsappJaCadastrado
+              ? "Sua fazenda já está no Gestão Pec"
+              : tecnico
+                ? "Falta liberar seu acesso"
+                : "Sua conta ainda não tem fazenda"}
           </h1>
           <p className="text-zinc-600 dark:text-zinc-400">
             {whatsappJaCadastrado
-              ? "O WhatsApp que você informou já está cadastrado numa fazenda do Gestão Pec, então não criamos outra. O gestor liga esta conta à fazenda que já existe."
+              ? `O WhatsApp ${whatsappInformado ?? "que você informou"} já é de uma fazenda cadastrada, então não criamos outra. Falta só o gestor ligar esta conta a ela — o cadastro deu certo.`
               : "A conta foi criada, mas ainda não está ligada a nenhuma fazenda."}
           </p>
         </div>
@@ -75,6 +80,16 @@ export async function SemPropriedade() {
           </ol>
           <AtualizarAcesso />
         </div>
+
+        {/* produtor que digitou o WhatsApp errado no cadastro: cadastra a fazenda com o número certo */}
+        {whatsappJaCadastrado && (
+          <div className="flex flex-col gap-2 border-t border-black/[.08] pt-4 dark:border-white/[.145]">
+            <p className="text-base text-black dark:text-zinc-50">
+              <strong>Digitou o WhatsApp errado?</strong> Cadastre a fazenda com o número certo:
+            </p>
+            <CadastrarMinhaFazenda />
+          </div>
+        )}
 
         <form action={logout}>
           <button

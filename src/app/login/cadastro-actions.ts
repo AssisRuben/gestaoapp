@@ -43,6 +43,15 @@ function resultadoCadastro(
   return { success: true };
 }
 
+// Confere, antes de criar a conta, se o WhatsApp já é de uma fazenda (0054). Só sim/não; qualquer
+// erro vira "não" — o cadastro segue normal e o banco continua sem criar fazenda repetida (0046).
+export async function whatsappJaCadastrado(numero: string): Promise<boolean> {
+  if (numero.replace(/\D/g, "").length < 10) return false;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("whatsapp_ja_cadastrado", { p_whatsapp: numero });
+  return !error && data === true;
+}
+
 export async function cadastrarNovaFazenda(
   _state: CadastroState,
   formData: FormData,
