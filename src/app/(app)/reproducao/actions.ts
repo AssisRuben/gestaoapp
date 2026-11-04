@@ -22,6 +22,8 @@ export async function registrarCobertura(
     p_touro_semen: touroSemenRaw || null,
     p_touro_id: touroIdRaw || null,
     p_dose_programa: formData.get("dose_programa") === "on",
+    // "tecnico" = a dose é de quem está registrando (0055)
+    p_dose_tecnico: formData.get("dose_origem") === "tecnico",
   });
 
   if (error) {
@@ -137,6 +139,8 @@ export async function atualizarCobertura(
     p_diagnostico_prenhez: diagnostico,
     p_touro_id: touroIdRaw || null,
     p_dose_programa: formData.get("dose_programa") === "on",
+    // sem a escolha no formulário, mantém de quem era a dose (0055)
+    p_dose_tecnico: formData.has("dose_origem") ? formData.get("dose_origem") === "tecnico" : null,
   });
 
   if (error) {
@@ -224,6 +228,79 @@ export async function registrarBaixaDoses(
   if (error) return { error: error.message };
 
   revalidarDoses();
+  return { success: true };
+}
+
+// ===== Doses com o técnico (0055) =====
+
+function revalidarDosesTecnico() {
+  revalidatePath("/reproducao");
+  revalidatePath("/campo");
+  revalidatePath("/gestor/programa");
+  updateTag("entregas_doses");
+}
+
+export async function confirmarDosesTecnico(_state: BaixaDosesState, formData: FormData): Promise<BaixaDosesState> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("confirmar_recebimento_doses_tecnico", {
+    p_entrega_id: formData.get("entrega_id") as string,
+  });
+  if (error) return { error: error.message };
+  revalidarDosesTecnico();
+  return { success: true };
+}
+
+export async function registrarBaixaDosesTecnico(_state: BaixaDosesState, formData: FormData): Promise<BaixaDosesState> {
+  const quantidade = Number(formData.get("quantidade"));
+  if (!Number.isInteger(quantidade) || quantidade <= 0) {
+    return { error: "A quantidade deve ser um número inteiro maior que zero." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("registrar_baixa_doses_tecnico", {
+    p_touro_id: formData.get("touro_id") as string,
+    p_quantidade: quantidade,
+    p_motivo: formData.get("motivo") as string,
+    p_data_baixa: formData.get("data_baixa") as string,
+    p_observacao: (formData.get("observacao") as string) || null,
+  });
+  if (error) return { error: error.message };
+  revalidarDosesTecnico();
+  return { success: true };
+}
+
+export async function deletarBaixaDosesTecnico(_state: BaixaDosesState, formData: FormData): Promise<BaixaDosesState> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("deletar_baixa_doses_tecnico", { p_baixa_id: formData.get("baixa_id") as string });
+  if (error) return { error: error.message };
+  revalidarDosesTecnico();
+  return { success: true };
+}
+
+// Técnico passa doses dele pra fazenda que está aberta (a fazenda confirma o recebimento).
+export async function transferirDosesTecnico(_state: BaixaDosesState, formData: FormData): Promise<BaixaDosesState> {
+  const propriedade = await getPropriedadeAtual();
+  if (!propriedade) return { error: "Conta sem propriedade vinculada." };
+  const quantidade = Number(formData.get("quantidade"));
+  if (!Number.isInteger(quantidade) || quantidade <= 0) {
+    return { error: "A quantidade deve ser um número inteiro maior que zero." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("transferir_doses_tecnico", {
+    p_propriedade_id: propriedade.id,
+    p_touro_id: formData.get("touro_id") as string,
+    p_quantidade: quantidade,
+    p_observacao: (formData.get("observacao") as string) || null,
+  });
+  if (error) return { error: error.message };
+  revalidarDosesTecnico();
+  return { success: true };
+}
+
+export async function cancelarTransferenciaDoses(_state: BaixaDosesState, formData: FormData): Promise<BaixaDosesState> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cancelar_transferencia_doses", { p_entrega_id: formData.get("entrega_id") as string });
+  if (error) return { error: error.message };
+  revalidarDosesTecnico();
   return { success: true };
 }
 

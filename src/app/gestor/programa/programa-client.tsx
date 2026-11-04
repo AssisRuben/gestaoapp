@@ -9,6 +9,9 @@ import {
   rotuloTouro,
   type Touro,
   type EntregaDoses,
+  type EntregaDosesTecnico,
+  type SaldoDosesTecnico,
+  type TecnicoPrograma,
   type SaldoDoses,
   type Adesao,
   type IndicadoresAtuais,
@@ -51,8 +54,14 @@ export function ProgramaClient({
   baixas,
   reprodutivos,
   entidades,
+  entregasTecnico = [],
+  saldosTecnico = [],
+  tecnicos = [],
 }: {
   entidades: EntidadeOpcao[];
+  entregasTecnico?: EntregaDosesTecnico[];
+  saldosTecnico?: SaldoDosesTecnico[];
+  tecnicos?: TecnicoPrograma[];
   propriedades: Propriedade[];
   touros: Touro[];
   entregas: EntregaDoses[];
@@ -65,7 +74,15 @@ export function ProgramaClient({
   const { mensagemToast, mostrarToast } = useSuccessToast();
   // null = fechado; objeto vazio = novo; objeto com id = edição
   const [touroAberto, setTouroAberto] = useState<Partial<Touro> | null>(null);
-  const [entregaAberta, setEntregaAberta] = useState<Partial<EntregaDoses> | null>(null);
+  const [entregaAberta, setEntregaAberta] = useState<EntregaEmEdicao | null>(null);
+  const nomeTecnico = useMemo(() => {
+    const mapa = new Map(tecnicos.map((t) => [t.usuario_id, t.nome ?? t.email]));
+    return (id: string | null | undefined) => (id ? (mapa.get(id) ?? "técnico") : "técnico");
+  }, [tecnicos]);
+  const tourosPorId = useMemo(() => new Map(touros.map((t) => [t.id, t])), [touros]);
+  const saldosTecnicoVisiveis = saldosTecnico.filter(
+    (s) => s.recebidas + s.a_receber + s.utilizadas + s.baixas + s.transferidas > 0,
+  );
 
   const totais = useMemo(() => {
     const t = { recebidas: 0, aReceber: 0, utilizadas: 0, baixas: 0, saldo: 0 };
@@ -183,6 +200,53 @@ export function ProgramaClient({
 
       <ResultadosReprodutivos propriedades={propriedades} indicadores={reprodutivos} />
 
+      {/* doses que estão com técnicos (0055) */}
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Doses com os técnicos</h2>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            O técnico usa nas fazendas que atende. A concepção e os nascidos contam na fazenda da vaca.
+          </p>
+        </div>
+        {saldosTecnicoVisiveis.length === 0 ? (
+          <EmptyCard>Nenhum técnico recebeu doses ainda. Use + Nova entrega → Para um técnico.</EmptyCard>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border bg-surface border-black/[.08] dark:border-white/[.145]">
+            <table className="w-full min-w-[640px] text-left text-base">
+              <thead>
+                <tr className="border-b border-black/[.08] text-zinc-600 dark:border-white/[.145] dark:text-zinc-400">
+                  <th className="px-4 py-2 font-medium">Técnico</th>
+                  <th className="px-4 py-2 font-medium">Touro</th>
+                  <th className="px-4 py-2 text-right font-medium">Recebidas</th>
+                  <th className="px-4 py-2 text-right font-medium">A confirmar</th>
+                  <th className="px-4 py-2 text-right font-medium">Usadas</th>
+                  <th className="px-4 py-2 text-right font-medium">Passadas</th>
+                  <th className="px-4 py-2 text-right font-medium">Perdidas</th>
+                  <th className="px-4 py-2 text-right font-medium">Saldo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {saldosTecnicoVisiveis.map((s, i) => {
+                  const touro = tourosPorId.get(s.touro_id);
+                  return (
+                    <tr key={`${s.tecnico_id}-${s.touro_id}`} className={i % 2 === 1 ? "bg-black/[.02] dark:bg-white/[.03]" : ""}>
+                      <td className="px-4 py-2 text-black dark:text-zinc-50">{nomeTecnico(s.tecnico_id)}</td>
+                      <td className="px-4 py-2 text-black dark:text-zinc-50">{touro ? rotuloTouro(touro) : "—"}</td>
+                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400">{s.recebidas}</td>
+                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400">{s.a_receber}</td>
+                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400">{s.utilizadas}</td>
+                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400">{s.transferidas}</td>
+                      <td className="px-4 py-2 text-right text-zinc-600 dark:text-zinc-400">{s.baixas}</td>
+                      <td className="px-4 py-2 text-right font-semibold text-black dark:text-zinc-50">{s.saldo}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Entregas de doses</h2>
@@ -198,7 +262,7 @@ export function ProgramaClient({
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {entregas.map((e) => (
-            <MobileCard key={e.id} onClick={e.recebido_em ? undefined : () => setEntregaAberta(e)}>
+            <MobileCard key={e.id} onClick={e.recebido_em || e.origem_tecnico_id ? undefined : () => setEntregaAberta(e)}>
               <CardHeader
                 title={e.propriedade?.nome_propriedade ?? "—"}
                 accentClassName="bg-reproducao"
@@ -220,6 +284,38 @@ export function ProgramaClient({
                   value={[e.entidade.nome, e.entidade.responsavel].filter(Boolean).join(" · ")}
                 />
               )}
+              {e.origem_tecnico_id && <CardRow label="Origem" value={`Passadas pelo técnico ${nomeTecnico(e.origem_tecnico_id)}`} />}
+              <CardRow label="Touro" value={rotuloTouro(e.touro)} />
+              <CardRow label="Doses" value={e.kits ? `${e.quantidade} (${e.kits} ${e.kits === 1 ? "kit" : "kits"})` : e.quantidade} />
+              <CardRow label="Enviada em" value={formatarDataBR(e.data_entrega)} />
+              {e.recebido_em && (
+                <CardRow label="Recebida em" value={formatarDataBR(e.recebido_em.slice(0, 10))} />
+              )}
+            </MobileCard>
+          ))}
+          {entregasTecnico.map((e) => (
+            <MobileCard
+              key={e.id}
+              onClick={e.recebido_em ? undefined : () => setEntregaAberta({ ...e, destino: "tecnico" })}
+            >
+              <CardHeader
+                title={`Técnico: ${nomeTecnico(e.tecnico_id)}`}
+                accentClassName="bg-reproducao"
+                badge={
+                  e.recebido_em ? (
+                    <span className="rounded-full bg-brand-green/10 px-2 py-0.5 text-sm font-medium text-brand-green">
+                      Recebida
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-financeiro-tint px-2 py-0.5 text-sm font-medium text-financeiro-ink">
+                      Aguardando
+                    </span>
+                  )
+                }
+              />
+              {e.entidade && (
+                <CardRow label="Entidade" value={[e.entidade.nome, e.entidade.responsavel].filter(Boolean).join(" · ")} />
+              )}
               <CardRow label="Touro" value={rotuloTouro(e.touro)} />
               <CardRow label="Doses" value={e.kits ? `${e.quantidade} (${e.kits} ${e.kits === 1 ? "kit" : "kits"})` : e.quantidade} />
               <CardRow label="Enviada em" value={formatarDataBR(e.data_entrega)} />
@@ -229,7 +325,7 @@ export function ProgramaClient({
             </MobileCard>
           ))}
         </div>
-        {entregas.length === 0 && <EmptyCard>Nenhuma entrega registrada ainda.</EmptyCard>}
+        {entregas.length === 0 && entregasTecnico.length === 0 && <EmptyCard>Nenhuma entrega registrada ainda.</EmptyCard>}
       </section>
 
       <section className="flex flex-col gap-3">
@@ -282,6 +378,7 @@ export function ProgramaClient({
           propriedades={propriedades}
           touros={touros}
           entidades={entidades}
+          tecnicos={tecnicos}
           onFechar={() => setEntregaAberta(null)}
           onSucesso={(msg) => {
             setEntregaAberta(null);
@@ -382,6 +479,9 @@ function TouroModal({
 
 export type EntidadeOpcao = { id: string; nome: string; responsavel: string | null; telefone: string | null };
 
+// Entrega aberta no formulário: da fazenda (como antes) ou de um técnico (0055).
+type EntregaEmEdicao = Partial<EntregaDoses> & { tecnico_id?: string; destino?: "fazenda" | "tecnico" };
+
 // Entidade beneficiada (associação, cooperativa…) por onde a fazenda recebe — 0048. Escolhida na
 // lista das cadastradas na aba Entidades (é lá que se cria e corrige responsável/telefone/CNPJ).
 function CamposEntidade({ entidades, inicialId }: { entidades: EntidadeOpcao[]; inicialId: string }) {
@@ -436,10 +536,12 @@ function EntregaModal({
   propriedades,
   touros,
   entidades,
+  tecnicos,
   onFechar,
   onSucesso,
 }: {
-  entrega: Partial<EntregaDoses>;
+  entrega: EntregaEmEdicao;
+  tecnicos: TecnicoPrograma[];
   entidades: EntidadeOpcao[];
   propriedades: Propriedade[];
   touros: Touro[];
@@ -460,6 +562,8 @@ function EntregaModal({
 
   const erro = salvarState?.error ?? excluirState?.error;
   const tourosOpcoes = touros.filter((t) => t.ativo || t.id === entrega.touro_id);
+  // pra quem vão as doses: fazenda ou técnico (0055); na edição não troca
+  const [destino, setDestino] = useState<"fazenda" | "tecnico">(entrega.destino ?? "fazenda");
 
   return (
     <Modal onFechar={onFechar}>
@@ -468,31 +572,79 @@ function EntregaModal({
         <h2 className="text-lg font-semibold text-black dark:text-zinc-50">
           {edicao ? "Editar entrega" : "Nova entrega de doses"}
         </h2>
+        <input type="hidden" name="destino" value={destino} />
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          As doses só entram no saldo da fazenda depois que ela confirmar o recebimento. Até lá, a
-          entrega pode ser corrigida ou excluída.
+          As doses só entram no saldo depois que {destino === "tecnico" ? "o técnico" : "a fazenda"} confirmar o
+          recebimento. Até lá, a entrega pode ser corrigida ou excluída.
         </p>
+
+        {!edicao && (
+          <div role="radiogroup" aria-label="Para quem vão as doses" className="grid grid-cols-2 gap-1 rounded-full bg-zinc-100 p-1 dark:bg-white/[.08]">
+            {(
+              [
+                ["fazenda", "Para uma fazenda"],
+                ["tecnico", "Para um técnico"],
+              ] as const
+            ).map(([valor, rotulo]) => (
+              <button
+                key={valor}
+                type="button"
+                role="radio"
+                aria-checked={destino === valor}
+                onClick={() => setDestino(valor)}
+                className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                  destino === valor
+                    ? "bg-white text-black shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
+                    : "text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50"
+                }`}
+              >
+                {rotulo}
+              </button>
+            ))}
+          </div>
+        )}
 
         <CamposEntidade entidades={entidades} inicialId={entrega.entidade_id ?? ""} />
 
-        <Campo id="propriedade_id" label="Fazenda que recebe">
-          <select
-            id="propriedade_id"
-            name="propriedade_id"
-            required
-            defaultValue={entrega.propriedade_id ?? ""}
-            className={CAMPO_CLASSES}
-          >
-            <option value="" disabled>
-              Selecione
-            </option>
-            {propriedades.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome_propriedade}
+        {destino === "tecnico" ? (
+          <Campo id="tecnico_id" label="Técnico que recebe">
+            <select id="tecnico_id" name="tecnico_id" required defaultValue={entrega.tecnico_id ?? ""} className={CAMPO_CLASSES}>
+              <option value="" disabled>
+                Selecione
               </option>
-            ))}
-          </select>
-        </Campo>
+              {tecnicos.map((t) => (
+                <option key={t.usuario_id} value={t.usuario_id}>
+                  {t.nome ? `${t.nome} (${t.email})` : t.email}
+                </option>
+              ))}
+            </select>
+            {tecnicos.length === 0 && (
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                Nenhum técnico ainda. O técnico cria a conta (Cadastre-se → Sou técnico) e recebe acesso a uma fazenda
+                em Acessos.
+              </span>
+            )}
+          </Campo>
+        ) : (
+          <Campo id="propriedade_id" label="Fazenda que recebe">
+            <select
+              id="propriedade_id"
+              name="propriedade_id"
+              required
+              defaultValue={entrega.propriedade_id ?? ""}
+              className={CAMPO_CLASSES}
+            >
+              <option value="" disabled>
+                Selecione
+              </option>
+              {propriedades.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome_propriedade}
+                </option>
+              ))}
+            </select>
+          </Campo>
+        )}
 
         <Campo id="touro_id" label="Touro">
           <select

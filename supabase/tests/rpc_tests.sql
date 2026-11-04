@@ -1842,6 +1842,115 @@ begin
     raise exception 'FALHOU [whatsapp_ja_cadastrado]: número livre, curto ou vazio deveria dar não';
   end if;
 
+  -- doses do programa com o técnico (0055)
+  declare
+    v_tec uuid;
+    v_touro uuid;
+    v_vaca_t1 uuid;
+    v_vaca_t2 uuid;
+    v_vaca_t3 uuid;
+    v_ent uuid;
+    v_cob coberturas;
+    v_transf entregas_doses;
+    v_baixa baixas_doses_tecnico;
+    v_r jsonb;
+    v_saldo integer;
+  begin
+    insert into auth.users (email, raw_user_meta_data)
+    values ('__tecnico_doses__@exemplo.invalid', '{"nome": "Técnico Doses", "perfil": "tecnico"}')
+    returning id into v_tec;
+    insert into usuarios_propriedades (usuario_id, propriedade_id, papel) values (v_tec, v_propriedade_id, 'tecnico');
+    insert into touros (nome, codigo) values ('__touro_tecnico__', '__TT__') returning id into v_touro;
+    insert into vacas (propriedade_id, numero_identificacao, status_produtivo) values
+      (v_propriedade_id, 92001, 'novilha') returning id into v_vaca_t1;
+    insert into vacas (propriedade_id, numero_identificacao, status_produtivo) values
+      (v_propriedade_id, 92002, 'novilha') returning id into v_vaca_t2;
+    insert into vacas (propriedade_id, numero_identificacao, status_produtivo) values
+      (v_propriedade_id, 92003, 'novilha') returning id into v_vaca_t3;
+
+    insert into entregas_doses_tecnico (tecnico_id, touro_id, quantidade, data_entrega)
+    values (v_tec, v_touro, 3, _hoje_fazenda()) returning id into v_ent;
+
+    perform set_config('request.jwt.claim.sub', v_tec::text, true);
+
+    begin
+      perform registrar_cobertura(v_vaca_t1, _hoje_fazenda(), null, v_touro, true, true);
+      raise exception 'FALHOU [0055]: dose de entrega não confirmada não deveria ser usada';
+    exception when others then
+      if sqlerrm not ilike '%confirme o recebimento%' then raise exception 'FALHOU [0055]: erro inesperado: %', sqlerrm; end if;
+    end;
+
+    perform confirmar_recebimento_doses_tecnico(v_ent);
+    v_cob := registrar_cobertura(v_vaca_t1, _hoje_fazenda(), null, v_touro, true, true);
+    if v_cob.dose_tecnico_id is distinct from v_tec then
+      raise exception 'FALHOU [0055]: a cobertura deveria guardar que a dose era do técnico';
+    end if;
+    select saldo into v_saldo from saldo_doses_tecnico where tecnico_id = v_tec and touro_id = v_touro;
+    if v_saldo <> 2 then
+      raise exception 'FALHOU [0055]: saldo do técnico deveria ser 2 depois de usar 1 (veio %)', v_saldo;
+    end if;
+    if exists (select 1 from saldo_doses where propriedade_id = v_propriedade_id and touro_id = v_touro and utilizadas > 0) then
+      raise exception 'FALHOU [0055]: dose do técnico não pode descontar do saldo da fazenda';
+    end if;
+
+    -- transferência pra fazenda: sai do técnico na hora, entra na fazenda quando ela confirma
+    v_transf := transferir_doses_tecnico(v_propriedade_id, v_touro, 1, 'sobrou');
+    select saldo into v_saldo from saldo_doses_tecnico where tecnico_id = v_tec and touro_id = v_touro;
+    if v_saldo <> 1 or (select a_receber from saldo_doses where propriedade_id = v_propriedade_id and touro_id = v_touro) <> 1 then
+      raise exception 'FALHOU [0055]: transferência deveria tirar do técnico e ficar a receber na fazenda';
+    end if;
+    begin
+      perform confirmar_recebimento_doses(v_transf.id);
+      raise exception 'FALHOU [0055]: o técnico não pode confirmar a própria transferência';
+    exception when others then
+      if sqlerrm not ilike '%quem recebe%' then raise exception 'FALHOU [0055]: erro inesperado: %', sqlerrm; end if;
+    end;
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+    perform confirmar_recebimento_doses(v_transf.id);
+    if (select saldo from saldo_doses where propriedade_id = v_propriedade_id and touro_id = v_touro) <> 1 then
+      raise exception 'FALHOU [0055]: a fazenda deveria ter 1 dose depois de confirmar a transferência';
+    end if;
+    perform set_config('request.jwt.claim.sub', v_tec::text, true);
+
+    -- perda zera o saldo; sem saldo, cobertura com dose do técnico é recusada; desfazer devolve
+    v_baixa := registrar_baixa_doses_tecnico(v_touro, 1, 'perda', _hoje_fazenda(), 'palheta quebrou');
+    begin
+      perform registrar_cobertura(v_vaca_t2, _hoje_fazenda(), null, v_touro, true, true);
+      raise exception 'FALHOU [0055]: sem saldo do técnico a cobertura deveria ser recusada';
+    exception when others then
+      if sqlerrm not ilike '%sem saldo de doses suas%' then raise exception 'FALHOU [0055]: erro inesperado: %', sqlerrm; end if;
+    end;
+    perform deletar_baixa_doses_tecnico(v_baixa.id);
+
+    -- transferência cancelada devolve as doses ao técnico
+    v_transf := transferir_doses_tecnico(v_propriedade_id, v_touro, 1);
+    perform cancelar_transferencia_doses(v_transf.id);
+    select saldo into v_saldo from saldo_doses_tecnico where tecnico_id = v_tec and touro_id = v_touro;
+    if v_saldo <> 1 then
+      raise exception 'FALHOU [0055]: cancelar a transferência deveria devolver a dose (veio %)', v_saldo;
+    end if;
+
+    -- Lançar no campo com a dose do técnico
+    v_r := registrar_lancamento_campo(gen_random_uuid(), v_propriedade_id, 'cobertura',
+      jsonb_build_object('vaca_id', v_vaca_t3, 'data', _hoje_fazenda(), 'touro_id', v_touro,
+                         'dose_programa', true, 'dose_tecnico', true));
+    if not (v_r->>'ok')::boolean or (select dose_tecnico_id from coberturas where vaca_id = v_vaca_t3) is distinct from v_tec then
+      raise exception 'FALHOU [0055]: Lançar no campo deveria usar a dose do técnico (veio %)', v_r;
+    end if;
+
+    -- arquivar a cobertura (registrar_parto lista as colunas) não pode devolver a dose ao técnico
+    insert into coberturas_historico (id, vaca_id, data_cobertura, diagnostico_prenhez, touro_semen, touro_id, dose_programa, created_at)
+    select id, vaca_id, data_cobertura, diagnostico_prenhez, touro_semen, touro_id, dose_programa, created_at
+    from coberturas where id = v_cob.id;
+    delete from coberturas where id = v_cob.id;
+    if (select dose_tecnico_id from coberturas_historico where id = v_cob.id) is distinct from v_tec
+       or (select saldo from saldo_doses_tecnico where tecnico_id = v_tec and touro_id = v_touro) <> 0 then
+      raise exception 'FALHOU [0055]: no histórico a dose continua sendo do técnico';
+    end if;
+
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

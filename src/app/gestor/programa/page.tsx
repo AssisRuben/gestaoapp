@@ -18,6 +18,8 @@ import type {
   IndicadoresReprodutivos,
 } from "@/lib/programa";
 import { createServiceClient } from "@/lib/supabase/service";
+import { createClient } from "@/lib/supabase/server";
+import type { EntregaDosesTecnico, SaldoDosesTecnico, TecnicoPrograma } from "@/lib/programa";
 import { ProgramaClient, type EntidadeOpcao } from "./programa-client";
 
 // Dados reais (diferente das outras abas do gestor, ainda fictícias). O layout do gestor já
@@ -33,6 +35,9 @@ export default async function ProgramaPage() {
     baixasData,
     reprodutivosData,
     { data: entidadesData },
+    entregasTecnicoRes,
+    saldosTecnicoRes,
+    tecnicosRes,
   ] = await Promise.all([
     getPropriedadesTodasCache(),
     getTourosCache(),
@@ -44,6 +49,14 @@ export default async function ProgramaPage() {
     getIndicadoresReprodutivosTodasCache(),
     // entidades cadastradas (aba Entidades) pra escolher na entrega — sem cache, a lista é curta
     createServiceClient().from("entidades").select("id, nome, responsavel, telefone").order("nome"),
+    // doses com os técnicos (0055) — sem a migration, as seções ficam vazias
+    createServiceClient()
+      .from("entregas_doses_tecnico")
+      .select("*, touro:touro_id(id, nome, codigo), entidade:entidade_id(nome, responsavel, telefone)")
+      .order("data_entrega", { ascending: false })
+      .order("id"),
+    createServiceClient().from("saldo_doses_tecnico").select("*").order("tecnico_id").order("touro_id"),
+    (await createClient()).rpc("listar_tecnicos_programa"),
   ]);
 
   return (
@@ -57,6 +70,17 @@ export default async function ProgramaPage() {
       baixas={baixasData as unknown as BaixaDoses[]}
       reprodutivos={reprodutivosData as unknown as IndicadoresReprodutivos[]}
       entidades={(entidadesData ?? []) as EntidadeOpcao[]}
+      entregasTecnico={(entregasTecnicoRes.data ?? []) as unknown as EntregaDosesTecnico[]}
+      saldosTecnico={((saldosTecnicoRes.data ?? []) as unknown as SaldoDosesTecnico[]).map((s) => ({
+        ...s,
+        recebidas: Number(s.recebidas),
+        a_receber: Number(s.a_receber),
+        utilizadas: Number(s.utilizadas),
+        baixas: Number(s.baixas),
+        transferidas: Number(s.transferidas),
+        saldo: Number(s.saldo),
+      }))}
+      tecnicos={(tecnicosRes.data ?? []) as TecnicoPrograma[]}
     />
   );
 }

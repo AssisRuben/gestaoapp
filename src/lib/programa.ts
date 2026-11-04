@@ -25,6 +25,8 @@ export type EntregaDoses = {
   entidade_id?: string | null;
   kits?: number | null;
   entidade?: { nome: string; cnpj?: string | null; responsavel: string | null; telefone: string | null } | null;
+  // transferência: doses que um técnico passou pra fazenda (0055)
+  origem_tecnico_id?: string | null;
 };
 
 export type SaldoDoses = {
@@ -78,6 +80,58 @@ export type IndicadoresReprodutivos = {
   natimortos: number;
   femeas_no_rebanho: number;
 };
+
+// Doses com o técnico (0055): ele recebe do gestor, usa nas fazendas que atende e pode passar
+// doses pra uma delas.
+export type EntregaDosesTecnico = {
+  id: string;
+  tecnico_id: string;
+  touro_id: string;
+  quantidade: number;
+  kits: number | null;
+  entidade_id: string | null;
+  data_entrega: string;
+  observacao: string | null;
+  recebido_em: string | null;
+  touro: { id: string; nome: string; codigo: string | null };
+  entidade?: { nome: string; responsavel: string | null; telefone: string | null } | null;
+};
+
+export type SaldoDosesTecnico = {
+  tecnico_id: string;
+  touro_id: string;
+  recebidas: number;
+  a_receber: number;
+  utilizadas: number;
+  baixas: number;
+  transferidas: number;
+  saldo: number;
+};
+
+export type BaixaDosesTecnico = {
+  id: string;
+  tecnico_id: string;
+  touro_id: string;
+  quantidade: number;
+  motivo: MotivoBaixa;
+  data_baixa: string;
+  observacao: string | null;
+  touro: { id: string; nome: string; codigo: string | null };
+};
+
+export type DosesTecnico = {
+  usuarioId: string | null;
+  entregas: EntregaDosesTecnico[];
+  saldos: SaldoDosesTecnico[];
+  baixas: BaixaDosesTecnico[];
+  // transferências do técnico ainda não confirmadas pela fazenda
+  transferencias: EntregaDoses[];
+};
+
+export type TecnicoPrograma = { usuario_id: string; email: string; nome: string | null };
+
+export const temDosesTecnico = (d: DosesTecnico) =>
+  d.entregas.length > 0 || d.saldos.some((s) => s.recebidas + s.a_receber > 0);
 
 export function rotuloTouro(touro: { nome: string; codigo: string | null }) {
   return touro.codigo ? `${touro.nome} (${touro.codigo})` : touro.nome;

@@ -3,6 +3,8 @@ import { getVacasCache, getTourosCache, getSaldoDosesCache, getEntregasDosesCach
 import type { Touro, SaldoDoses } from "@/lib/programa";
 import { SemPropriedade } from "../sem-propriedade";
 import { CampoClient, type VacaCampo } from "./campo-client";
+import { carregarDosesTecnico } from "@/lib/doses-tecnico";
+import { temDosesTecnico } from "@/lib/programa";
 
 // Lançar no campo: cobertura, parto e diagnóstico, funcionando sem internet (public/sw.js guarda
 // esta tela; os lançamentos vão pela fila do celular, src/lib/fila-campo.ts).
@@ -10,14 +12,17 @@ export default async function CampoPage() {
   const propriedadeAtual = await getPropriedadeAtual();
   if (!propriedadeAtual) return <SemPropriedade />;
 
-  const [vacasData, tourosData, saldosData, entregasData] = await Promise.all([
+  const [vacasData, tourosData, saldosData, entregasData, dosesTecnico] = await Promise.all([
     getVacasCache(propriedadeAtual.id),
     getTourosCache(),
     getSaldoDosesCache(propriedadeAtual.id),
     getEntregasDosesCache(propriedadeAtual.id),
+    carregarDosesTecnico(),
   ]);
   // catálogo de touros só pra fazenda do programa de sêmen (já recebeu alguma entrega)
-  const participa = (entregasData as unknown[]).length > 0;
+  // (ou o técnico logado tem doses dele, 0055)
+  const participa = (entregasData as unknown[]).length > 0 || temDosesTecnico(dosesTecnico);
+  const saldoTecnico = new Map(dosesTecnico.saldos.map((s) => [s.touro_id, s.saldo]));
 
   const vacas: VacaCampo[] = (
     vacasData as unknown as { id: string; numero_identificacao: number; status_produtivo: string; status_reprodutivo: string }[]
@@ -27,8 +32,14 @@ export default async function CampoPage() {
 
   const saldo = new Map((saldosData as unknown as SaldoDoses[]).map((s) => [s.touro_id, Number(s.saldo)]));
   const touros = (participa ? (tourosData as unknown as Touro[]) : [])
-    .filter((t) => t.ativo || (saldo.get(t.id) ?? 0) > 0)
-    .map((t) => ({ id: t.id, nome: t.nome, codigo: t.codigo, saldo: saldo.get(t.id) ?? 0 }));
+    .filter((t) => t.ativo || (saldo.get(t.id) ?? 0) > 0 || (saldoTecnico.get(t.id) ?? 0) > 0)
+    .map((t) => ({
+      id: t.id,
+      nome: t.nome,
+      codigo: t.codigo,
+      saldo: saldo.get(t.id) ?? 0,
+      saldoTecnico: saldoTecnico.get(t.id) ?? 0,
+    }));
 
   return (
     <div className="flex flex-1 flex-col p-4 sm:p-6">

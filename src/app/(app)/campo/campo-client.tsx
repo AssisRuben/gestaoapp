@@ -15,7 +15,7 @@ import {
 } from "@/lib/fila-campo";
 
 export type VacaCampo = { id: string; numero: number; produtivo: string; reprodutivo: string };
-type TouroCampo = { id: string; nome: string; codigo: string | null; saldo: number };
+type TouroCampo = { id: string; nome: string; codigo: string | null; saldo: number; saldoTecnico?: number };
 
 const CAMPO =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
@@ -84,6 +84,8 @@ export function CampoClient({
   const [touroId, setTouroId] = useState("");
   const [touroTexto, setTouroTexto] = useState("");
   const [dosePrograma, setDosePrograma] = useState(false);
+  // de quem é a dose quando a fazenda e o técnico têm saldo do touro (0055)
+  const [doseMinha, setDoseMinha] = useState(false);
   const [sexo, setSexo] = useState<"femea" | "macho" | "natimorto" | null>(null);
   const [numeroCria, setNumeroCria] = useState("");
   const [resultado, setResultado] = useState<"positivo" | "negativo" | null>(null);
@@ -95,6 +97,10 @@ export function CampoClient({
 
   const vaca = useMemo(() => vacas.find((v) => String(v.numero) === numero.trim()) ?? null, [vacas, numero]);
   const touro = touros.find((t) => t.id === touroId) ?? null;
+  const saldoFazendaTouro = touro?.saldo ?? 0;
+  const saldoTecnicoTouro = touro?.saldoTecnico ?? 0;
+  // só com saldo do técnico, a dose é dele; com os dois, ele escolhe
+  const doseDoTecnico = saldoTecnicoTouro > 0 && (saldoFazendaTouro <= 0 || doseMinha);
 
   function tentarEnviar() {
     startEnviar(async () => {
@@ -122,6 +128,7 @@ export function CampoClient({
     setTouroId("");
     setTouroTexto("");
     setDosePrograma(false);
+    setDoseMinha(false);
     setSexo(null);
     setNumeroCria("");
     setResultado(null);
@@ -136,7 +143,14 @@ export function CampoClient({
 
     const dados: LancamentoCampo["dados"] =
       tipo === "cobertura"
-        ? { vaca_id: vaca.id, data, touro_id: touroId || null, touro_texto: touroId ? null : touroTexto.trim() || null, dose_programa: !!touro && dosePrograma }
+        ? {
+            vaca_id: vaca.id,
+            data,
+            touro_id: touroId || null,
+            touro_texto: touroId ? null : touroTexto.trim() || null,
+            dose_programa: !!touro && dosePrograma,
+            dose_tecnico: !!touro && dosePrograma && doseDoTecnico,
+          }
         : tipo === "parto"
           ? { vaca_id: vaca.id, data, sexo_bezerro: sexo, numero_bezerro: numeroCria.trim() ? Number(numeroCria) : null }
           : { vaca_id: vaca.id, resultado };
@@ -209,13 +223,14 @@ export function CampoClient({
                 Touro / sêmen
               </label>
               {touros.length > 0 && (
-                <select id="campo_touro" value={touroId} onChange={(e) => { setTouroId(e.target.value); setDosePrograma(false); }} className={CAMPO}>
+                <select id="campo_touro" value={touroId} onChange={(e) => { setTouroId(e.target.value); setDosePrograma(false); setDoseMinha(false); }} className={CAMPO}>
                   <option value="">Outro / não sei (escrever)</option>
                   {touros.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.nome}
                       {t.codigo ? ` (${t.codigo})` : ""}
-                      {t.saldo > 0 ? ` — ${t.saldo} dose${t.saldo === 1 ? "" : "s"} do programa` : ""}
+                      {t.saldo > 0 ? ` — ${t.saldo} dose${t.saldo === 1 ? "" : "s"} da fazenda` : ""}
+                      {(t.saldoTecnico ?? 0) > 0 ? ` — ${t.saldoTecnico} sua${t.saldoTecnico === 1 ? "" : "s"}` : ""}
                     </option>
                   ))}
                 </select>
@@ -231,10 +246,18 @@ export function CampoClient({
                 />
               )}
             </div>
-            {touro && touro.saldo > 0 && (
+            {touro && (saldoFazendaTouro > 0 || saldoTecnicoTouro > 0) && (
               <label className="flex items-center gap-3">
                 <input type="checkbox" checked={dosePrograma} onChange={(e) => setDosePrograma(e.target.checked)} className="h-5 w-5 accent-brand-green" />
-                <span className="text-base text-black dark:text-zinc-50">Foi dose do programa (desconta do saldo)</span>
+                <span className="text-base text-black dark:text-zinc-50">
+                  Foi dose do programa (desconta do saldo {doseDoTecnico ? "seu, de técnico" : "da fazenda"})
+                </span>
+              </label>
+            )}
+            {touro && dosePrograma && saldoFazendaTouro > 0 && saldoTecnicoTouro > 0 && (
+              <label className="flex items-center gap-3">
+                <input type="checkbox" checked={doseMinha} onChange={(e) => setDoseMinha(e.target.checked)} className="h-5 w-5 accent-brand-green" />
+                <span className="text-base text-black dark:text-zinc-50">A dose é minha (técnico), não da fazenda</span>
               </label>
             )}
           </>

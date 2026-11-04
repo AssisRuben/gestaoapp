@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { confirmarRecebimentoDoses, registrarBaixaDoses, deletarBaixaDoses } from "./actions";
 import { formatarDataBR } from "../format";
 import { rotuloTouro, MOTIVOS_BAIXA } from "@/lib/programa";
-import type { Touro, EntregaDoses, SaldoDoses, BaixaDoses } from "./types";
+import type { Touro, EntregaDoses, SaldoDoses, BaixaDoses, BaixaDosesTecnico, SaldoDosesTecnico } from "./types";
 import { hojeBrasil } from "@/lib/datas";
 
 const CAMPO_CLASSES =
@@ -20,12 +20,17 @@ export function DosesPrograma({
   saldos,
   baixas,
   onConfirmado,
+  usuarioId = null,
+  nomes = {},
 }: {
   touros: Touro[];
   entregas: EntregaDoses[];
   saldos: SaldoDoses[];
   baixas: BaixaDoses[];
   onConfirmado: (mensagem: string) => void;
+  // quem está logado e os nomes de quem tem acesso: transferência de técnico (0055)
+  usuarioId?: string | null;
+  nomes?: Record<string, string>;
 }) {
   const [state, action, pending] = useActionState(confirmarRecebimentoDoses, undefined);
   const [baixaAberta, setBaixaAberta] = useState(false);
@@ -77,6 +82,11 @@ export function DosesPrograma({
               {formatarDataBR(entrega.data_entrega)}
               {entrega.observacao ? ` — ${entrega.observacao}` : ""}
             </span>
+            {entrega.origem_tecnico_id && (
+              <span className="text-sm">
+                Passadas pelo técnico {nomes[entrega.origem_tecnico_id] ?? ""}
+              </span>
+            )}
             {entrega.entidade && (
               <span className="text-sm">
                 Retirar com {entrega.entidade.nome}
@@ -85,13 +95,17 @@ export function DosesPrograma({
               </span>
             )}
           </p>
-          <button
-            type="submit"
-            disabled={pending}
-            className="shrink-0 rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark disabled:opacity-50"
-          >
-            {pending ? "Confirmando..." : "Confirmar recebimento"}
-          </button>
+          {entrega.origem_tecnico_id && entrega.origem_tecnico_id === usuarioId ? (
+            <span className="shrink-0 text-sm text-financeiro-ink">Aguardando a fazenda confirmar</span>
+          ) : (
+            <button
+              type="submit"
+              disabled={pending}
+              className="shrink-0 rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark disabled:opacity-50"
+            >
+              {pending ? "Confirmando..." : "Confirmar recebimento"}
+            </button>
+          )}
         </form>
       ))}
 
@@ -152,14 +166,16 @@ export function DosesPrograma({
   );
 }
 
-function ListaBaixas({
+export function ListaBaixas({
   baixas,
   onSucesso,
+  acao = deletarBaixaDoses,
 }: {
-  baixas: BaixaDoses[];
+  baixas: (BaixaDoses | BaixaDosesTecnico)[];
   onSucesso: (mensagem: string) => void;
+  acao?: typeof deletarBaixaDoses;
 }) {
-  const [state, action, pending] = useActionState(deletarBaixaDoses, undefined);
+  const [state, action, pending] = useActionState(acao, undefined);
   // exclusão em dois cliques (regra 6 do CLAUDE.md): primeiro marca, depois confirma
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
 
@@ -226,18 +242,20 @@ function ListaBaixas({
   );
 }
 
-function BaixaModal({
+export function BaixaModal({
   touros,
   saldos,
   onFechar,
   onSucesso,
+  acao = registrarBaixaDoses,
 }: {
   touros: Touro[];
-  saldos: SaldoDoses[];
+  saldos: { touro_id: string; saldo: number }[];
   onFechar: () => void;
   onSucesso: (mensagem: string) => void;
+  acao?: typeof registrarBaixaDoses;
 }) {
-  const [state, action, pending] = useActionState(registrarBaixaDoses, undefined);
+  const [state, action, pending] = useActionState(acao, undefined);
   const [touroId, setTouroId] = useState(saldos[0]?.touro_id ?? "");
   const tourosPorId = new Map(touros.map((t) => [t.id, t]));
   const saldo = saldos.find((s) => s.touro_id === touroId)?.saldo ?? 0;
@@ -372,6 +390,8 @@ export function CamposTouro({
   touroIdInicial = "",
   doseProgramaInicial = false,
   touroSemenInicial = "",
+  saldosTecnico = [],
+  doseTecnicoInicial = false,
 }: {
   touros: Touro[];
   saldos: SaldoDoses[];
@@ -379,15 +399,27 @@ export function CamposTouro({
   touroIdInicial?: string;
   doseProgramaInicial?: boolean;
   touroSemenInicial?: string;
+  // doses que estão com o técnico logado (0055)
+  saldosTecnico?: SaldoDosesTecnico[];
+  doseTecnicoInicial?: boolean;
 }) {
   const [touroId, setTouroId] = useState(touroIdInicial);
   const [dosePrograma, setDosePrograma] = useState(doseProgramaInicial);
 
-  const saldo = saldos.find((s) => s.touro_id === touroId)?.saldo ?? 0;
   // na edição, a dose que a própria cobertura já gastou continua disponível pra ela
-  const saldoDisponivel =
-    saldo + (doseProgramaInicial && touroId === touroIdInicial && touroId ? 1 : 0);
-  const podeUsarDose = !!touroId && saldoDisponivel > 0;
+  const mesmaDose = doseProgramaInicial && touroId === touroIdInicial && !!touroId;
+  const saldoFazendaDe = (id: string) =>
+    (saldos.find((s) => s.touro_id === id)?.saldo ?? 0) + (mesmaDose && id === touroIdInicial && !doseTecnicoInicial ? 1 : 0);
+  const saldoTecnicoDe = (id: string) =>
+    (saldosTecnico.find((s) => s.touro_id === id)?.saldo ?? 0) + (mesmaDose && id === touroIdInicial && doseTecnicoInicial ? 1 : 0);
+  const saldoFazenda = saldoFazendaDe(touroId);
+  const saldoTecnico = saldoTecnicoDe(touroId);
+  const [origem, setOrigem] = useState<"fazenda" | "tecnico">(
+    doseTecnicoInicial || (saldoFazenda <= 0 && saldoTecnico > 0) ? "tecnico" : "fazenda",
+  );
+  const origemEfetiva = saldoFazenda > 0 && saldoTecnico > 0 ? origem : saldoTecnico > 0 ? "tecnico" : "fazenda";
+  const saldoDisponivel = origemEfetiva === "tecnico" ? saldoTecnico : saldoFazenda;
+  const podeUsarDose = !!touroId && (saldoFazenda > 0 || saldoTecnico > 0);
 
   const opcoes = touros.filter((t) => t.ativo || t.id === touroIdInicial);
 
@@ -415,6 +447,7 @@ export function CamposTouro({
           onChange={(e) => {
             setTouroId(e.target.value);
             setDosePrograma(false);
+            setOrigem(saldoFazendaDe(e.target.value) <= 0 && saldoTecnicoDe(e.target.value) > 0 ? "tecnico" : "fazenda");
           }}
           className={CAMPO_CLASSES}
         >
@@ -440,13 +473,42 @@ export function CamposTouro({
           <span>
             Usou dose do programa
             <span className="block text-sm text-zinc-600 dark:text-zinc-400">
-              {podeUsarDose
-                ? `Saldo desse touro: ${saldoDisponivel} ${saldoDisponivel === 1 ? "dose" : "doses"}`
-                : "Sem saldo de doses desse touro."}
+              {!podeUsarDose
+                ? "Sem saldo de doses desse touro."
+                : `Saldo ${origemEfetiva === "tecnico" ? "seu (técnico)" : "da fazenda"} desse touro: ${saldoDisponivel} ${saldoDisponivel === 1 ? "dose" : "doses"}`}
             </span>
           </span>
         </label>
+      ) : null}
+
+      {/* de quem é a dose: só pergunta quando a fazenda e o técnico têm saldo desse touro (0055) */}
+      {touroId && dosePrograma && saldoFazenda > 0 && saldoTecnico > 0 ? (
+        <fieldset className="flex flex-col gap-2 rounded-xl border border-black/[.08] p-3 dark:border-white/[.145]">
+          <legend className="px-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">De quem é a dose</legend>
+          {(
+            [
+              ["fazenda", `Da fazenda (saldo ${saldoFazenda})`],
+              ["tecnico", `Minha, de técnico (saldo ${saldoTecnico})`],
+            ] as const
+          ).map(([valor, texto]) => (
+            <label key={valor} className="flex items-center gap-3 text-base text-black dark:text-zinc-50">
+              <input
+                type="radio"
+                name="dose_origem"
+                value={valor}
+                checked={origem === valor}
+                onChange={() => setOrigem(valor)}
+                className="h-5 w-5 accent-brand-green"
+              />
+              {texto}
+            </label>
+          ))}
+        </fieldset>
       ) : (
+        touroId && dosePrograma && <input type="hidden" name="dose_origem" value={origemEfetiva} />
+      )}
+
+      {touroId ? null : (
         <div className="flex flex-col gap-1">
           <label htmlFor="touro_semen" className={LABEL_CLASSES}>
             Touro/Sêmen (opcional)

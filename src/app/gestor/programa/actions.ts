@@ -109,6 +109,32 @@ export async function salvarEntrega(
 
   const supabase = await createClient();
 
+  // entrega pra um técnico (0055): ele leva as doses e usa nas fazendas que atende
+  if (formData.get("destino") === "tecnico") {
+    const tecnicoId = textoOuNull(formData.get("tecnico_id"));
+    if (!tecnicoId) return { error: "Escolha o técnico que vai receber as doses." };
+    const dadosTecnico = {
+      tecnico_id: tecnicoId,
+      touro_id: formData.get("touro_id") as string,
+      quantidade,
+      kits,
+      entidade_id: entidadeId,
+      data_entrega: formData.get("data_entrega") as string,
+      observacao: textoOuNull(formData.get("observacao")),
+    };
+    if (id) {
+      const { data, error } = await supabase.from("entregas_doses_tecnico").update(dadosTecnico).eq("id", id).select("id");
+      if (error) return { error: error.message };
+      if (!data?.length) return { error: "Essa entrega já foi confirmada pelo técnico e não pode mais ser alterada." };
+    } else {
+      const { error } = await supabase.from("entregas_doses_tecnico").insert(dadosTecnico);
+      if (error) return { error: error.message };
+    }
+    revalidar();
+    updateTag("entregas_doses");
+    return { success: true };
+  }
+
   const dados = {
     propriedade_id: formData.get("propriedade_id") as string,
     touro_id: formData.get("touro_id") as string,
@@ -151,7 +177,7 @@ export async function excluirEntrega(
 
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("entregas_doses")
+    .from(formData.get("destino") === "tecnico" ? "entregas_doses_tecnico" : "entregas_doses")
     .delete()
     .eq("id", id)
     .select("id");

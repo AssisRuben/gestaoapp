@@ -307,6 +307,18 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   produtor/técnico não mostra nada do programa (catálogo de touros e dose na cobertura, Reprodução
   e Lançar no campo; bloco "Programa de sêmen" nos Índices). A comparação com a linha de base da
   adesão fica só no painel do gestor (aba Programa).
+- **Doses com o técnico** (0055): o gestor entrega pra fazenda OU pra um técnico (`+ Nova entrega` →
+  Para um técnico; lista por `listar_tecnicos_programa`). Tabelas próprias `entregas_doses_tecnico` e
+  `baixas_doses_tecnico` (as consultas antigas de `entregas_doses` não mudam); saldo em
+  `saldo_doses_tecnico` (view sem security_invoker, filtra por auth.uid() — o técnico vê o dele, o
+  gestor e a service role veem todos). O técnico confirma (`confirmar_recebimento_doses_tecnico`),
+  usa na cobertura pelo site/Lançar no campo (`coberturas.dose_tecnico_id`; "De quem é a dose" quando
+  fazenda e técnico têm saldo; o WhatsApp do produtor só usa dose da fazenda), registra perda e passa
+  doses pra uma fazenda (`transferir_doses_tecnico` → entrega da fazenda com `origem_tecnico_id`; sai
+  do saldo dele na hora, entra no da fazenda quando ELA confirma; ele cancela enquanto pendente).
+  Concepção e nascidos contam na fazenda da vaca. Trigger no `coberturas_historico` copia
+  `dose_tecnico_id` ao arquivar. Ainda fora: alerta de entrega ao técnico sem confirmação e doses de
+  técnico nos totais da aba Entidades.
 - `baixas_doses` (0021): dose que sai do saldo sem virar inseminação (perda, descarte,
   transferência). A fazenda registra/desfaz via `registrar_baixa_doses`/`deletar_baixa_doses`.
 - Coberturas do bot gastam dose desde 0022 (ver seção do bot abaixo).

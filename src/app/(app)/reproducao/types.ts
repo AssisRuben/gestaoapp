@@ -11,6 +11,8 @@ export type Cobertura = CamposAutoria & {
   touro_semen: string | null;
   touro_id: string | null;
   dose_programa: boolean;
+  // dose do programa que era do técnico (0055); nulo = da fazenda
+  dose_tecnico_id?: string | null;
   created_at: string;
   vaca: { id: string; numero_identificacao: number };
 };
@@ -26,4 +28,12 @@ export type Parto = CamposAutoria & {
   vaca: { id: string; numero_identificacao: number };
 };
 
-export type { Touro, EntregaDoses, SaldoDoses, BaixaDoses } from "@/lib/programa";
+export type {
+  Touro,
+  EntregaDoses,
+  SaldoDoses,
+  BaixaDoses,
+  DosesTecnico,
+  SaldoDosesTecnico,
+  BaixaDosesTecnico,
+} from "@/lib/programa";
