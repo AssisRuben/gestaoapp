@@ -61,7 +61,7 @@
     {
       "parameters": {
         "resource": "messages-api",
-        "instanceName": "Gabriel Bandeira",
+        "instanceName": "Adam Rubens",
         "remoteJid": "={{ $json.telefone }}",
         "messageText": "={{ $json.mensagem }}",
         "options_message": {}
@@ -77,7 +77,7 @@
       "credentials": {
         "evolutionApi": {
           "id": "gtlPdveg89MKtmGW",
-          "name": "Evolution Gabriel"
+          "name": "Evolution Adam"
         }
       },
       "onError": "continueRegularOutput"
