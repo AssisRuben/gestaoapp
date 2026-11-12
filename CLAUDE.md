@@ -379,10 +379,10 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   positivo → prenhe, negativo → vazia. Edição manual vale até a próxima mudança de cobertura.
 - Bot, nó "Acesso Liberado?": processa mensagem de usuário cadastrado e ativo (não grupo) ou a
   conversa do número consigo mesmo (teste), e só de eventos da instância do bot
-  (`body.instance === 'Gabriel Bandeira'` desde 04/11/2026; antes 'Assis Rubens') — outra instância com
+  (`body.instance === 'Adam Rubens'` desde 12/11/2026; antes 'Gabriel Bandeira' e 'Assis Rubens') — outra instância com
   webhook pro mesmo n8n repassava as mensagens que ELA recebia (2026-10-11). Trocou a instância? Mude
-  ali, no `instanceName` dos nós da Evolution e na credencial ("Evolution Gabriel").
-- **Modo teste** (04/11/2026): `const MODO_TESTE = true` dentro da expressão do "Acesso Liberado?" E do
+  ali, no `instanceName` dos nós da Evolution e na credencial ("Evolution Adam").
+- **Modo teste** (04/11/2026; JSON do repo com `false` desde 12/11/2026 — vale só depois de reimportar no n8n): `const MODO_TESTE = true` dentro da expressão do "Acesso Liberado?" E do
   "Avisar Acesso Bloqueado?" — com true, o bot só responde à conversa do número consigo mesmo (o
   número do agente também é WhatsApp pessoal). Pra abrir pros produtores, trocar pra false nos dois.
 - **O workflow publicado precisa ser o do repo.** Em 04/11/2026 o n8n estava rodando outro workflow
@@ -553,6 +553,25 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   no cadastro, no "cadastrar minha fazenda" e no modal da fazenda; o cadastro grava
   latitude/longitude do metadata (trigger, 0048) — é o ponto do mapa do gestor.
 
+## Fazendas de acompanhamento (0056)
+
+- Produtores acompanhados de graça (sem plano pago) não têm acesso: a fazenda é cadastrada SEM
+  WhatsApp (o bot ignora) e sem conta de produtor, e um técnico opera tudo. `propriedades.plano` =
+  'pagante' (padrão) | 'acompanhamento'. O painel do gestor ESCONDE essas fazendas por padrão (Visão
+  Geral, Ranking, Alertas e planilhas exportadas — senão geram alerta de "sem lançamento" e puxam as
+  médias); o botão "Acompanhamento" no cabeçalho liga/desliga (cookie `gestor_ver_acompanhamento`,
+  `src/lib/gestor-plano.ts`). Acessos, Programa e Entidades mostram todas.
+- Quem cadastra: só técnico autorizado pelo gestor (`tecnicos_cadastradores`; aba Acessos → "Técnicos
+  que cadastram fazendas" — não vale o `perfil: tecnico` do metadata, o usuário edita isso). Página
+  `/fazendas` (botão "Cadastrar fazendas" no Início e na tela sem fazenda): uma fazenda ou planilha
+  (`src/lib/planilha-fazendas.ts`, modelo .xlsx na tela, "Conferir" antes de gravar, só as certas).
+  RPCs `tecnico_criar_fazenda`, `tecnico_criar_fazendas(linhas, gravar)`: criam a fazenda e ligam quem
+  criou como técnico. Retirar a autorização não apaga fazenda nem acesso.
+- Virar pagante: NÃO deixar o produtor usar "Sou produtor" (sem WhatsApp na fazenda, criaria outra
+  fazenda). Cadastrar o WhatsApp na fazenda, o produtor criar a conta com o mesmo número e o gestor ligar
+  pelo e-mail (Dar acesso ao site → Produtor). O gestor também cadastra fazenda sem WhatsApp
+  (`gestor_criar_fazenda`).
+
 ## Perfil da fazenda (0053_perfil_fazenda.sql)
 
 - Perguntas pros relatórios: área total e usada pro leite (ha), pasto irrigado (+ ha), raça
@@ -580,6 +599,13 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   Regras e gravação no banco: `importar_rebanho(propriedade, dados, modo)` — 'validar' faz tudo e
   desfaz (a prévia é exatamente o que a importação faria), 'importar' é tudo ou nada,
   'importar_ok' grava só as linhas certas. Cada linha num bloco próprio.
+- **Sem número do brinco** (0057): vaca/bezerro com Número vazio recebe o próximo número livre (nunca um
+  número escrito em outra linha da planilha: as linhas com número entram primeiro; `numerados` na resposta
+  lista quem ganhou qual pra anotar). Vaca sem número precisa de Nome. Mãe (Vacas/Bezerros) e vaca do leite
+  aceitam número OU nome (`_resolver_vaca`; número vale primeiro; nome por `_nome_chave`, sem
+  acento/maiúscula/espaço extra). Nome repetido na fazenda é recusado; nome que já serve a duas vacas (dado
+  antigo) pede o número. O bot continua só pelo número (ideia pendente: aceitar nome, respondendo o que
+  entendeu se não achar, sem gravar por aproximação).
 - Bezerro do parto só é criado se a planilha informar. `vacas.nome` é opcional (aparece no site);
   o bot continua só pelo número.
 

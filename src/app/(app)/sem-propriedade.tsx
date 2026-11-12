@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "./actions";
 import { CopiarEmail, AtualizarAcesso } from "./sem-propriedade-acoes";
+import Link from "next/link";
 import { CadastrarMinhaFazenda } from "./cadastrar-minha-fazenda";
 
 // Conta sem vínculo com fazenda. Três casos:
@@ -14,6 +15,8 @@ export async function SemPropriedade() {
     data: { user },
   } = await supabase.auth.getUser();
   const email = user?.email ?? null;
+  // técnico autorizado pelo gestor a cadastrar fazendas de acompanhamento (0056)
+  const { data: podeCadastrar } = await supabase.rpc("posso_cadastrar_fazendas");
   const tecnico = user?.user_metadata?.perfil === "tecnico";
   const whatsappJaCadastrado = !!user?.user_metadata?.nome_propriedade;
   const whatsappInformado = (user?.user_metadata?.whatsapp as string | undefined) ?? null;
@@ -88,6 +91,20 @@ export async function SemPropriedade() {
               <strong>Digitou o WhatsApp errado?</strong> Cadastre a fazenda com o número certo:
             </p>
             <CadastrarMinhaFazenda />
+          </div>
+        )}
+
+        {podeCadastrar === true && (
+          <div className="flex flex-col gap-2 border-t border-black/[.08] pt-4 dark:border-white/[.145]">
+            <p className="text-base text-black dark:text-zinc-50">
+              <strong>Você pode cadastrar fazendas</strong> de acompanhamento (sem WhatsApp e sem acesso do produtor).
+            </p>
+            <Link
+              href="/fazendas"
+              className="w-full rounded-full bg-brand-green px-4 py-2.5 text-center text-base font-medium text-white transition-colors hover:bg-brand-green-dark"
+            >
+              Cadastrar fazendas
+            </Link>
           </div>
         )}
 

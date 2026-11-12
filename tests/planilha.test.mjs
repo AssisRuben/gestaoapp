@@ -60,4 +60,22 @@ ok(c.mascaraCnpj("11222333000181") === "11.222.333/0001-81", "CNPJ completo");
 ok(c.mascaraCnpj("112223") === "11.222.3", "CNPJ enquanto digita");
 ok(c.mascaraCnpj("11.222.333/0001-81999") === "11.222.333/0001-81", "corta dígitos a mais");
 
+// sem número do brinco (0057): mãe e vaca do leite pelo nome, número vazio
+const semNumero = p.dadosVazios();
+p.lerTabela(
+  [
+    ["Nome", "Situação", "Nome da mãe", "Último parto"],
+    ["Jandira", "lactação", "Mimosa", "02/08/2026"],
+  ],
+  "vacas",
+  semNumero,
+);
+ok(semNumero.vacas[0].numero === "" && semNumero.vacas[0].nome === "Jandira" && semNumero.vacas[0].numero_mae === "Mimosa", "vaca sem número, mãe pelo nome");
+const leiteNome = p.dadosVazios();
+p.lerTabela([["Nome da vaca", "Data", "Litros"], ["Jandira", "05/10/2026", "14"]], "leite", leiteNome);
+ok(leiteNome.leite[0].numero_vaca === "Jandira" && leiteNome.leite[0].litros === "14", "leite: vaca pelo nome");
+const bezNome = p.dadosVazios();
+p.lerTabela([["Sexo", "Nascimento", "Mãe (número ou nome)"], ["Macho", "05/09/2026", "Mimosa"]], "bezerros", bezNome);
+ok(bezNome.bezerros[0].numero === "" && bezNome.bezerros[0].numero_mae === "Mimosa", "bezerro sem número, mãe pelo nome");
+
 terminar("planilha");

@@ -4,17 +4,23 @@ import {
   getFinanceiroDiarioTodasCache,
 } from "@/lib/cached-data";
 import { normalizarResumo, normalizarLeite, normalizarFinanceiro } from "@/lib/gestor";
+import { propriedadesOcultas, semOcultas } from "@/lib/gestor-plano";
 import { GestorDashboardClient } from "./gestor-dashboard-client";
 import { ExportarPlanilhas } from "./exportar-planilhas";
 
 // Dados reais, agregados no banco (0020_gestor_dados_reais.sql). O layout do gestor já validou
 // isGestor() antes de chegar aqui, que é o que autoriza as leituras com service role.
 export default async function GestorDashboardPage() {
-  const [resumoData, leiteData, financeiroData] = await Promise.all([
+  const [resumoTodas, leiteTodas, financeiroTodas, ocultas] = await Promise.all([
     getResumoFazendasCache(),
     getLeiteDiarioTodasCache(),
     getFinanceiroDiarioTodasCache(),
+    propriedadesOcultas(),
   ]);
+  // fazendas de acompanhamento ficam fora, a menos que o gestor ligue no cabeçalho
+  const resumoData = semOcultas(resumoTodas, ocultas);
+  const leiteData = semOcultas(leiteTodas, ocultas);
+  const financeiroData = semOcultas(financeiroTodas, ocultas);
 
   const resumo = normalizarResumo(resumoData);
 

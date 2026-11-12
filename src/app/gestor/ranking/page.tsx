@@ -8,6 +8,7 @@ import { normalizarResumo, normalizarLeite, normalizarFinanceiro, hojeBrasil } f
 import { createServiceClient } from "@/lib/supabase/service";
 import { somarDias } from "@/lib/datas";
 import { RankingClient, type FazendaRanking } from "./ranking-client";
+import { propriedadesOcultas, semOcultas } from "@/lib/gestor-plano";
 
 const NOMES_MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -73,12 +74,17 @@ export default async function GestorRankingPage({
   const { de, ate } = await searchParams;
   const periodo = de && ate && DATA_ISO.test(de) && DATA_ISO.test(ate) && de <= ate ? { de, ate } : null;
 
-  const [resumoData, leiteData, financeiroData, indicadoresData] = await Promise.all([
+  const [resumoTodas, leiteTodas, financeiroTodas, indicadoresData, ocultas] = await Promise.all([
     getResumoFazendasCache(),
     getLeiteDiarioTodasCache(),
     getFinanceiroDiarioTodasCache(),
     periodo ? indicadoresDoPeriodo(periodo.de, periodo.ate) : getIndicadoresTodasCache(),
+    propriedadesOcultas(),
   ]);
+  // fazendas de acompanhamento ficam fora, a menos que o gestor ligue no cabeçalho
+  const resumoData = semOcultas(resumoTodas, ocultas);
+  const leiteData = semOcultas(leiteTodas, ocultas);
+  const financeiroData = semOcultas(financeiroTodas, ocultas);
 
   const meses = ultimosMesesFechados(hojeBrasil(), 6);
   const indicadores = new Map(

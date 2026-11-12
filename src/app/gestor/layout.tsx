@@ -5,6 +5,8 @@ import Link from "next/link";
 import { isGestor, getPropriedadesDoUsuario } from "@/lib/propriedade";
 import { logout } from "../(app)/actions";
 import { GestorTopNav, GestorBottomNav } from "./gestor-nav";
+import { FiltroPlano } from "./filtro-plano";
+import { quantasAcompanhamento, verAcompanhamento } from "@/lib/gestor-plano";
 
 export default async function GestorLayout({
   children,
@@ -19,6 +21,7 @@ export default async function GestorLayout({
   if (!gestor) {
     redirect("/");
   }
+  const [acompanhamento, verTodas] = await Promise.all([quantasAcompanhamento(), verAcompanhamento()]);
 
   return (
     // overflow-x-clip: nada (balão do mapa/gráfico, tabela) pode deixar a página mais larga que a
@@ -39,6 +42,7 @@ export default async function GestorLayout({
         </span>
 
         <div className="flex items-center gap-3">
+          {acompanhamento > 0 && <FiltroPlano ver={verTodas} quantas={acompanhamento} />}
           {vinculos.length > 0 && (
             <Link href="/" className="rounded-full border border-black/[.08] px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]">
               Minha fazenda

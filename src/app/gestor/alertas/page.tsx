@@ -7,6 +7,7 @@ import {
   type AlertaSemLancamento,
   type NivelAlerta,
 } from "./alertas-client";
+import { propriedadesOcultas, semOcultas } from "@/lib/gestor-plano";
 
 type LinhaReprodutiva = {
   propriedade_id: string;
@@ -43,11 +44,16 @@ function nivelPorDias(dias: number | null): NivelAlerta {
 }
 
 export default async function GestorAlertasPage() {
-  const [resumoData, financeiroData, reprodutivosData] = await Promise.all([
+  const [resumoTodas, financeiroTodas, reprodutivosTodas, ocultas] = await Promise.all([
     getResumoFazendasCache(),
     getFinanceiroDiarioTodasCache(),
     getAlertasReprodutivosCache(),
+    propriedadesOcultas(),
   ]);
+  // fazendas de acompanhamento ficam fora, a menos que o gestor ligue no cabeçalho
+  const resumoData = semOcultas(resumoTodas, ocultas);
+  const financeiroData = semOcultas(financeiroTodas, ocultas);
+  const reprodutivosData = semOcultas(reprodutivosTodas, ocultas);
 
   const hoje = hojeBrasil();
   const mesAtual = mesAnterior(hoje.slice(0, 7));

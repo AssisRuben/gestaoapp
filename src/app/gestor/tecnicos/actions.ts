@@ -105,3 +105,37 @@ export async function removerGestor(
   revalidatePath("/gestor/tecnicos");
   return { success: true };
 }
+
+// Técnicos autorizados a cadastrar fazendas de acompanhamento (0056).
+export async function adicionarCadastrador(
+  _state: TecnicoActionState,
+  formData: FormData,
+): Promise<TecnicoActionState> {
+  if (!(await isGestor())) return { error: await semAcessoGestor() };
+
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) return { error: "Informe o e-mail da conta." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("adicionar_tecnico_cadastrador", { p_email: email });
+  if (error) return { error: error.message };
+
+  revalidatePath("/gestor/tecnicos");
+  return { success: true };
+}
+
+export async function removerCadastrador(
+  _state: TecnicoActionState,
+  formData: FormData,
+): Promise<TecnicoActionState> {
+  if (!(await isGestor())) return { error: await semAcessoGestor() };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("remover_tecnico_cadastrador", {
+    p_usuario_id: formData.get("usuario_id") as string,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/gestor/tecnicos");
+  return { success: true };
+}

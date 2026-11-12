@@ -105,6 +105,8 @@ export type ResultadoImportacao = {
   ok: boolean;
   importado: boolean;
   erros: { aba: string; linha: number; mensagem: string }[];
+  // animais que vieram sem número e receberam o próximo livre (0057)
+  numerados?: { aba: string; linha: number; nome: string | null; numero: number }[];
   contagem: { vacas: number; bezerros: number; leite: number };
 };
 

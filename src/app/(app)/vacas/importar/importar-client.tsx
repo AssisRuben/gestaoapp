@@ -44,14 +44,14 @@ function celulas(aba: Aba, linha: DadosImportacao[Aba][number]): string[] {
   if (aba === "vacas") {
     const v = linha as DadosImportacao["vacas"][number];
     return [
-      v.numero, v.nome, r(v.situacao), v.numero_mae, data(v.data_parto),
+      v.numero || "automático", v.nome, r(v.situacao), v.numero_mae, data(v.data_parto),
       [v.bezerro_numero, r(v.bezerro_sexo)].filter(Boolean).join(" "),
       [data(v.data_cobertura), v.touro, r(v.diagnostico)].filter(Boolean).join(" · "),
     ];
   }
   if (aba === "bezerros") {
     const b = linha as DadosImportacao["bezerros"][number];
-    return [b.numero, r(b.sexo), data(b.data_nascimento), b.numero_mae];
+    return [b.numero || "automático", r(b.sexo), data(b.data_nascimento), b.numero_mae];
   }
   const l = linha as DadosImportacao["leite"][number];
   return [l.numero_vaca, data(l.data), l.litros.replace(".", ","), r(l.ordenha)];
@@ -68,6 +68,27 @@ async function textoDoArquivo(arquivo: File) {
   const utf8 = new TextDecoder("utf-8").decode(bytes);
   // CSV salvo pelo Excel em português costuma vir em Windows-1252 (acentos viram "�" em UTF-8)
   return utf8.includes("�") ? new TextDecoder("windows-1252").decode(bytes) : utf8;
+}
+
+// Animais que vieram sem número e ganharam o próximo livre. Depois de gravar, serve pra anotar/marcar
+// os animais (o número é o que o sistema usa em todo lugar).
+function NumerosAtribuidos({ itens, depois = false }: { itens: NonNullable<ResultadoImportacao["numerados"]>; depois?: boolean }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-xl border border-black/[.08] bg-zinc-50 p-3 text-sm dark:border-white/[.145] dark:bg-white/[.04]">
+      <p className="font-medium text-black dark:text-zinc-50">
+        {depois
+          ? `${itens.length} ${itens.length === 1 ? "animal recebeu" : "animais receberam"} número automático — anote ou marque os animais:`
+          : `${itens.length} ${itens.length === 1 ? "animal está sem número e vai receber" : "animais estão sem número e vão receber"} o próximo número livre:`}
+      </p>
+      <ul className="grid grid-cols-1 gap-x-6 gap-y-0.5 sm:grid-cols-2">
+        {itens.map((i) => (
+          <li key={`${i.aba}:${i.linha}`} className="text-black dark:text-zinc-50">
+            <strong className="tabular-nums">{i.numero}</strong> — {i.nome ?? `${i.aba === "Bezerros" ? "bezerro" : "vaca"} da linha ${i.linha}`}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export function ImportarClient({ nomeFazenda }: { nomeFazenda: string }) {
@@ -182,6 +203,7 @@ export function ImportarClient({ nomeFazenda }: { nomeFazenda: string }) {
           {c.vacas} {c.vacas === 1 ? "vaca" : "vacas"}, {c.bezerros} {c.bezerros === 1 ? "bezerro" : "bezerros"} e{" "}
           {c.leite} {c.leite === 1 ? "pesagem" : "pesagens"} de leite gravados na {nomeFazenda}.
         </p>
+        {(final.numerados?.length ?? 0) > 0 && <NumerosAtribuidos itens={final.numerados ?? []} depois />}
         {final.erros.length > 0 && (
           <p className="text-sm text-amber-700 dark:text-amber-400">
             {final.erros.length} {final.erros.length === 1 ? "linha ficou" : "linhas ficaram"} de fora, com erro. Corrija na
@@ -209,7 +231,8 @@ export function ImportarClient({ nomeFazenda }: { nomeFazenda: string }) {
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           Uma planilha com três abas: <strong>Vacas</strong> (uma linha por vaca, com parto, cobertura e
           diagnóstico atuais), <strong>Bezerros</strong> e <strong>Leite</strong> (pesagens da lactação atual).
-          Abas vazias são ignoradas. A sua planilha pode ter outros nomes de coluna parecidos — a conferência
+          Abas vazias são ignoradas. Sem o número do brinco? Deixe o Número vazio e preencha o Nome: o sistema dá o próximo
+          número livre, e a mãe e a vaca do leite podem ser escritas pelo nome. A sua planilha pode ter outros nomes de coluna parecidos — a conferência
           mostra o que foi entendido.
         </p>
         <button type="button" onClick={baixarModelo} className={`${BOTAO_2} self-start`}>
@@ -305,6 +328,7 @@ export function ImportarClient({ nomeFazenda }: { nomeFazenda: string }) {
         <section className={CARTAO}>
           <h2 className="text-base font-semibold text-black dark:text-zinc-50">3. Confira antes de gravar</h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">Nada foi gravado ainda.</p>
+          {(previa.numerados?.length ?? 0) > 0 && <NumerosAtribuidos itens={previa.numerados ?? []} />}
 
           <div className="flex flex-wrap gap-2">
             {ABAS.filter((a) => dados[a].length > 0).map((a) => {

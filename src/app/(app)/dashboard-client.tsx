@@ -186,8 +186,10 @@ export function DashboardClient({
   vacasPraSecar,
   diagnosticosPendentes,
   indicadores,
+  podeCadastrarFazendas = false,
 }: {
   indicadores?: React.ReactNode;
+  podeCadastrarFazendas?: boolean;
   propriedadeAtual: Propriedade;
   vacasEmLactacao: number;
   vacasTotal: number;
@@ -260,6 +262,14 @@ export function DashboardClient({
         >
           Relatório da visita
         </Link>
+        {podeCadastrarFazendas && (
+          <Link
+            href="/fazendas"
+            className="rounded-full border border-black/[.08] px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
+          >
+            Cadastrar fazendas
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-row items-end gap-3">

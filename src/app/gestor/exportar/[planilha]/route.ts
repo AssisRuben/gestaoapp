@@ -11,6 +11,7 @@ import {
 } from "@/lib/cached-data";
 import { normalizarResumo, normalizarLeite, normalizarFinanceiro, hojeBrasil } from "@/lib/gestor";
 import { paraCsv, type Celula } from "@/lib/csv";
+import { propriedadesOcultas } from "@/lib/gestor-plano";
 
 // Planilhas do painel do gestor (botões na Visão Geral). Route handler NÃO passa pelo layout de
 // /gestor: a checagem de gestor tem que ser feita aqui. Leituras com service role, como o resto do
@@ -19,7 +20,10 @@ import { paraCsv, type Celula } from "@/lib/csv";
 type Linha = Record<string, unknown>;
 const n = (v: unknown) => (v === null || v === undefined || v === "" ? null : Number(v));
 
+// Fazendas de acompanhamento ficam fora das planilhas, a menos que o gestor ligue no cabeçalho (mesmo
+// filtro das telas). Todas as planilhas partem desta lista de nomes, então filtrar aqui basta.
 async function nomesFazendas() {
+  const ocultas = await propriedadesOcultas();
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("propriedades")
@@ -27,14 +31,14 @@ async function nomesFazendas() {
     .order("nome_propriedade")
     .order("id");
   if (error) throw new Error(error.message);
-  return (data ?? []) as {
+  return ((data ?? []) as {
     id: string;
     nome_propriedade: string;
     nome_produtor: string;
     municipio: string | null;
     estado: string | null;
     tecnico_responsavel: string | null;
-  }[];
+  }[]).filter((f) => !ocultas.has(f.id));
 }
 
 async function planilhaFazendas() {

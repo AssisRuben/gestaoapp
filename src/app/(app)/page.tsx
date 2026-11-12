@@ -38,6 +38,8 @@ export default async function DashboardPage() {
     supabase.from("perfil_fazenda_atual").select(COLUNAS_PERFIL).eq("propriedade_id", propriedadeAtual.id).maybeSingle(),
   ]);
   // perfil da fazenda (0053): lembrete enquanto faltar resposta; sem a migration, nada aparece
+  // técnico autorizado pelo gestor a cadastrar fazendas de acompanhamento (0056); sem a migration, false
+  const { data: podeCadastrar } = await supabase.rpc("posso_cadastrar_fazendas");
   const perguntasPerfil = perfilRes.error ? 0 : perguntasFaltando(perfilRes.data as PerfilFazenda | null);
 
   const vacas = vacasData as unknown as { id: string; status_produtivo: string }[];
@@ -121,6 +123,7 @@ export default async function DashboardPage() {
       lancamentos={lancamentos}
       vacasPraSecar={vacasPraSecar}
       diagnosticosPendentes={diagnosticosPendentes}
+      podeCadastrarFazendas={podeCadastrar === true}
       indicadores={
         <>
           {perguntasPerfil > 0 && <LembretePerfil faltam={perguntasPerfil} />}

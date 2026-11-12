@@ -1567,6 +1567,80 @@ begin
   end;
 
   -- ============================================================
+  -- importação sem número: vaca/bezerro numerados sozinhos, mãe e leite por nome (0057)
+  -- ============================================================
+
+  declare
+    v_imp uuid;
+    v_res jsonb;
+    v_dados jsonb;
+    v_h date := _hoje_fazenda();
+  begin
+    insert into propriedades (nome_propriedade, nome_produtor) values ('__importacao_nomes__', 'x') returning id into v_imp;
+    insert into usuarios_propriedades (usuario_id, propriedade_id, papel) values (v_usuario_id, v_imp, 'produtor');
+
+    v_dados := jsonb_build_object(
+      'vacas', jsonb_build_array(
+        -- a mãe (Mimosa) vem DEPOIS da filha; as duas sem número
+        jsonb_build_object('linha', 2, 'nome', 'Estrela', 'situacao', 'lactacao', 'numero_mae', 'mimosa',
+          'data_parto', (v_h - 100)::text),
+        jsonb_build_object('linha', 3, 'nome', 'Mimosa', 'situacao', 'seca', 'data_parto', (v_h - 400)::text),
+        jsonb_build_object('linha', 4, 'numero', '7', 'nome', 'Jandira', 'situacao', 'novilha'),
+        jsonb_build_object('linha', 5, 'nome', 'ESTRELA ', 'situacao', 'novilha'),   -- mesmo nome (maiúscula/espaço)
+        jsonb_build_object('linha', 6, 'situacao', 'novilha')                         -- sem número e sem nome
+      ),
+      'bezerros', jsonb_build_array(
+        jsonb_build_object('linha', 2, 'sexo', 'femea', 'data_nascimento', (v_h - 30)::text, 'numero_mae', 'estrela')
+      ),
+      'leite', jsonb_build_array(
+        jsonb_build_object('linha', 2, 'numero_vaca', 'ESTRELA', 'data', (v_h - 5)::text, 'litros', '18,5'),
+        jsonb_build_object('linha', 3, 'numero_vaca', 'Jandira', 'data', (v_h - 5)::text, 'litros', '10'),  -- novilha, sem parto
+        jsonb_build_object('linha', 4, 'numero_vaca', 'Fantasma', 'data', (v_h - 5)::text, 'litros', '10')  -- não existe
+      )
+    );
+    -- o leite da linha 2 usa vírgula decimal? o site já manda ponto; aqui o ponto vale
+    v_dados := jsonb_set(v_dados, '{leite,0,litros}', '"18.5"');
+
+    v_res := importar_rebanho(v_imp, v_dados, 'importar_ok');
+    if not (v_res->>'importado')::boolean or jsonb_array_length(v_res->'erros') <> 4
+       or jsonb_array_length(v_res->'numerados') <> 3 then
+      raise exception 'FALHOU [0057]: esperava 4 erros e 3 números automáticos (veio %)', v_res;
+    end if;
+    -- as linhas com número entram primeiro: 7 é da Jandira, e os automáticos seguem (8, 9 e o bezerro 10)
+    if (select numero_identificacao from vacas where propriedade_id = v_imp and nome = 'Estrela') <> 8
+       or (select numero_identificacao from vacas where propriedade_id = v_imp and nome = 'Mimosa') <> 9
+       or (select numero_identificacao from vacas where propriedade_id = v_imp and nome = 'Jandira') <> 7 then
+      raise exception 'FALHOU [0057]: números automáticos fora do esperado (veio %)', v_res->'numerados';
+    end if;
+    if (select m.nome from vacas f join vacas m on m.id = f.mae_id
+        where f.propriedade_id = v_imp and f.nome = 'Estrela') is distinct from 'Mimosa' then
+      raise exception 'FALHOU [0057]: mãe por nome não ligou';
+    end if;
+    if not exists (select 1 from bezerros b join vacas m on m.id = b.mae_id
+                   where b.propriedade_id = v_imp and b.numero_identificacao = 10 and m.nome = 'Estrela') then
+      raise exception 'FALHOU [0057]: bezerro sem número deveria ser o 10, filho da Estrela';
+    end if;
+    if (select count(*) from controle_leite c join vacas v on v.id = c.vaca_id
+        where v.propriedade_id = v_imp and v.nome = 'Estrela') <> 1 then
+      raise exception 'FALHOU [0057]: leite por nome não gravou';
+    end if;
+    -- nome repetido que já existe na fazenda (dado antigo ou 2ª importação) também é recusado
+    v_res := importar_rebanho(v_imp, jsonb_build_object('vacas', jsonb_build_array(
+      jsonb_build_object('linha', 2, 'nome', 'mimosa', 'situacao', 'novilha'))), 'validar');
+    if jsonb_array_length(v_res->'erros') <> 1 or v_res->'erros'->0->>'mensagem' not ilike '%já existe uma vaca chamada%' then
+      raise exception 'FALHOU [0057]: nome já existente na fazenda deveria ser recusado (veio %)', v_res;
+    end if;
+    -- nome ambíguo (duas vacas, dado antigo) pede o número
+    insert into vacas (propriedade_id, numero_identificacao, nome, status_produtivo, status_reprodutivo)
+    values (v_imp, 50, 'Gêmea', 'novilha', 'vazia'), (v_imp, 51, 'gemea', 'novilha', 'vazia');
+    v_res := importar_rebanho(v_imp, jsonb_build_object('bezerros', jsonb_build_array(
+      jsonb_build_object('linha', 2, 'sexo', 'macho', 'data_nascimento', (v_h - 3)::text, 'numero_mae', 'GEMEA'))), 'validar');
+    if jsonb_array_length(v_res->'erros') <> 1 or v_res->'erros'->0->>'mensagem' not ilike '%mais de uma vaca%' then
+      raise exception 'FALHOU [0057]: nome ambíguo deveria pedir o número (veio %)', v_res;
+    end if;
+  end;
+
+  -- ============================================================
   -- cadastro "Sou produtor" com WhatsApp que já é de uma fazenda (0046)
   -- ============================================================
 
@@ -1946,6 +2020,101 @@ begin
     if (select dose_tecnico_id from coberturas_historico where id = v_cob.id) is distinct from v_tec
        or (select saldo from saldo_doses_tecnico where tecnico_id = v_tec and touro_id = v_touro) <> 0 then
       raise exception 'FALHOU [0055]: no histórico a dose continua sendo do técnico';
+    end if;
+
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+  end;
+
+  -- ============================================================
+  -- técnico cadastra fazendas de acompanhamento (0056)
+  -- ============================================================
+
+  declare
+    v_tecn uuid := (select id from auth.users where email = '__tecnico_teste__@exemplo.invalid');
+    v_faz uuid;
+    v_res jsonb;
+  begin
+    insert into gestores (usuario_id) values (v_usuario_id) on conflict do nothing;
+    delete from tecnicos_cadastradores;
+
+    -- técnico sem autorização não cadastra
+    perform set_config('request.jwt.claim.sub', v_tecn::text, true);
+    begin
+      perform tecnico_criar_fazenda('__faz_acomp__', 'Fulano');
+      raise exception 'FALHOU [0056]: técnico sem autorização deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%não está autorizada%' then raise exception 'FALHOU [0056]: erro inesperado: %', sqlerrm; end if;
+    end;
+    begin
+      perform adicionar_tecnico_cadastrador('__tecnico_teste__@exemplo.invalid');
+      raise exception 'FALHOU [0056]: não gestor não autoriza ninguém';
+    exception when others then
+      if sqlerrm not ilike '%Só o gestor%' then raise exception 'FALHOU [0056]: erro inesperado: %', sqlerrm; end if;
+    end;
+
+    -- o gestor autoriza
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+    perform adicionar_tecnico_cadastrador(' __Tecnico_Teste__@exemplo.invalid ');
+    begin
+      perform adicionar_tecnico_cadastrador('__tecnico_teste__@exemplo.invalid');
+      raise exception 'FALHOU [0056]: autorizar duas vezes deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%já pode cadastrar%' then raise exception 'FALHOU [0056]: erro inesperado: %', sqlerrm; end if;
+    end;
+
+    -- o técnico cadastra: sem WhatsApp, plano de acompanhamento, ligado a ele como técnico
+    perform set_config('request.jwt.claim.sub', v_tecn::text, true);
+    if not posso_cadastrar_fazendas() then raise exception 'FALHOU [0056]: posso_cadastrar_fazendas deveria ser true'; end if;
+    v_faz := tecnico_criar_fazenda(' __faz_acomp__ ', 'Fulano', 'Quixadá', 'ce');
+    if (select plano from propriedades where id = v_faz) <> 'acompanhamento'
+       or (select estado from propriedades where id = v_faz) <> 'CE'
+       or exists (select 1 from usuarios_whatsapp where propriedade_id = v_faz)
+       or (select papel from usuarios_propriedades where propriedade_id = v_faz and usuario_id = v_tecn) is distinct from 'tecnico' then
+      raise exception 'FALHOU [0056]: fazenda de acompanhamento não ficou como esperado';
+    end if;
+    begin
+      perform tecnico_criar_fazenda('__FAZ_ACOMP__', 'Outro', 'quixadá');
+      raise exception 'FALHOU [0056]: nome repetido no mesmo município deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%Já existe a fazenda%' then raise exception 'FALHOU [0056]: erro inesperado: %', sqlerrm; end if;
+    end;
+
+    -- lote: conferir não grava; importar grava só o que está certo; repetida na própria planilha cai
+    v_res := tecnico_criar_fazendas('[
+      {"linha":2,"nome_propriedade":"__lote_a__","nome_produtor":"Ana","municipio":"Tauá","estado":"CE"},
+      {"linha":3,"nome_propriedade":"__lote_b__","nome_produtor":"Beto"},
+      {"linha":4,"nome_propriedade":"__lote_a__","nome_produtor":"Ana","municipio":"Tauá"},
+      {"linha":5,"nome_propriedade":"__lote_c__"},
+      {"linha":6,"erro":"data inválida"}
+    ]'::jsonb, false);
+    if (v_res->>'ok')::int <> 2 or (v_res->>'erros')::int <> 3
+       or exists (select 1 from propriedades where nome_propriedade like '\_\_lote\_%') then
+      raise exception 'FALHOU [0056]: conferir o lote deveria contar 2 certas, 3 com erro e não gravar nada (veio %)', v_res;
+    end if;
+    v_res := tecnico_criar_fazendas('[
+      {"linha":2,"nome_propriedade":"__lote_a__","nome_produtor":"Ana","municipio":"Tauá","estado":"CE"},
+      {"linha":3,"nome_propriedade":"__lote_b__","nome_produtor":"Beto"},
+      {"linha":4,"nome_propriedade":"__lote_a__","nome_produtor":"Ana","municipio":"Tauá"}
+    ]'::jsonb, true);
+    if (v_res->>'ok')::int <> 2 or (v_res->>'erros')::int <> 1
+       or (select count(*) from propriedades where nome_propriedade like '\_\_lote\_%' and plano = 'acompanhamento') <> 2
+       or (select count(*) from usuarios_propriedades up join propriedades p on p.id = up.propriedade_id
+           where p.nome_propriedade like '\_\_lote\_%' and up.usuario_id = v_tecn and up.papel = 'tecnico') <> 2 then
+      raise exception 'FALHOU [0056]: importar o lote deveria gravar 2 fazendas ligadas ao técnico (veio %)', v_res;
+    end if;
+
+    -- retirar a autorização não apaga o que já foi cadastrado
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+    perform remover_tecnico_cadastrador(v_tecn);
+    perform set_config('request.jwt.claim.sub', v_tecn::text, true);
+    begin
+      perform tecnico_criar_fazenda('__faz_acomp2__', 'Fulano');
+      raise exception 'FALHOU [0056]: sem a autorização não cadastra mais';
+    exception when others then
+      if sqlerrm not ilike '%não está autorizada%' then raise exception 'FALHOU [0056]: erro inesperado: %', sqlerrm; end if;
+    end;
+    if not exists (select 1 from propriedades where id = v_faz) then
+      raise exception 'FALHOU [0056]: a fazenda cadastrada deveria continuar';
     end if;
 
     perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
