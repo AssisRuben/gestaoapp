@@ -49,3 +49,6 @@ next-env.d.ts
 # gerados pra homologação (scripts/montar-banco.js e scripts/workflow-homologacao.js)
 /supabase/homologacao/banco_completo.sql
 /n8n-homologacao/
+
+# imagens do manual geradas por scripts/capturas-manual.mjs
+/capturas-manual/

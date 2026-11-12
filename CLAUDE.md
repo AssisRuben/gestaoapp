@@ -699,6 +699,18 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - Modelo do classificador de intenção: `gpt-5-mini`, com memória de conversa em Redis
   (`sessionKey`=telefone, janela de 15 mensagens).
 
+## Manual do usuário
+
+- Documento editável (Claude Docs): **Manual do Gestão Pec** — https://claude.ai/artifact/KAkEWftR1gbE3YD5nBprxy
+  (22 capítulos em 5 partes: produtor, técnico e gestor). Falta só a imagem 11 (print do WhatsApp).
+- Imagens: `node scripts/capturas-manual.mjs [nn ...]` (Playwright) gera as telas em `capturas-manual/`
+  (ignorada pelo git). Contas e senhas em `.env.capturas` (ignorado; ver o topo do script). Só abre telas
+  e preenche formulários — nunca salva, confirma nem exclui nada.
+- Usa a "Fazenda Teste" da produção; os dados de exemplo dela vêm de
+  `supabase/homologacao/dados_manual_fazenda_teste.sql` (rodar no SQL Editor; não duplica se rodar de novo).
+- Rede que bloqueia o domínio: `npx next dev -p 3100` com `.env.local` e `CAPTURAS_URL=http://localhost:3100`
+  (o script esconde o selo do Next). O `next dev` reescreve o `AGENTS.md` — desfazer antes do commit.
+
 ## Onde ver a lógica completa hoje
 
 O workflow n8n exportado (`fazenda-leite-multiagentes.json`, na raiz do projeto) tem a lógica
