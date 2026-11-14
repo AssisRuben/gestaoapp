@@ -381,7 +381,7 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   conversa do número consigo mesmo (teste), e só de eventos da instância do bot
   (`body.instance === 'Adam Rubens'` desde 12/11/2026; antes 'Gabriel Bandeira' e 'Assis Rubens') — outra instância com
   webhook pro mesmo n8n repassava as mensagens que ELA recebia (2026-10-11). Trocou a instância? Mude
-  ali, no `instanceName` dos nós da Evolution e na credencial ("Evolution Adam").
+  ali, no `instanceName` dos nós da Evolution e na credencial ("Evolution Adam", id qFPyWQxioJ8lY37f).
 - **Modo teste** (04/11/2026; JSON do repo com `false` desde 12/11/2026 — vale só depois de reimportar no n8n): `const MODO_TESTE = true` dentro da expressão do "Acesso Liberado?" E do
   "Avisar Acesso Bloqueado?" — com true, o bot só responde à conversa do número consigo mesmo (o
   número do agente também é WhatsApp pessoal). Pra abrir pros produtores, trocar pra false nos dois.
@@ -571,6 +571,28 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   fazenda). Cadastrar o WhatsApp na fazenda, o produtor criar a conta com o mesmo número e o gestor ligar
   pelo e-mail (Dar acesso ao site → Produtor). O gestor também cadastra fazenda sem WhatsApp
   (`gestor_criar_fazenda`).
+
+## Botijão de nitrogênio (0058_botijao_nitrogenio.sql)
+
+- Tela Reprodução, bloco "Botijão de nitrogênio" (`reproducao/botijao-nitrogenio.tsx`). Uma fazenda = um
+  botijão (sem cadastro de botijão). Produtor e técnico (qualquer vínculo) registram: data, nível em cm
+  (0–200), valor pago e FOTO obrigatória.
+- `registrar_abastecimento_botijao` grava o abastecimento E uma despesa em `financeiro` (categoria
+  'inseminacao artificial') na mesma transação; `excluir_abastecimento_botijao` apaga os dois e devolve o
+  caminho da foto. Exclusão em dois cliques no site.
+- Foto no bucket privado `botijao` do Storage (`<propriedade_id>/<arquivo>`), sem policy de Storage: o site
+  envia/remove/assina (URL de 1h) com a service role depois de conferir a fazenda (`src/lib/botijao.ts`,
+  actions em `reproducao/actions.ts`). O celular reduz a foto (1600 px, JPEG 80%) antes de enviar. A
+  migration só cria o bucket se o schema `storage` existir (não existe no PGlite dos testes).
+- **Bot** (`bot_registrar_botijao`, ramo `registrar_botijao` de `bot_acao`; regra única em
+  `_registrar_abastecimento_botijao`, a mesma do site): o produtor manda a FOTO da régua com a legenda
+  ("abasteci o botijão, nível 42 cm, 180 reais"). No n8n: "É Foto?" (antes do "É Áudio?") → "Extrair Foto"
+  (base64 da Evolution, o mesmo "Webhook Base64" do áudio) → "Guardar Foto (Storage)" (bucket `botijao`, pasta da
+  fazenda) → caminho no Redis `botijao_foto:<telefone>` (15 min) → legenda segue o buffer/IA como texto
+  (intenção `outras_acoes`, acao `registrar_botijao`, entidade `nivel_cm`/`valor`/`data`); "Ler Foto Botijão
+  (Redis)" entrega o caminho ao `bot_acao`. Foto sem legenda: o bot pede a legenda. Cada foto vale um
+  abastecimento só (recusa repetida); sem foto, nível ou valor o bot pergunta e não grava.
+  Vale só depois de reimportar o workflow no n8n; foto enviada e não usada fica no Storage.
 
 ## Perfil da fazenda (0053_perfil_fazenda.sql)
 

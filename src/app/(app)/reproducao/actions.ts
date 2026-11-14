@@ -3,6 +3,8 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPropriedadeAtual } from "@/lib/propriedade";
+import { createServiceClient } from "@/lib/supabase/service";
+import { BUCKET_BOTIJAO } from "@/lib/botijao";
 
 export type RegistrarCoberturaState = { error?: string; success?: boolean } | undefined;
 
@@ -316,5 +318,91 @@ export async function deletarBaixaDoses(
   if (error) return { error: error.message };
 
   revalidarDoses();
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// Botijão de nitrogênio (0058)
+// ---------------------------------------------------------------------------
+
+export type BotijaoState = { error?: string; success?: boolean } | undefined;
+
+const TIPOS_FOTO: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+const LIMITE_FOTO = 5 * 1024 * 1024;
+
+// "1.234,50" e "1234.5" viram número; o resto vira NaN
+function lerNumero(bruto: FormDataEntryValue | null): number {
+  const t = String(bruto ?? "").trim();
+  if (!t) return NaN;
+  return Number(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : t);
+}
+
+export async function registrarAbastecimentoBotijao(
+  _state: BotijaoState,
+  formData: FormData,
+): Promise<BotijaoState> {
+  const propriedadeAtual = await getPropriedadeAtual();
+  if (!propriedadeAtual) return { error: "Nenhuma propriedade vinculada à sua conta." };
+
+  const nivel = lerNumero(formData.get("nivel_cm"));
+  const valor = lerNumero(formData.get("valor"));
+  const data = String(formData.get("data") ?? "");
+  const foto = formData.get("foto");
+
+  if (!Number.isFinite(nivel) || nivel < 0 || nivel > 200) return { error: "Informe o nível em cm (entre 0 e 200)." };
+  if (!Number.isFinite(valor) || valor <= 0) return { error: "Informe o valor pago pelo abastecimento." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return { error: "Informe a data do abastecimento." };
+  if (!(foto instanceof File) || foto.size === 0) return { error: "A foto do nível é obrigatória." };
+  const extensao = TIPOS_FOTO[foto.type];
+  if (!extensao) return { error: "A foto precisa ser JPG, PNG ou WebP." };
+  if (foto.size > LIMITE_FOTO) return { error: "A foto passa de 5 MB." };
+
+  // o RPC confere o vínculo com a fazenda; o upload só acontece depois de a sessão já ter fazenda
+  const caminho = `${propriedadeAtual.id}/${crypto.randomUUID()}.${extensao}`;
+  const storage = createServiceClient().storage.from(BUCKET_BOTIJAO);
+  const { error: erroUpload } = await storage.upload(caminho, await foto.arrayBuffer(), {
+    contentType: foto.type,
+  });
+  if (erroUpload) return { error: `Não foi possível enviar a foto: ${erroUpload.message}` };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("registrar_abastecimento_botijao", {
+    p_propriedade_id: propriedadeAtual.id,
+    p_data: data,
+    p_nivel_cm: nivel,
+    p_valor: valor,
+    p_foto_path: caminho,
+  });
+
+  if (error) {
+    // não deixa foto órfã quando o banco recusa
+    await storage.remove([caminho]);
+    return { error: error.message };
+  }
+
+  revalidatePath("/reproducao");
+  revalidatePath("/financeiro");
+  updateTag("financeiro");
+  return { success: true };
+}
+
+export async function excluirAbastecimentoBotijao(
+  _state: BotijaoState,
+  formData: FormData,
+): Promise<BotijaoState> {
+  const supabase = await createClient();
+  const { data: caminho, error } = await supabase.rpc("excluir_abastecimento_botijao", {
+    p_abastecimento_id: formData.get("abastecimento_id") as string,
+  });
+
+  if (error) return { error: error.message };
+
+  if (typeof caminho === "string" && caminho) {
+    await createServiceClient().storage.from(BUCKET_BOTIJAO).remove([caminho]);
+  }
+
+  revalidatePath("/reproducao");
+  revalidatePath("/financeiro");
+  updateTag("financeiro");
   return { success: true };
 }

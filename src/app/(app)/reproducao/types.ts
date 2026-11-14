@@ -37,3 +37,5 @@ export type {
   SaldoDosesTecnico,
   BaixaDosesTecnico,
 } from "@/lib/programa";
+
+export type { AbastecimentoBotijao } from "@/lib/botijao";

@@ -15,6 +15,7 @@ import { useSuccessToast, SuccessToast } from "../toast";
 import { Autoria } from "../autoria";
 import { formatarDataBR } from "../format";
 import { DosesPrograma, CamposTouro } from "./doses-programa";
+import { BotijaoNitrogenio } from "./botijao-nitrogenio";
 import { DosesTecnicoBloco } from "./doses-tecnico";
 import { temDosesTecnico } from "@/lib/programa";
 import type {
@@ -25,6 +26,7 @@ import type {
   EntregaDoses,
   SaldoDoses,
   BaixaDoses,
+  AbastecimentoBotijao,
   DosesTecnico,
 } from "./types";
 import { hojeBrasil, somarDias } from "@/lib/datas";
@@ -69,9 +71,11 @@ export function ReproducaoClient({
   baixas,
   nomes = {},
   dosesTecnico,
+  abastecimentos = [],
   nomeFazenda = "",
 }: {
   dosesTecnico?: DosesTecnico;
+  abastecimentos?: AbastecimentoBotijao[];
   nomeFazenda?: string;
   coberturas: Cobertura[];
   partos: Parto[];
@@ -196,6 +200,8 @@ export function ReproducaoClient({
       {dosesTecnico && (
         <DosesTecnicoBloco touros={touros} doses={dosesTecnico} nomeFazenda={nomeFazenda} onSucesso={mostrarToast} />
       )}
+
+      <BotijaoNitrogenio abastecimentos={abastecimentos} nomes={nomes} onSucesso={mostrarToast} />
 
       <Link
         href="/campo"

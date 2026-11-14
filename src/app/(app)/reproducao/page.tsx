@@ -11,6 +11,7 @@ import {
 } from "@/lib/cached-data";
 import { ReproducaoClient } from "./reproducao-client";
 import { carregarDosesTecnico } from "@/lib/doses-tecnico";
+import { carregarAbastecimentosBotijao } from "@/lib/botijao";
 import type {
   Cobertura,
   Parto,
@@ -28,7 +29,7 @@ export default async function ReproducaoPage() {
     return <SemPropriedade />;
   }
 
-  const [coberturasData, partosData, vacasData, tourosData, entregasData, saldosData, baixasData, nomes, dosesTecnico] =
+  const [coberturasData, partosData, vacasData, tourosData, entregasData, saldosData, baixasData, nomes, dosesTecnico, abastecimentos] =
     await Promise.all([
       getCoberturasCache(propriedadeAtual.id),
       getPartosCache(propriedadeAtual.id),
@@ -39,6 +40,7 @@ export default async function ReproducaoPage() {
       getBaixasDosesCache(propriedadeAtual.id),
       getNomesUsuarios(propriedadeAtual.id),
       carregarDosesTecnico(),
+      carregarAbastecimentosBotijao(propriedadeAtual.id),
     ]);
 
   const coberturas = coberturasData as unknown as Cobertura[];
@@ -61,6 +63,7 @@ export default async function ReproducaoPage() {
         baixas={baixas}
         nomes={nomes}
         dosesTecnico={dosesTecnico}
+        abastecimentos={abastecimentos}
         nomeFazenda={propriedadeAtual.nome_propriedade}
       />
     </div>

@@ -2120,6 +2120,134 @@ begin
     perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
   end;
 
+  -- ============================================================
+  -- botijão de nitrogênio (0058)
+  -- ============================================================
+
+  declare
+    v_ab botijao_abastecimentos;
+    v_foto text;
+    v_fin_antes integer;
+  begin
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+    v_fin_antes := (select count(*) from financeiro where propriedade_id = v_propriedade_id);
+
+    -- registra: grava o abastecimento E a despesa ligada, com autoria
+    v_ab := registrar_abastecimento_botijao(v_propriedade_id, current_date, 42.5, 180, v_propriedade_id::text || '/teste.jpg');
+    if v_ab.nivel_cm <> 42.5 or v_ab.valor <> 180 or v_ab.financeiro_id is null or v_ab.criado_por is distinct from v_usuario_id then
+      raise exception 'FALHOU [0058]: abastecimento não ficou como esperado (%)', v_ab;
+    end if;
+    if not exists (
+      select 1 from financeiro f
+      where f.id = v_ab.financeiro_id and f.tipo = 'despesa' and f.valor = 180
+        and f.categoria = 'inseminacao artificial' and f.data = current_date and f.propriedade_id = v_propriedade_id
+    ) then
+      raise exception 'FALHOU [0058]: a despesa do abastecimento deveria ter ido pro Financeiro';
+    end if;
+
+    -- validações
+    begin
+      perform registrar_abastecimento_botijao(v_propriedade_id, current_date, 40, 100, null);
+      raise exception 'FALHOU [0058]: sem foto deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%foto%obrigat%' then raise exception 'FALHOU [0058]: erro inesperado: %', sqlerrm; end if;
+    end;
+    begin
+      perform registrar_abastecimento_botijao(v_propriedade_id, current_date, 40, 100, gen_random_uuid()::text || '/outra.jpg');
+      raise exception 'FALHOU [0058]: foto na pasta de outra fazenda deveria ser recusada';
+    exception when others then
+      if sqlerrm not ilike '%foto%obrigat%' then raise exception 'FALHOU [0058]: erro inesperado: %', sqlerrm; end if;
+    end;
+    begin
+      perform registrar_abastecimento_botijao(v_propriedade_id, current_date + 3, 40, 100, v_propriedade_id::text || '/a.jpg');
+      raise exception 'FALHOU [0058]: data futura deveria ser recusada';
+    exception when others then
+      if sqlerrm not ilike '%futuro%' then raise exception 'FALHOU [0058]: erro inesperado: %', sqlerrm; end if;
+    end;
+    begin
+      perform registrar_abastecimento_botijao(v_propriedade_id, current_date, 250, 100, v_propriedade_id::text || '/a.jpg');
+      raise exception 'FALHOU [0058]: nível acima de 200 cm deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%entre 0 e 200%' then raise exception 'FALHOU [0058]: erro inesperado: %', sqlerrm; end if;
+    end;
+    begin
+      perform registrar_abastecimento_botijao(v_propriedade_id, current_date, 40, 0, v_propriedade_id::text || '/a.jpg');
+      raise exception 'FALHOU [0058]: valor zero deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%valor%' then raise exception 'FALHOU [0058]: erro inesperado: %', sqlerrm; end if;
+    end;
+    -- nenhuma recusa deixou despesa pra trás
+    if (select count(*) from financeiro where propriedade_id = v_propriedade_id) <> v_fin_antes + 1 then
+      raise exception 'FALHOU [0058]: só o abastecimento válido deveria ter gerado despesa';
+    end if;
+
+    -- quem não tem vínculo com a fazenda não registra nem apaga
+    perform set_config('request.jwt.claim.sub', gen_random_uuid()::text, true);
+    begin
+      perform registrar_abastecimento_botijao(v_propriedade_id, current_date, 40, 100, v_propriedade_id::text || '/a.jpg');
+      raise exception 'FALHOU [0058]: sem vínculo não registra';
+    exception when others then
+      if sqlerrm not ilike '%sem acesso%' then raise exception 'FALHOU [0058]: erro inesperado: %', sqlerrm; end if;
+    end;
+    begin
+      perform excluir_abastecimento_botijao(v_ab.id);
+      raise exception 'FALHOU [0058]: sem vínculo não apaga';
+    exception when others then
+      if sqlerrm not ilike '%sem acesso%' then raise exception 'FALHOU [0058]: erro inesperado: %', sqlerrm; end if;
+    end;
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+
+    -- WhatsApp: o bot usa a mesma regra
+    -- (o telefone 5500000000001 é da fazenda de teste; número solto como "42,5" também vale)
+    if _numero_do_texto('1.234,50') <> 1234.5 or _numero_do_texto('42,5') <> 42.5 or _numero_do_texto('180') <> 180
+       or _numero_do_texto('abc') is not null then
+      raise exception 'FALHOU [0058]: _numero_do_texto não leu os formatos esperados';
+    end if;
+    perform set_config('request.jwt.claim.sub', '', true);
+    v_bot := bot_registrar_botijao('5500000000001', jsonb_build_object('nivel_cm', 38, 'valor', '150,5', 'foto_path', v_propriedade_id::text || '/bot.jpg'));
+    if not (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%38%R$ 150,50%'
+       or not exists (select 1 from botijao_abastecimentos where foto_path = v_propriedade_id::text || '/bot.jpg' and criado_via = 'whatsapp' and data = _hoje_fazenda() and valor = 150.5)
+       or not exists (select 1 from financeiro where propriedade_id = v_propriedade_id and categoria = 'inseminacao artificial' and valor = 150.5) then
+      raise exception 'FALHOU [0058]: o bot deveria registrar abastecimento e despesa (veio %)', v_bot;
+    end if;
+    -- a mesma foto não vale duas vezes
+    v_bot := bot_registrar_botijao('5500000000001', jsonb_build_object('nivel_cm', 38, 'valor', 150, 'foto_path', v_propriedade_id::text || '/bot.jpg'));
+    if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%já foi usada%' then
+      raise exception 'FALHOU [0058]: foto repetida deveria ser recusada (veio %)', v_bot;
+    end if;
+    -- faltando dado, o bot pergunta (e não grava nada)
+    v_bot := bot_registrar_botijao('5500000000001', jsonb_build_object('nivel_cm', 38, 'valor', 150));
+    if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%foto%' then
+      raise exception 'FALHOU [0058]: sem foto o bot deveria pedir a foto (veio %)', v_bot;
+    end if;
+    v_bot := bot_registrar_botijao('5500000000001', jsonb_build_object('valor', 150, 'foto_path', v_propriedade_id::text || '/x.jpg'));
+    if (v_bot->>'ok')::boolean or v_bot->>'mensagem' not ilike '%nível%' then
+      raise exception 'FALHOU [0058]: sem nível o bot deveria perguntar (veio %)', v_bot;
+    end if;
+    v_bot := bot_registrar_botijao('5500000000001', jsonb_build_object('nivel_cm', 38, 'valor', 150, 'foto_path', gen_random_uuid()::text || '/outra.jpg'));
+    if (v_bot->>'ok')::boolean then
+      raise exception 'FALHOU [0058]: foto de outra fazenda deveria ser recusada';
+    end if;
+    v_bot := bot_registrar_botijao('5599999999999', jsonb_build_object('nivel_cm', 38, 'valor', 150, 'foto_path', v_propriedade_id::text || '/y.jpg'));
+    if (v_bot->>'ok')::boolean then
+      raise exception 'FALHOU [0058]: número não cadastrado deveria ser recusado';
+    end if;
+    -- pela ação genérica do bot
+    v_bot := bot_acao('5500000000001', 'registrar_botijao', jsonb_build_object('nivel_cm', 40, 'valor', 90, 'data', '2020-01-02', 'foto_path', v_propriedade_id::text || '/acao.jpg'));
+    if not (v_bot->>'ok')::boolean or not exists (select 1 from botijao_abastecimentos where foto_path = v_propriedade_id::text || '/acao.jpg' and data = date '2020-01-02') then
+      raise exception 'FALHOU [0058]: bot_acao registrar_botijao deveria gravar com a data falada (veio %)', v_bot;
+    end if;
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+
+    -- apagar devolve o caminho da foto e leva a despesa junto
+    v_foto := excluir_abastecimento_botijao(v_ab.id);
+    if v_foto <> v_propriedade_id::text || '/teste.jpg'
+       or exists (select 1 from botijao_abastecimentos where id = v_ab.id)
+       or exists (select 1 from financeiro where id = v_ab.financeiro_id) then
+      raise exception 'FALHOU [0058]: excluir deveria apagar abastecimento e despesa e devolver o caminho da foto';
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 
