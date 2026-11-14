@@ -17,6 +17,7 @@
 //   CAPTURAS_URL=https://gestaopec.com.br
 //   CAPTURAS_SEM_FAZENDA_EMAIL=... (opcional: conta sem fazenda, pra imagem 03)
 //   CAPTURAS_SEM_FAZENDA_SENHA=...
+//   CAPTURAS_FOTO_BOTIJAO=...      (opcional; padrão capturas-manual/foto-botijao.jpeg — foto da régua, imagem 33)
 //
 // Saída: capturas-manual/<nome>.png (pasta ignorada pelo git). A imagem 11 (WhatsApp) é manual.
 import { chromium } from "playwright";
@@ -291,6 +292,26 @@ const CAPTURAS = [
     await ir(p, "/gestor");
     await rolarAte(p, "Exportar planilhas");
     await foto(p, "31-gestor-exportar.png");
+  }],
+  ["32-botijao-nitrogenio.png", "celular", true, async (p) => {
+    await ir(p, "/reproducao");
+    await rolarAte(p, "Botijão de nitrogênio");
+    await foto(p, "32-botijao-nitrogenio.png");
+  }],
+  ["33-registrar-abastecimento.png", "celular", true, async (p) => {
+    // preenche o formulário e NÃO toca em Registrar
+    await ir(p, "/reproducao");
+    await botao(p, "+ Registrar abastecimento").click();
+    await p.waitForTimeout(600);
+    await p.fill("#botijao_nivel", "23");
+    await p.fill("#botijao_valor", "180,00");
+    // foto de exemplo: capturas-manual/foto-botijao.jpeg (pasta fora do git) ou CAPTURAS_FOTO_BOTIJAO
+    const fotoBotijao = path.resolve(RAIZ, env.CAPTURAS_FOTO_BOTIJAO || "capturas-manual/foto-botijao.jpeg");
+    if (fs.existsSync(fotoBotijao)) {
+      await p.setInputFiles("#botijao_foto", fotoBotijao);
+      await p.waitForTimeout(800);
+    }
+    await foto(p, "33-registrar-abastecimento.png");
   }],
 ];
 
