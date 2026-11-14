@@ -1,3 +1,4 @@
+import { exigirGestor } from "@/lib/propriedade";
 import { getResumoFazendasCache, getFinanceiroDiarioTodasCache, getAlertasReprodutivosCache } from "@/lib/cached-data";
 import { normalizarResumo, normalizarFinanceiro, hojeBrasil, diasEntre } from "@/lib/gestor";
 import {
@@ -44,6 +45,7 @@ function nivelPorDias(dias: number | null): NivelAlerta {
 }
 
 export default async function GestorAlertasPage() {
+  await exigirGestor();
   const [resumoTodas, financeiroTodas, reprodutivosTodas, ocultas] = await Promise.all([
     getResumoFazendasCache(),
     getFinanceiroDiarioTodasCache(),

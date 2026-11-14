@@ -1,3 +1,4 @@
+import { exigirGestor } from "@/lib/propriedade";
 import {
   getPropriedadesTodasCache,
   getTourosCache,
@@ -25,6 +26,7 @@ import { ProgramaClient, type EntidadeOpcao } from "./programa-client";
 // Dados reais (diferente das outras abas do gestor, ainda fictícias). O layout do gestor já
 // validou isGestor() antes de chegar aqui, que é o que autoriza as leituras com service role.
 export default async function ProgramaPage() {
+  await exigirGestor();
   const [
     propriedadesData,
     tourosData,

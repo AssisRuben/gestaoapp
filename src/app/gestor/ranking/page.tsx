@@ -1,3 +1,4 @@
+import { exigirGestor } from "@/lib/propriedade";
 import {
   getResumoFazendasCache,
   getLeiteDiarioTodasCache,
@@ -71,6 +72,7 @@ export default async function GestorRankingPage({
 }: {
   searchParams: Promise<{ de?: string; ate?: string }>;
 }) {
+  await exigirGestor();
   const { de, ate } = await searchParams;
   const periodo = de && ate && DATA_ISO.test(de) && DATA_ISO.test(ate) && de <= ate ? { de, ate } : null;
 

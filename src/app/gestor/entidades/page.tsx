@@ -1,3 +1,4 @@
+import { exigirGestor } from "@/lib/propriedade";
 import { createServiceClient } from "@/lib/supabase/service";
 import { EntidadesClient, type Entidade, type FazendaEntidade } from "./entidades-client";
 
@@ -5,6 +6,7 @@ import { EntidadesClient, type Entidade, type FazendaEntidade } from "./entidade
 // do gestor já validou isGestor() — por isso a leitura com service role. Sem cache: poucas linhas, e
 // quem abre quer ver o número de agora.
 export default async function EntidadesPage() {
+  await exigirGestor();
   const supabase = createServiceClient();
   const [{ data: entidades, error: e1 }, { data: fazendas, error: e2 }] = await Promise.all([
     supabase.rpc("indicadores_entidades"),

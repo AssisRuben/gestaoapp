@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { createClient, getUser } from "@/lib/supabase/server";
@@ -51,6 +52,12 @@ export const isGestor = cache(async (): Promise<boolean> => {
 
   return !!data;
 });
+
+// Toda página de /gestor chama isto antes de ler com a service role: o layout também confere, mas
+// o Next não garante que o layout rode em toda requisição da página.
+export async function exigirGestor(): Promise<void> {
+  if (!(await isGestor())) redirect("/");
+}
 
 // Mensagem pra ação de gestor recusada. Caso comum: a tela foi aberta como gestor, mas depois
 // alguém entrou com outra conta no mesmo navegador (a sessão é uma só pra todas as abas) — dizer

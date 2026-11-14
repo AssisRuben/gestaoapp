@@ -1,3 +1,4 @@
+import { exigirGestor } from "@/lib/propriedade";
 import { getInteracoesRecentesCache, getResumoFazendasCache } from "@/lib/cached-data";
 import { normalizarResumo, hojeBrasil } from "@/lib/gestor";
 import { formatarDataBR } from "../../(app)/format";
@@ -15,6 +16,7 @@ const formatarQuando = new Intl.DateTimeFormat("pt-BR", {
 
 // Dados reais de interacoes_log, últimos 30 dias. O layout do gestor já validou isGestor().
 export default async function GestorAgentePage() {
+  await exigirGestor();
   const hoje = hojeBrasil();
   const inicio = new Date(`${hoje}T00:00:00-03:00`);
   inicio.setUTCDate(inicio.getUTCDate() - (DIAS_PERIODO - 1));

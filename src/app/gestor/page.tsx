@@ -1,3 +1,4 @@
+import { exigirGestor } from "@/lib/propriedade";
 import {
   getResumoFazendasCache,
   getLeiteDiarioTodasCache,
@@ -11,6 +12,7 @@ import { ExportarPlanilhas } from "./exportar-planilhas";
 // Dados reais, agregados no banco (0020_gestor_dados_reais.sql). O layout do gestor já validou
 // isGestor() antes de chegar aqui, que é o que autoriza as leituras com service role.
 export default async function GestorDashboardPage() {
+  await exigirGestor();
   const [resumoTodas, leiteTodas, financeiroTodas, ocultas] = await Promise.all([
     getResumoFazendasCache(),
     getLeiteDiarioTodasCache(),

@@ -1,3 +1,4 @@
+import { exigirGestor } from "@/lib/propriedade";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { getResumoFazendasCache } from "@/lib/cached-data";
 import { normalizarResumo } from "@/lib/gestor";
@@ -8,6 +9,7 @@ import { CadastradoresSecao, type Cadastrador } from "./cadastradores-secao";
 // Sem cache: muda só quando alguém dá/tira acesso, e quem olha esta tela quer ver o estado atual.
 // O layout do gestor já validou isGestor(); as RPCs conferem de novo.
 export default async function GestorTecnicosPage() {
+  await exigirGestor();
   const supabase = await createClient();
   const [{ data, error }, resumoData, { data: gestoresData, error: gestoresErro }, usuario, { data: cadastradoresData, error: cadastradoresErro }] = await Promise.all([
     supabase.rpc("acessos_todas_fazendas"),

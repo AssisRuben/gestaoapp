@@ -1,3 +1,4 @@
+import { exigirGestor } from "@/lib/propriedade";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { carregarResumoFazenda } from "@/lib/resumo-fazenda";
@@ -20,6 +21,7 @@ export default async function GestorFazendaPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ de?: string }>;
 }) {
+  await exigirGestor();
   const [{ id }, { de }] = await Promise.all([params, searchParams]);
   const resumo = await carregarResumoFazenda(id);
   if (!resumo) notFound();
