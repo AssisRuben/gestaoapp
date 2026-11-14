@@ -459,6 +459,13 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   por `/auth/confirm` (token_hash).
   `scripts/workflow-homologacao.js` gera as cópias dos workflows sem as credenciais de produção.
 
+## Backup do banco
+
+- `.github/workflows/backup.yml`: pg_dump diário (03:00 Fortaleza) de public/auth/storage, criptografado
+  (gpg AES-256, secret `BACKUP_PASSPHRASE`) e guardado como artefato por 30 dias. O repositório é PÚBLICO:
+  o dump nunca pode sair sem criptografia. Fotos do Storage não entram. Configuração e restauração:
+  `deploy/BACKUP.md`.
+
 ## Visitas técnicas (0032_visitas.sql)
 
 - `visitas` (data, observações, autor + `autor_nome` gravado) e `recomendacoes` (texto, prazo,
