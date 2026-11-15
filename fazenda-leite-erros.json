@@ -52,7 +52,7 @@
     {
       "parameters": {
         "resource": "messages-api",
-        "instanceName": "Adam Rubens",
+        "instanceName": "Gestao Pec",
         "remoteJid": "={{ $json.remoteJid }}",
         "messageText": "={{ $json.resposta }}",
         "options_message": {}

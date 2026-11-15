@@ -379,7 +379,8 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   positivo → prenhe, negativo → vazia. Edição manual vale até a próxima mudança de cobertura.
 - Bot, nó "Acesso Liberado?": processa mensagem de usuário cadastrado e ativo (não grupo) ou a
   conversa do número consigo mesmo (teste), e só de eventos da instância do bot
-  (`body.instance === 'Adam Rubens'` desde 12/11/2026; antes 'Gabriel Bandeira' e 'Assis Rubens') — outra instância com
+  (`body.instance === 'Gestao Pec'` desde 16/11/2026, número +55 85 9620-7701; antes 'Adam Rubens',
+  'Gabriel Bandeira' e 'Assis Rubens') — outra instância com
   webhook pro mesmo n8n repassava as mensagens que ELA recebia (2026-10-11). Trocou a instância? Mude
   ali, no `instanceName` dos nós da Evolution e na credencial ("Evolution Adam", id qFPyWQxioJ8lY37f).
 - **Modo teste** (04/11/2026; JSON do repo com `false` desde 12/11/2026 — vale só depois de reimportar no n8n): `const MODO_TESTE = true` dentro da expressão do "Acesso Liberado?" E do
@@ -651,10 +652,21 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   lista quem ganhou qual pra anotar). Vaca sem número precisa de Nome. Mãe (Vacas/Bezerros) e vaca do leite
   aceitam número OU nome (`_resolver_vaca`; número vale primeiro; nome por `_nome_chave`, sem
   acento/maiúscula/espaço extra). Nome repetido na fazenda é recusado; nome que já serve a duas vacas (dado
-  antigo) pede o número. O bot continua só pelo número (ideia pendente: aceitar nome, respondendo o que
-  entendeu se não achar, sem gravar por aproximação).
-- Bezerro do parto só é criado se a planilha informar. `vacas.nome` é opcional (aparece no site);
-  o bot continua só pelo número.
+  antigo) pede o número. O bot também aceita o nome desde 0061 (seção "Bot: vaca pelo nome").
+- Bezerro do parto só é criado se a planilha informar. `vacas.nome` é opcional; no site aparece
+  como "12 · Mimosa" em toda lista e campo de vaca (`rotuloVaca` em `src/app/(app)/vaca-opcao.ts`).
+
+## Bot: vaca pelo nome (0061_bot_vaca_por_nome.sql)
+
+- A IA põe o nome falado em `entidades.nome_vaca` (ou `nome_mae`, "filha da Mimosa") e deixa o número
+  nulo. No n8n, depois do "Parsear Resposta IA": "Tem Nome de Vaca?" → "Resolver Vaca pelo Nome (RPC)"
+  (`bot_resolver_vacas`, mesma comparação de `_nome_chave`) → "Entidades Resolvidas" (entidades com
+  `numero_vaca`/`numero_mae` preenchidos) → "Vaca Achada?" → "Rotear Intencao". Os nós seguintes leem
+  `$('Entidades Resolvidas')`, não mais o Parsear.
+- Nunca grava por aproximação: nome que não existe ou de duas vacas responde pedindo o número e não
+  faz nada. Número falado vale mais que o nome. Bezerro continua só pelo número.
+- A resposta da consulta de uma vaca com nome sai como "Vaca 1 · Mimosa" (0062: `bot_consultar` troca
+  "Vaca N" no texto pronto; os `_rel_vaca_*` não mudaram).
 
 ## Cobertura atual (0038_cobertura_atual.sql)
 

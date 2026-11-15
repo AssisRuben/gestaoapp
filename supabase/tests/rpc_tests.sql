@@ -2338,6 +2338,69 @@ begin
     perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
   end;
 
+  -- ============================================================
+  -- WhatsApp: vaca pelo nome (0061)
+  -- ============================================================
+
+  declare
+    v_r jsonb;
+  begin
+    insert into vacas (propriedade_id, numero_identificacao, nome, status_produtivo, status_reprodutivo) values
+      (v_propriedade_id, 93001, 'Mimosa Bot', 'lactacao', 'vazia'),
+      (v_propriedade_id, 93002, 'Gêmea Bot', 'novilha', 'vazia'),
+      (v_propriedade_id, 93003, 'gemea bot', 'novilha', 'vazia');
+    perform set_config('request.jwt.claim.sub', '', true);
+
+    -- acha pelo nome sem acento/maiúscula/espaço extra
+    v_r := bot_resolver_vacas('5500000000001', '{"nome_vaca": "  mimosa   BOT "}');
+    if not (v_r->>'ok')::boolean or v_r->'entidades'->>'numero_vaca' <> '93001' then
+      raise exception 'FALHOU [0061]: deveria achar a Mimosa pelo nome (veio %)', v_r;
+    end if;
+    -- mãe pelo nome
+    v_r := bot_resolver_vacas('5500000000001', '{"numero_vaca": "93010", "nome_mae": "Mimosa Bot"}');
+    if not (v_r->>'ok')::boolean or v_r->'entidades'->>'numero_mae' <> '93001' or v_r->'entidades'->>'numero_vaca' <> '93010' then
+      raise exception 'FALHOU [0061]: deveria achar a mãe pelo nome e manter o número da filha (veio %)', v_r;
+    end if;
+    -- número falado vale mais que o nome
+    v_r := bot_resolver_vacas('5500000000001', '{"numero_vaca": "7", "nome_vaca": "Mimosa Bot"}');
+    if v_r->'entidades'->>'numero_vaca' <> '7' then
+      raise exception 'FALHOU [0061]: com número falado, o nome não troca (veio %)', v_r;
+    end if;
+    -- não acha: pergunta, sem gravar nada
+    v_r := bot_resolver_vacas('5500000000001', '{"nome_vaca": "Fantasma"}');
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%Não achei vaca chamada "Fantasma"%' then
+      raise exception 'FALHOU [0061]: nome inexistente deveria perguntar o número (veio %)', v_r;
+    end if;
+    -- nome de duas vacas: pergunta qual
+    v_r := bot_resolver_vacas('5500000000001', '{"nome_vaca": "gêmea bot"}');
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%mais de uma vaca%93002, 93003%' then
+      raise exception 'FALHOU [0061]: nome ambíguo deveria listar os números (veio %)', v_r;
+    end if;
+    -- vaca de outra fazenda não aparece; número não cadastrado é recusado
+    v_r := bot_resolver_vacas('5599999999999', '{"nome_vaca": "Mimosa Bot"}');
+    if (v_r->>'ok')::boolean then
+      raise exception 'FALHOU [0061]: telefone sem fazenda não resolve (veio %)', v_r;
+    end if;
+    -- sem nome: devolve as entidades como vieram
+    v_r := bot_resolver_vacas('5500000000001', '{"numero_vaca": "12", "litros": 15}');
+    if not (v_r->>'ok')::boolean or v_r->'entidades' <> '{"numero_vaca": "12", "litros": 15}'::jsonb then
+      raise exception 'FALHOU [0061]: sem nome não deveria mudar nada (veio %)', v_r;
+    end if;
+
+    -- a resposta da consulta mostra o nome junto do número (0062)
+    v_r := bot_consultar('5500000000001', 'consultar_vaca', '{"numero_vaca": "93001", "tipo_relatorio": "geral"}', '', false);
+    if v_r->>'mensagem' not ilike '%Vaca 93001 · Mimosa Bot* — reprodução%'
+       or v_r->>'mensagem' not ilike '%vaca 93001 · Mimosa Bot%' then
+      raise exception 'FALHOU [0062]: a resposta deveria mostrar o nome da vaca (veio %)', v_r;
+    end if;
+    -- vaca sem nome continua só com o número
+    v_r := bot_consultar('5500000000001', 'consultar_vaca', '{"numero_vaca": "90002", "tipo_relatorio": "reprodutivo"}', '', false);
+    if v_r->>'mensagem' not ilike '%Vaca 90002* — reprodução%' then
+      raise exception 'FALHOU [0062]: vaca sem nome deveria ficar só com o número (veio %)', v_r;
+    end if;
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 
