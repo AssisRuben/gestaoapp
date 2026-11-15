@@ -192,6 +192,20 @@ export async function atualizarPropriedade(
   return { success: true };
 }
 
+// As ações do patrimônio devolvem a lista atualizada: o modal guarda os dados de quando abriu, e
+// sem isso o item novo/alterado/excluído só aparecia ao fechar e abrir de novo.
+export type PatrimonioActionState = { error?: string; success?: boolean; patrimonios?: PatrimonioItem[] } | undefined;
+
+async function listarPatrimonio(propriedadeId: string): Promise<PatrimonioItem[] | undefined> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("patrimonio")
+    .select("*")
+    .eq("propriedade_id", propriedadeId)
+    .order("created_at");
+  return data ?? undefined;
+}
+
 // O banco só aceita os tipos de TIPOS_ATIVO (0060); confere antes pra dar uma mensagem clara.
 function tipoAtivoDoFormulario(formData: FormData): string | null {
   const valor = String(formData.get("tipo_ativo") ?? "");
@@ -199,9 +213,9 @@ function tipoAtivoDoFormulario(formData: FormData): string | null {
 }
 
 export async function cadastrarPatrimonio(
-  _state: ActionState,
+  _state: PatrimonioActionState,
   formData: FormData,
-): Promise<ActionState> {
+): Promise<PatrimonioActionState> {
   const propriedadeAtual = await getPropriedadeAtual();
   if (!propriedadeAtual) {
     return { error: "Nenhuma propriedade vinculada à sua conta." };
@@ -223,13 +237,17 @@ export async function cadastrarPatrimonio(
   }
 
   revalidatePath("/");
-  return { success: true };
+  return { success: true, patrimonios: await listarPatrimonio(propriedadeAtual.id) };
 }
 
 export async function atualizarPatrimonio(
-  _state: ActionState,
+  _state: PatrimonioActionState,
   formData: FormData,
-): Promise<ActionState> {
+): Promise<PatrimonioActionState> {
+  const propriedadeAtual = await getPropriedadeAtual();
+  if (!propriedadeAtual) {
+    return { error: "Nenhuma propriedade vinculada à sua conta." };
+  }
   const id = formData.get("id") as string;
   const tipoAtivo = tipoAtivoDoFormulario(formData);
   if (!tipoAtivo) return { error: "Escolha o tipo do ativo: terra, animais, máquinas ou instalações." };
@@ -250,13 +268,17 @@ export async function atualizarPatrimonio(
   }
 
   revalidatePath("/");
-  return { success: true };
+  return { success: true, patrimonios: await listarPatrimonio(propriedadeAtual.id) };
 }
 
 export async function deletarPatrimonio(
-  _state: ActionState,
+  _state: PatrimonioActionState,
   formData: FormData,
-): Promise<ActionState> {
+): Promise<PatrimonioActionState> {
+  const propriedadeAtual = await getPropriedadeAtual();
+  if (!propriedadeAtual) {
+    return { error: "Nenhuma propriedade vinculada à sua conta." };
+  }
   const id = formData.get("id") as string;
 
   const supabase = await createClient();
@@ -267,5 +289,5 @@ export async function deletarPatrimonio(
   }
 
   revalidatePath("/");
-  return { success: true };
+  return { success: true, patrimonios: await listarPatrimonio(propriedadeAtual.id) };
 }

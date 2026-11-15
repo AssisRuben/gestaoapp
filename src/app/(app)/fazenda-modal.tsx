@@ -271,10 +271,23 @@ function PatrimonioSecao({
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<PatrimonioItem | null>(null);
   const [paraExcluir, setParaExcluir] = useState<PatrimonioItem | null>(null);
+  // lista que a tela mostra: começa com a do modal e é trocada pela que cada ação devolve
+  const [lista, setLista] = useState(itens);
 
   const [criarState, criarAction] = useActionState(cadastrarPatrimonio, undefined);
   const [editarState, editarAction] = useActionState(atualizarPatrimonio, undefined);
   const [excluirState, excluirAction] = useActionState(deletarPatrimonio, undefined);
+
+  // um efeito por ação: vale sempre a lista da última que terminou
+  useEffect(() => {
+    if (criarState?.patrimonios) queueMicrotask(() => setLista(criarState.patrimonios!));
+  }, [criarState]);
+  useEffect(() => {
+    if (editarState?.patrimonios) queueMicrotask(() => setLista(editarState.patrimonios!));
+  }, [editarState]);
+  useEffect(() => {
+    if (excluirState?.patrimonios) queueMicrotask(() => setLista(excluirState.patrimonios!));
+  }, [excluirState]);
 
   useEffect(() => {
     if (criarState?.success) {
@@ -320,7 +333,7 @@ function PatrimonioSecao({
             </tr>
           </thead>
           <tbody>
-            {itens.map((p, i) => (
+            {lista.map((p, i) => (
               <tr
                 key={p.id}
                 onClick={() => setEmEdicao(p)}
@@ -341,7 +354,7 @@ function PatrimonioSecao({
                 </td>
               </tr>
             ))}
-            {itens.length === 0 && (
+            {lista.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-3 py-4 text-center text-zinc-600 dark:text-zinc-400">
                   Nenhum item cadastrado.
