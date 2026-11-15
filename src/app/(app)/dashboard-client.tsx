@@ -244,32 +244,35 @@ export function DashboardClient({
     <div className="flex flex-1 flex-col gap-4 p-4 sm:p-6">
       <SuccessToast mensagem={mensagemToast} />
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* celular: produtor numa linha e os botões juntos embaixo (antes se espalhavam pelos cantos) */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="text-zinc-600 dark:text-zinc-400">
           Produtor: {propriedadeAtual.nome_produtor}
           {propriedadeAtual.municipio && ` · ${propriedadeAtual.municipio}`}
           {propriedadeAtual.estado && `/${propriedadeAtual.estado}`}
         </p>
-        <Link
-          href="/campo"
-          className="rounded-full bg-brand-green px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark"
-        >
-          Lançar no campo
-        </Link>
-        <Link
-          href="/relatorio"
-          className="rounded-full border border-black/[.08] px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
-        >
-          Relatório da visita
-        </Link>
-        {podeCadastrarFazendas && (
+        <div className="flex flex-wrap gap-2">
           <Link
-            href="/fazendas"
+            href="/campo"
+            className="rounded-full bg-brand-green px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark"
+          >
+            Lançar no campo
+          </Link>
+          <Link
+            href="/relatorio"
             className="rounded-full border border-black/[.08] px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
           >
-            Cadastrar fazendas
+            Relatório da visita
           </Link>
-        )}
+          {podeCadastrarFazendas && (
+            <Link
+              href="/fazendas"
+              className="rounded-full border border-black/[.08] px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
+            >
+              Cadastrar fazendas
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-row items-end gap-3">

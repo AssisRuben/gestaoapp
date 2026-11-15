@@ -48,15 +48,16 @@ export function FazendaTrigger({
           width={776}
           height={768}
           sizes="80px"
-          className="h-16 w-auto sm:h-20"
+          className="h-12 w-auto sm:h-20"
         />
       </button>
 
-      <div className="flex min-w-0 flex-col items-center justify-center gap-1">
+      {/* celular: nome junto do logo, alinhado à esquerda; telas maiores: centralizado */}
+      <div className="flex min-w-0 flex-col items-start justify-center gap-0.5 sm:items-center">
         <button
           type="button"
           onClick={abrir}
-          className="max-w-full truncate text-lg font-bold text-black hover:underline lg:text-3xl dark:text-zinc-50"
+          className="max-w-full truncate text-left text-lg font-bold leading-tight text-black hover:underline sm:text-center lg:text-3xl dark:text-zinc-50"
         >
           {propriedade.nome_propriedade}
         </button>

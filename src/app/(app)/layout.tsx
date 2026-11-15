@@ -42,7 +42,7 @@ export default async function AppLayout({
               width={776}
               height={768}
               sizes="80px"
-              className="h-16 w-auto shrink-0 sm:h-20"
+              className="h-12 w-auto shrink-0 sm:h-20"
             />
             <span className="truncate text-center text-lg font-semibold text-zinc-600 dark:text-zinc-400">
               Nenhuma propriedade vinculada
@@ -53,7 +53,7 @@ export default async function AppLayout({
         {propriedadeAtual ? (
           <div className="flex items-center gap-2">
             {gestor && (
-              <Link href="/gestor" className="rounded-full border border-black/[.08] px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]">
+              <Link href="/gestor" className="whitespace-nowrap rounded-full border border-black/[.08] px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]">
                 Painel do gestor
               </Link>
             )}
