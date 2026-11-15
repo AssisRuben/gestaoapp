@@ -15,6 +15,19 @@ export type Acesso = {
   created_at: string;
 };
 
+// Tipos aceitos pelo banco (CHECK patrimonio_tipo_ativo_check, registrado em 0060).
+export const TIPOS_ATIVO = [
+  { valor: "terra", rotulo: "Terra" },
+  { valor: "animais", rotulo: "Animais" },
+  { valor: "maquinas", rotulo: "Máquinas" },
+  { valor: "instalacoes", rotulo: "Instalações" },
+] as const;
+
+export function rotuloTipoAtivo(valor: string | null): string {
+  if (!valor) return "—";
+  return TIPOS_ATIVO.find((t) => t.valor === valor)?.rotulo ?? valor;
+}
+
 export type PatrimonioItem = {
   id: string;
   propriedade_id: string;

@@ -400,6 +400,21 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - Datas de "hoje" no site: sempre `hojeBrasil()` de `src/lib/datas.ts` (fuso de Fortaleza), nunca
   `new Date().toISOString()`.
 
+## Limite diário do bot (0059_limite_bot.sql)
+
+- Cada fazenda tem uma cota de interações por dia com o bot (fuso de Fortaleza): padrão 30
+  (`_limite_bot_padrao()`), ou `propriedades.limite_bot_dia` quando o gestor muda (aba Acessos →
+  "Limite do WhatsApp"; `gestor_definir_limite_bot`, vazio = padrão; `gestor_uso_bot` mostra o uso de
+  hoje). Todos os números da fazenda dividem a cota.
+- Interação = chamada da IA. No n8n, a saída "não" do "Tem Pendência Delete?" passa por "Consumir
+  Interação (RPC)" (`bot_consumir_interacao`, contador atômico em `bot_uso_diario`) antes do AI Agent: o
+  SIM/NÃO de exclusão e a foto sem legenda não contam e nunca são bloqueados. Mensagens juntadas pelo
+  buffer contam uma vez.
+- Estourou: o bot avisa UMA vez no dia (nó "Mensagem Limite Diário", log com
+  `intencao_detectada='limite_diario'`) e depois fica em silêncio. Áudio acima do limite ainda é
+  transcrito (o Whisper roda antes do buffer). Se a RPC falhar, o bot segue respondendo (não trava por
+  erro no banco). Vale só depois de reimportar o workflow no n8n.
+
 ## Acesso de técnicos (0023_acesso_tecnicos.sql)
 
 - O vínculo é a própria `usuarios_propriedades` (0001), com `papel='tecnico'`. Toda RPC/policy só
@@ -617,6 +632,9 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   seção pelo evento `gestaopec:abrir-perfil`). O resumo da fazenda (relatório e gestor) mostra o perfil.
 - Patrimônio tem data e autor de quando foi salvo (trigger de autoria de 0030, colunas novas em
   `patrimonio`): coluna "Salvo em" e linha "Lançado por" — o usuário não digita data.
+- `patrimonio.tipo_ativo` só aceita terra | animais | maquinas | instalacoes (CHECK que já existia
+  na produção, criado fora das migrations; registrado em 0060). O site escolhe numa lista
+  (`TIPOS_ATIVO` em `src/app/(app)/fazenda-types.ts`).
 
 ## Importar rebanho por planilha (0045_importar_rebanho.sql)
 

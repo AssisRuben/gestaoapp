@@ -3,7 +3,7 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPropriedadeAtual, getPropriedadesDoUsuario } from "@/lib/propriedade";
-import type { UsuarioWhatsapp, PatrimonioItem, Acesso } from "./fazenda-types";
+import { TIPOS_ATIVO, type UsuarioWhatsapp, type PatrimonioItem, type Acesso } from "./fazenda-types";
 import { COLUNAS_PERFIL, type PerfilFazenda } from "@/lib/perfil-fazenda";
 import { perfilDoFormulario } from "@/lib/perfil-fazenda-form";
 
@@ -192,6 +192,12 @@ export async function atualizarPropriedade(
   return { success: true };
 }
 
+// O banco só aceita os tipos de TIPOS_ATIVO (0060); confere antes pra dar uma mensagem clara.
+function tipoAtivoDoFormulario(formData: FormData): string | null {
+  const valor = String(formData.get("tipo_ativo") ?? "");
+  return TIPOS_ATIVO.some((t) => t.valor === valor) ? valor : null;
+}
+
 export async function cadastrarPatrimonio(
   _state: ActionState,
   formData: FormData,
@@ -200,11 +206,13 @@ export async function cadastrarPatrimonio(
   if (!propriedadeAtual) {
     return { error: "Nenhuma propriedade vinculada à sua conta." };
   }
+  const tipoAtivo = tipoAtivoDoFormulario(formData);
+  if (!tipoAtivo) return { error: "Escolha o tipo do ativo: terra, animais, máquinas ou instalações." };
 
   const supabase = await createClient();
   const { error } = await supabase.from("patrimonio").insert({
     propriedade_id: propriedadeAtual.id,
-    tipo_ativo: (formData.get("tipo_ativo") as string) || null,
+    tipo_ativo: tipoAtivo,
     valor_total: formData.get("valor_total") ? Number(formData.get("valor_total")) : null,
     taxa_juros: formData.get("taxa_juros") ? Number(formData.get("taxa_juros")) : null,
     vida_util: formData.get("vida_util") ? Number(formData.get("vida_util")) : null,
@@ -223,12 +231,14 @@ export async function atualizarPatrimonio(
   formData: FormData,
 ): Promise<ActionState> {
   const id = formData.get("id") as string;
+  const tipoAtivo = tipoAtivoDoFormulario(formData);
+  if (!tipoAtivo) return { error: "Escolha o tipo do ativo: terra, animais, máquinas ou instalações." };
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("patrimonio")
     .update({
-      tipo_ativo: (formData.get("tipo_ativo") as string) || null,
+      tipo_ativo: tipoAtivo,
       valor_total: formData.get("valor_total") ? Number(formData.get("valor_total")) : null,
       taxa_juros: formData.get("taxa_juros") ? Number(formData.get("taxa_juros")) : null,
       vida_util: formData.get("vida_util") ? Number(formData.get("vida_util")) : null,

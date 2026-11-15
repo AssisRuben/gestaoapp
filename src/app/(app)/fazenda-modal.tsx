@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import type { Propriedade } from "@/lib/propriedade";
-import type { UsuarioWhatsapp, PatrimonioItem, Acesso } from "./fazenda-types";
+import { TIPOS_ATIVO, rotuloTipoAtivo, type UsuarioWhatsapp, type PatrimonioItem, type Acesso } from "./fazenda-types";
 import {
   atualizarPropriedade,
   cadastrarPatrimonio,
@@ -328,7 +328,7 @@ function PatrimonioSecao({
                   i % 2 === 1 ? "bg-black/[.02] dark:bg-white/[.03]" : ""
                 }`}
               >
-                <td className="px-3 py-2 text-black dark:text-zinc-50">{p.tipo_ativo ?? "—"}</td>
+                <td className="px-3 py-2 text-black dark:text-zinc-50">{rotuloTipoAtivo(p.tipo_ativo)}</td>
                 <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">{formatarMoeda(p.valor_total)}</td>
                 <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">
                   {p.taxa_juros !== null
@@ -364,7 +364,16 @@ function PatrimonioSecao({
               <label htmlFor="p_tipo_ativo" className={LABEL_CLASSES}>
                 Ativo
               </label>
-              <input id="p_tipo_ativo" name="tipo_ativo" type="text" placeholder="trator, ordenhadeira..." className={CAMPO_CLASSES} />
+              <select id="p_tipo_ativo" name="tipo_ativo" required defaultValue="" className={CAMPO_CLASSES}>
+                <option value="" disabled>
+                  Escolha o tipo
+                </option>
+                {TIPOS_ATIVO.map((t) => (
+                  <option key={t.valor} value={t.valor}>
+                    {t.rotulo}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="p_valor_total" className={LABEL_CLASSES}>
@@ -421,13 +430,22 @@ function PatrimonioSecao({
               <label htmlFor="ep_tipo_ativo" className={LABEL_CLASSES}>
                 Ativo
               </label>
-              <input
+              <select
                 id="ep_tipo_ativo"
                 name="tipo_ativo"
-                type="text"
-                defaultValue={emEdicao.tipo_ativo ?? ""}
+                required
+                defaultValue={TIPOS_ATIVO.some((t) => t.valor === emEdicao.tipo_ativo) ? (emEdicao.tipo_ativo ?? "") : ""}
                 className={CAMPO_CLASSES}
-              />
+              >
+                <option value="" disabled>
+                  Escolha o tipo
+                </option>
+                {TIPOS_ATIVO.map((t) => (
+                  <option key={t.valor} value={t.valor}>
+                    {t.rotulo}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="ep_valor_total" className={LABEL_CLASSES}>

@@ -106,6 +106,32 @@ export async function removerGestor(
   return { success: true };
 }
 
+// Limite diário de interações com o bot, por fazenda (0059). Campo vazio = volta ao padrão.
+export async function definirLimiteBot(
+  _state: TecnicoActionState,
+  formData: FormData,
+): Promise<TecnicoActionState> {
+  if (!(await isGestor())) return { error: await semAcessoGestor() };
+
+  const propriedadeId = String(formData.get("propriedade_id") ?? "");
+  if (!propriedadeId) return { error: "Escolha a fazenda." };
+  const texto = String(formData.get("limite") ?? "").trim();
+  const limite = texto === "" ? null : Number(texto);
+  if (limite !== null && (!Number.isInteger(limite) || limite < 1 || limite > 1000)) {
+    return { error: "O limite deve ser um número inteiro entre 1 e 1000 (ou vazio pra usar o padrão)." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("gestor_definir_limite_bot", {
+    p_propriedade_id: propriedadeId,
+    p_limite: limite,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/gestor/tecnicos");
+  return { success: true };
+}
+
 // Técnicos autorizados a cadastrar fazendas de acompanhamento (0056).
 export async function adicionarCadastrador(
   _state: TecnicoActionState,

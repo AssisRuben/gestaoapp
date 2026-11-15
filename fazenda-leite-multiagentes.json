@@ -2080,7 +2080,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  propriedade_id: $('Identificar Usuario').first().json.propriedade_id || null,\n  intencao_detectada: $('Parsear Resposta IA').isExecuted ? $('Parsear Resposta IA').first().json.intencao : 'confirmacao_exclusao',\n  entidades_extraidas: $('Parsear Resposta IA').isExecuted ? $('Parsear Resposta IA').first().json.entidades : null,\n  mensagem_recebida: $('Buffer - Ler Final').isExecuted ? ($('Buffer - Ler Final').first().json.data || null) : null,\n  resposta_enviada: $json.resposta_sugerida || null\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  propriedade_id: $('Identificar Usuario').first().json.propriedade_id || null,\n  intencao_detectada: $('Parsear Resposta IA').isExecuted ? $('Parsear Resposta IA').first().json.intencao : ($('Mensagem Limite Diário').isExecuted ? 'limite_diario' : 'confirmacao_exclusao'),\n  entidades_extraidas: $('Parsear Resposta IA').isExecuted ? $('Parsear Resposta IA').first().json.entidades : null,\n  mensagem_recebida: $('Buffer - Ler Final').isExecuted ? ($('Buffer - Ler Final').first().json.data || null) : null,\n  resposta_enviada: $json.resposta_sugerida || null\n}) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -2843,6 +2843,135 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_consumir_interacao",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_telefone: $('Webhook').first().json.body.data.key.remoteJid }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2128,
+        13200
+      ],
+      "id": "a6d8d472-d7da-41e8-b7e6-3f5fab805871",
+      "name": "Consumir Interação (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "974130ef-a978-4f73-a543-fcc56072549f",
+              "leftValue": "={{ $json.ok !== false }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1936,
+        13200
+      ],
+      "id": "4394ef5b-1b9d-4d2e-aa17-2817a4db8509",
+      "name": "Dentro do Limite?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9cbf8578-bc95-4cdf-a6d7-384dbdcb0f6b",
+              "leftValue": "={{ $('Consumir Interação (RPC)').item.json.avisar === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1936,
+        12960
+      ],
+      "id": "aad22582-d2b6-46f3-ae79-146c1e15772a",
+      "name": "Avisar Limite?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "36061a46-d846-4d19-97a2-8955e6a57780",
+              "name": "resposta_sugerida",
+              "type": "string",
+              "value": "={{ $('Consumir Interação (RPC)').item.json.mensagem || 'Sua fazenda já usou as mensagens de hoje com o assistente do Gestão Pec. Amanhã libera de novo.' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1744,
+        12880
+      ],
+      "id": "8d7eded2-5d29-4e39-91e6-3bfb728a764e",
+      "name": "Mensagem Limite Diário"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -1744,
+        13060
+      ],
+      "id": "fe6272f2-0cb2-4ead-9bb3-07c4d311fb7e",
+      "name": "Limite Esgotado - Silêncio"
     }
   ],
   "pinData": {},
@@ -3210,7 +3339,7 @@
         ],
         [
           {
-            "node": "AI Agent",
+            "node": "Consumir Interação (RPC)",
             "type": "main",
             "index": 0
           }
@@ -4168,6 +4297,69 @@
         [
           {
             "node": "Outra Ação (RPC)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consumir Interação (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Dentro do Limite?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dentro do Limite?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Avisar Limite?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisar Limite?": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Limite Diário",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Limite Esgotado - Silêncio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem Limite Diário": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }

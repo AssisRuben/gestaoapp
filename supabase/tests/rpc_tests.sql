@@ -1648,8 +1648,8 @@ begin
     v_conta uuid;
   begin
     -- 85 99777-1234 é da fazenda criada pelo gestor no teste de 0044 (sem o 9 também tem que bater)
-    insert into auth.users (email, raw_user_meta_data)
-    values ('__produtor_zap__@exemplo.invalid',
+    insert into auth.users (id, email, raw_user_meta_data)
+    values (gen_random_uuid(), '__produtor_zap__@exemplo.invalid',
             '{"nome_propriedade": "__duplicada__", "nome_produtor": "Fulano", "whatsapp": "(85) 9777-1234"}')
     returning id into v_conta;
     if exists (select 1 from propriedades where nome_propriedade = '__duplicada__')
@@ -1657,8 +1657,8 @@ begin
       raise exception 'FALHOU [cadastro com WhatsApp existente]: não deveria criar outra fazenda';
     end if;
 
-    insert into auth.users (email, raw_user_meta_data)
-    values ('__produtor_novo__@exemplo.invalid',
+    insert into auth.users (id, email, raw_user_meta_data)
+    values (gen_random_uuid(), '__produtor_novo__@exemplo.invalid',
             '{"nome_propriedade": "__fazenda_nova__", "nome_produtor": "Beltrano", "whatsapp": "(88) 99555-0000"}')
     returning id into v_conta;
     if not exists (select 1 from usuarios_propriedades up join propriedades p on p.id = up.propriedade_id
@@ -1675,7 +1675,7 @@ begin
     v_conta uuid;
     v_faz uuid;
   begin
-    insert into auth.users (email) values ('__google__@exemplo.invalid') returning id into v_conta;
+    insert into auth.users (id, email) values (gen_random_uuid(), '__google__@exemplo.invalid') returning id into v_conta;
     perform set_config('request.jwt.claim.sub', v_conta::text, true);
 
     begin
@@ -1713,8 +1713,8 @@ begin
       raise exception 'FALHOU [gestor_salvar_entidade]: telefone novo deveria atualizar e responsável vazio manter';
     end if;
 
-    insert into auth.users (email, raw_user_meta_data)
-    values ('__produtor_gps__@exemplo.invalid',
+    insert into auth.users (id, email, raw_user_meta_data)
+    values (gen_random_uuid(), '__produtor_gps__@exemplo.invalid',
             '{"nome_propriedade": "__com_gps__", "nome_produtor": "X", "whatsapp": "(88) 97777-6666", "latitude": "-5.123456", "longitude": "abc"}')
     returning id into v_conta;
     -- índices por entidade (0049): a fazenda de teste recebe 10 doses (2 kits) pela associação
@@ -1888,8 +1888,8 @@ begin
     end;
 
     -- cadastro "Sou produtor" com as 3 perguntas
-    insert into auth.users (email, raw_user_meta_data)
-    values ('__produtor_perfil__@exemplo.invalid',
+    insert into auth.users (id, email, raw_user_meta_data)
+    values (gen_random_uuid(), '__produtor_perfil__@exemplo.invalid',
             '{"nome_propriedade": "__com_perfil__", "nome_produtor": "Y", "whatsapp": "(88) 97777-5555",
               "perfil": {"area_leite_ha": "8", "irrigado": "true", "area_irrigada_ha": "2", "raca": "gir"}}')
     returning id into v_conta;
@@ -1899,7 +1899,14 @@ begin
     end if;
 
     -- patrimônio: data e autor de quando foi salvo
-    insert into patrimonio (propriedade_id, tipo_ativo, valor_total) values (v_propriedade_id, 'Trator', 1000)
+    -- tipo do ativo só da lista (0060)
+    begin
+      insert into patrimonio (propriedade_id, tipo_ativo, valor_total) values (v_propriedade_id, 'Trator', 1000);
+      raise exception 'FALHOU [patrimônio]: tipo fora da lista deveria ser recusado';
+    exception when check_violation then
+      null;
+    end;
+    insert into patrimonio (propriedade_id, tipo_ativo, valor_total) values (v_propriedade_id, 'maquinas', 1000)
     returning id into v_pat;
     update patrimonio set valor_total = 900 where id = v_pat;
     if (select criado_por from patrimonio where id = v_pat) is distinct from v_usuario_id
@@ -1930,8 +1937,8 @@ begin
     v_r jsonb;
     v_saldo integer;
   begin
-    insert into auth.users (email, raw_user_meta_data)
-    values ('__tecnico_doses__@exemplo.invalid', '{"nome": "Técnico Doses", "perfil": "tecnico"}')
+    insert into auth.users (id, email, raw_user_meta_data)
+    values (gen_random_uuid(), '__tecnico_doses__@exemplo.invalid', '{"nome": "Técnico Doses", "perfil": "tecnico"}')
     returning id into v_tec;
     insert into usuarios_propriedades (usuario_id, propriedade_id, papel) values (v_tec, v_propriedade_id, 'tecnico');
     insert into touros (nome, codigo) values ('__touro_tecnico__', '__TT__') returning id into v_touro;
@@ -2246,6 +2253,89 @@ begin
        or exists (select 1 from financeiro where id = v_ab.financeiro_id) then
       raise exception 'FALHOU [0058]: excluir deveria apagar abastecimento e despesa e devolver o caminho da foto';
     end if;
+  end;
+
+  -- ============================================================
+  -- limite diário do bot (0059)
+  -- ============================================================
+
+  declare
+    v_r jsonb;
+    v_uso record;
+  begin
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+    insert into gestores (usuario_id) values (v_usuario_id) on conflict do nothing;
+
+    -- padrão 30, sem limite próprio
+    select * into v_uso from gestor_uso_bot() where propriedade_id = v_propriedade_id;
+    if v_uso.limite <> 30 or v_uso.limite_proprio is not null or v_uso.usadas_hoje <> 0 then
+      raise exception 'FALHOU [0059]: fazenda nova deveria estar no padrão de 30, sem uso (veio %)', v_uso;
+    end if;
+
+    perform gestor_definir_limite_bot(v_propriedade_id, 2);
+    begin
+      perform gestor_definir_limite_bot(v_propriedade_id, 0);
+      raise exception 'FALHOU [0059]: limite zero deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%entre 1 e 1000%' then raise exception 'FALHOU [0059]: erro inesperado: %', sqlerrm; end if;
+    end;
+
+    -- o bot (service role, sem usuário) consome a cota da fazenda, por qualquer número dela
+    perform set_config('request.jwt.claim.sub', '', true);
+    v_r := bot_consumir_interacao('5500000000001@s.whatsapp.net');
+    if not (v_r->>'ok')::boolean or (v_r->>'usadas')::int <> 1 then
+      raise exception 'FALHOU [0059]: primeira interação deveria passar (veio %)', v_r;
+    end if;
+    v_r := bot_consumir_interacao('5500000000001');
+    if not (v_r->>'ok')::boolean or (v_r->>'usadas')::int <> 2 then
+      raise exception 'FALHOU [0059]: segunda interação deveria passar (veio %)', v_r;
+    end if;
+    -- estourou: recusa e avisa uma vez só
+    v_r := bot_consumir_interacao('5500000000001');
+    if (v_r->>'ok')::boolean or not (v_r->>'avisar')::boolean or v_r->>'mensagem' not ilike '%2 mensagens de hoje%' then
+      raise exception 'FALHOU [0059]: acima do limite deveria recusar e avisar (veio %)', v_r;
+    end if;
+    v_r := bot_consumir_interacao('5500000000001');
+    if (v_r->>'ok')::boolean or (v_r->>'avisar')::boolean then
+      raise exception 'FALHOU [0059]: o aviso de limite deveria sair uma vez só no dia (veio %)', v_r;
+    end if;
+    if (select interacoes from bot_uso_diario where propriedade_id = v_propriedade_id and dia = _hoje_fazenda()) <> 2 then
+      raise exception 'FALHOU [0059]: recusa não deveria contar como interação';
+    end if;
+    -- número sem fazenda não é barrado aqui (quem barra é o "Acesso Liberado?")
+    v_r := bot_consumir_interacao('5599999999999');
+    if not (v_r->>'ok')::boolean then
+      raise exception 'FALHOU [0059]: número sem fazenda não deveria ser contado (veio %)', v_r;
+    end if;
+
+    -- voltando ao padrão, libera de novo no mesmo dia
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+    perform gestor_definir_limite_bot(v_propriedade_id, null);
+    select * into v_uso from gestor_uso_bot() where propriedade_id = v_propriedade_id;
+    if v_uso.limite <> 30 or v_uso.limite_proprio is not null or v_uso.usadas_hoje <> 2 then
+      raise exception 'FALHOU [0059]: gestor_uso_bot deveria mostrar o padrão e 2 usadas (veio %)', v_uso;
+    end if;
+    perform set_config('request.jwt.claim.sub', '', true);
+    v_r := bot_consumir_interacao('5500000000001');
+    if not (v_r->>'ok')::boolean or (v_r->>'usadas')::int <> 3 then
+      raise exception 'FALHOU [0059]: com o limite padrão deveria liberar de novo (veio %)', v_r;
+    end if;
+
+    -- só o gestor vê e muda
+    perform set_config('request.jwt.claim.sub', gen_random_uuid()::text, true);
+    begin
+      perform gestor_definir_limite_bot(v_propriedade_id, 50);
+      raise exception 'FALHOU [0059]: quem não é gestor não muda o limite';
+    exception when others then
+      if sqlerrm not ilike '%apenas o gestor%' then raise exception 'FALHOU [0059]: erro inesperado: %', sqlerrm; end if;
+    end;
+    begin
+      perform * from gestor_uso_bot();
+      raise exception 'FALHOU [0059]: quem não é gestor não vê o uso';
+    exception when others then
+      if sqlerrm not ilike '%apenas o gestor%' then raise exception 'FALHOU [0059]: erro inesperado: %', sqlerrm; end if;
+    end;
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
   end;
 
   raise notice 'TODOS OS TESTES PASSARAM';

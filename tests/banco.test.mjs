@@ -21,7 +21,8 @@ const db = new PGlite();
 await db.exec(`
   create role anon; create role authenticated; create role service_role;
   create schema auth;
-  create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb);
+  -- sem default no id, como no Supabase: insert sem id falha aqui também (o SQL Editor recusava)
+  create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb);
   create function auth.uid() returns uuid language sql stable
     as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 `);
@@ -37,7 +38,7 @@ for (const arquivo of ["supabase/base/0000_esquema_original.sql", ...migrations.
 console.log(`banco montado do zero: 0000 + ${migrations.length} migrations (até ${migrations.at(-1)})`);
 
 // o rpc_tests.sql usa um usuário existente como "quem está logado"
-await db.exec(`insert into auth.users (email, raw_user_meta_data) values ('teste@exemplo.invalid', '{"nome":"Usuário de teste"}')`);
+await db.exec(`insert into auth.users (id, email, raw_user_meta_data) values (gen_random_uuid(), 'teste@exemplo.invalid', '{"nome":"Usuário de teste"}')`);
 
 // o arquivo termina com ROLLBACK; troca o aviso final por um erro com nome conhecido pra ter
 // certeza de que TODAS as asserções rodaram (um erro antes disso é uma falha de verdade)
