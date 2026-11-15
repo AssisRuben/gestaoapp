@@ -8,6 +8,7 @@ import { formatarDataBR } from "../format";
 import type { Bezerro, VacaOpcao } from "./types";
 import { VirouVaca, idadeTexto } from "./virou-vaca";
 import { hojeBrasil } from "@/lib/datas";
+import { rotuloVaca } from "../vaca-opcao";
 
 const SEXO_LABEL: Record<string, string> = {
   macho: "Macho",
@@ -59,7 +60,7 @@ function CamposBezerro({
           <option value="">Nenhuma</option>
           {vacas.map((v) => (
             <option key={v.id} value={v.id}>
-              {v.numero_identificacao}
+              {rotuloVaca(v)}
             </option>
           ))}
         </select>
@@ -186,7 +187,7 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
                   {bezerro.numero_identificacao}
                 </td>
                 <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
-                  {bezerro.mae ? bezerro.mae.numero_identificacao : "—"}
+                  {bezerro.mae ? rotuloVaca(bezerro.mae) : "—"}
                 </td>
                 <td className="px-4 py-2 text-black dark:text-zinc-50">
                   {bezerro.sexo ? SEXO_LABEL[bezerro.sexo] ?? bezerro.sexo : "—"}
@@ -225,7 +226,7 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
                 </span>
               }
             />
-            <CardRow label="Mãe" value={bezerro.mae ? bezerro.mae.numero_identificacao : "—"} />
+            <CardRow label="Mãe" value={bezerro.mae ? rotuloVaca(bezerro.mae) : "—"} />
             <CardRow
               label="Nascimento"
               value={

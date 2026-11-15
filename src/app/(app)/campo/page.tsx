@@ -25,9 +25,9 @@ export default async function CampoPage() {
   const saldoTecnico = new Map(dosesTecnico.saldos.map((s) => [s.touro_id, s.saldo]));
 
   const vacas: VacaCampo[] = (
-    vacasData as unknown as { id: string; numero_identificacao: number; status_produtivo: string; status_reprodutivo: string }[]
+    vacasData as unknown as { id: string; numero_identificacao: number; nome: string | null; status_produtivo: string; status_reprodutivo: string }[]
   )
-    .map((v) => ({ id: v.id, numero: v.numero_identificacao, produtivo: v.status_produtivo, reprodutivo: v.status_reprodutivo }))
+    .map((v) => ({ id: v.id, numero: v.numero_identificacao, nome: v.nome, produtivo: v.status_produtivo, reprodutivo: v.status_reprodutivo }))
     .sort((a, b) => a.numero - b.numero);
 
   const saldo = new Map((saldosData as unknown as SaldoDoses[]).map((s) => [s.touro_id, Number(s.saldo)]));

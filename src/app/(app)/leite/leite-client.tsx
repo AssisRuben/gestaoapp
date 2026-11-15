@@ -10,6 +10,8 @@ import type { RegistroLeite, VacaOpcao } from "./types";
 import { formatarDataBR } from "../format";
 import { Autoria } from "../autoria";
 import { hojeBrasil, primeiroDiaMesBrasil } from "@/lib/datas";
+import { useViewportVisivel, rolarCampoParaVisivel } from "../../viewport-visivel";
+import { rotuloVaca } from "../vaca-opcao";
 
 const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
@@ -66,6 +68,8 @@ export function LeiteClient({
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [registroEmEdicao, setRegistroEmEdicao] = useState<RegistroLeite | null>(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState<RegistroLeite | null>(null);
+  // modal de edição só na parte da tela acima do teclado do celular
+  const areaVisivel = useViewportVisivel();
 
   const [criarState, criarAction, criarPending] = useActionState(registrarLeite, undefined);
   const criarFormRef = useRef<HTMLFormElement>(null);
@@ -223,7 +227,7 @@ export function LeiteClient({
                 }`}
               >
                 <td className="px-4 py-2 text-black dark:text-zinc-50">
-                  {registro.vaca.numero_identificacao}
+                  {rotuloVaca(registro.vaca)}
                 </td>
                 <td className="px-4 py-2 text-black dark:text-zinc-50">{dataComOrdenha(registro)}</td>
                 <td className="px-4 py-2 text-black dark:text-zinc-50">
@@ -246,7 +250,7 @@ export function LeiteClient({
         {registrosFiltrados.map((registro) => (
           <MobileCard key={registro.id} onClick={() => setRegistroEmEdicao(registro)}>
             <CardHeader
-              title={`Vaca ${registro.vaca.numero_identificacao}`}
+              title={`Vaca ${rotuloVaca(registro.vaca)}`}
               accentClassName="bg-leite"
               badge={
                 <span className="font-medium text-black dark:text-zinc-50">
@@ -292,7 +296,7 @@ export function LeiteClient({
                 </option>
                 {vacas.map((v) => (
                   <option key={v.id} value={v.id}>
-                    {v.numero_identificacao}
+                    {rotuloVaca(v)}
                   </option>
                 ))}
               </select>
@@ -362,17 +366,18 @@ export function LeiteClient({
       )}
 
       {registroEmEdicao && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div style={areaVisivel} className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/30" onClick={() => setRegistroEmEdicao(null)} />
           <form
             key={registroEmEdicao.id}
             action={editarAction}
-            className="relative flex max-h-[90vh] w-full max-w-lg flex-col gap-4 overflow-y-auto rounded-2xl bg-white p-6 dark:bg-zinc-950"
+            onFocus={rolarCampoParaVisivel}
+            className="relative flex max-h-full w-full max-w-lg flex-col gap-4 overflow-y-auto rounded-2xl bg-white p-6 dark:bg-zinc-950"
           >
             <input type="hidden" name="registro_id" value={registroEmEdicao.id} />
 
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">
-              Editar registro — vaca {registroEmEdicao.vaca.numero_identificacao}
+              Editar registro — vaca {rotuloVaca(registroEmEdicao.vaca)}
             </h2>
             <Autoria registro={registroEmEdicao} nomes={nomes} />
 
@@ -460,7 +465,7 @@ export function LeiteClient({
 
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Excluir registro?</h2>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Vaca {registroParaExcluir.vaca.numero_identificacao} — {formatarLitros(Number(registroParaExcluir.litros))} em{" "}
+              Vaca {rotuloVaca(registroParaExcluir.vaca)} — {formatarLitros(Number(registroParaExcluir.litros))} em{" "}
               {dataComOrdenha(registroParaExcluir)}. Essa ação não pode ser desfeita.
             </p>
 

@@ -30,6 +30,7 @@ import type {
   DosesTecnico,
 } from "./types";
 import { hojeBrasil, somarDias } from "@/lib/datas";
+import { rotuloVaca } from "../vaca-opcao";
 
 const SEXO_BEZERRO_LABEL: Record<string, string> = {
   macho: "Macho",
@@ -296,7 +297,7 @@ export function ReproducaoClient({
                   }`}
                 >
                   <td className="px-4 py-2 text-black dark:text-zinc-50">
-                    {cobertura.vaca.numero_identificacao}
+                    {rotuloVaca(cobertura.vaca)}
                   </td>
                   <td className="px-4 py-2 text-black dark:text-zinc-50">
                     {formatarDataBR(cobertura.data_cobertura)}
@@ -339,7 +340,7 @@ export function ReproducaoClient({
           return (
             <MobileCard key={cobertura.id} onClick={() => setCoberturaEmEdicao(cobertura)}>
               <CardHeader
-                title={`Vaca ${cobertura.vaca.numero_identificacao}`}
+                title={`Vaca ${rotuloVaca(cobertura.vaca)}`}
                 accentClassName="bg-reproducao"
                 badge={
                   <span
@@ -401,7 +402,7 @@ export function ReproducaoClient({
                 }`}
               >
                 <td className="px-4 py-2 text-black dark:text-zinc-50">
-                  {parto.vaca.numero_identificacao}
+                  {rotuloVaca(parto.vaca)}
                 </td>
                 <td className="px-4 py-2 text-black dark:text-zinc-50">{formatarDataBR(parto.data_parto)}</td>
                 <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">{parto.iep ?? "—"}</td>
@@ -425,7 +426,7 @@ export function ReproducaoClient({
         {partosFiltrados.map((parto) => (
           <MobileCard key={parto.id} onClick={() => setPartoEmEdicao(parto)}>
             <CardHeader
-              title={`Vaca ${parto.vaca.numero_identificacao}`}
+              title={`Vaca ${rotuloVaca(parto.vaca)}`}
               accentClassName="bg-reproducao"
               badge={
                 <span
@@ -476,7 +477,7 @@ export function ReproducaoClient({
                 </option>
                 {vacas.map((v) => (
                   <option key={v.id} value={v.id}>
-                    {v.numero_identificacao}
+                    {rotuloVaca(v)}
                   </option>
                 ))}
               </select>
@@ -558,7 +559,7 @@ export function ReproducaoClient({
             <input type="hidden" name="parto_id" value={partoEmEdicao.id} />
 
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">
-              Editar parto — vaca {partoEmEdicao.vaca.numero_identificacao}
+              Editar parto — vaca {rotuloVaca(partoEmEdicao.vaca)}
             </h2>
             <Autoria registro={partoEmEdicao} nomes={nomes} />
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -637,7 +638,7 @@ export function ReproducaoClient({
                 </option>
                 {vacas.map((v) => (
                   <option key={v.id} value={v.id}>
-                    {v.numero_identificacao}
+                    {rotuloVaca(v)}
                   </option>
                 ))}
               </select>
@@ -694,7 +695,7 @@ export function ReproducaoClient({
             <input type="hidden" name="cobertura_id" value={coberturaEmEdicao.id} />
 
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">
-              Editar cobertura — vaca {coberturaEmEdicao.vaca.numero_identificacao}
+              Editar cobertura — vaca {rotuloVaca(coberturaEmEdicao.vaca)}
             </h2>
             <Autoria registro={coberturaEmEdicao} nomes={nomes} />
 
@@ -792,7 +793,7 @@ export function ReproducaoClient({
               Excluir cobertura?
             </h2>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Cobertura da vaca {coberturaParaExcluir.vaca.numero_identificacao} em{" "}
+              Cobertura da vaca {rotuloVaca(coberturaParaExcluir.vaca)} em{" "}
               {coberturaParaExcluir.data_cobertura}. Essa ação não pode ser desfeita.
             </p>
 
@@ -831,7 +832,7 @@ export function ReproducaoClient({
 
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Excluir parto?</h2>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Parto da vaca {partoParaExcluir.vaca.numero_identificacao} em{" "}
+              Parto da vaca {rotuloVaca(partoParaExcluir.vaca)} em{" "}
               {partoParaExcluir.data_parto}. Essa ação não pode ser desfeita — se houver bezerro
               ou leite vinculados, a exclusão vai ser bloqueada.
             </p>

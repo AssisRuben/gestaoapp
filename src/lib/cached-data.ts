@@ -38,7 +38,7 @@ export const getVacasCache = unstable_cache(
     return buscarTodasPaginas((de, ate) =>
       supabase
         .from("vacas")
-        .select("*, mae:mae_id(id, numero_identificacao)")
+        .select("*, mae:mae_id(id, numero_identificacao, nome)")
         .eq("propriedade_id", propriedadeId)
         .order("numero_identificacao")
         .order("id")
@@ -56,7 +56,7 @@ export const getBezerrosCache = unstable_cache(
       supabase
         .from("bezerros")
         .select(
-          "*, mae:mae_id(id, numero_identificacao), vaca_gerada:vaca_id_gerada(id, numero_identificacao)",
+          "*, mae:mae_id(id, numero_identificacao, nome), vaca_gerada:vaca_id_gerada(id, numero_identificacao, nome)",
         )
         .eq("propriedade_id", propriedadeId)
         .order("numero_identificacao")
@@ -74,7 +74,7 @@ export const getControleLeiteCache = unstable_cache(
     return buscarTodasPaginas((de, ate) =>
       supabase
         .from("controle_leite")
-        .select("*, vaca:vaca_id!inner(id, numero_identificacao, propriedade_id)")
+        .select("*, vaca:vaca_id!inner(id, numero_identificacao, nome, propriedade_id)")
         .eq("vaca.propriedade_id", propriedadeId)
         .order("numero_identificacao", { foreignTable: "vaca" })
         .order("data_controle", { ascending: false })
@@ -109,7 +109,7 @@ export const getCoberturasCache = unstable_cache(
     return buscarTodasPaginas((de, ate) =>
       supabase
         .from("coberturas")
-        .select("*, vaca:vaca_id!inner(id, numero_identificacao, propriedade_id)")
+        .select("*, vaca:vaca_id!inner(id, numero_identificacao, nome, propriedade_id)")
         .eq("vaca.propriedade_id", propriedadeId)
         .order("numero_identificacao", { foreignTable: "vaca" })
         .order("data_cobertura", { ascending: false })
@@ -127,7 +127,7 @@ export const getPartosCache = unstable_cache(
     return buscarTodasPaginas((de, ate) =>
       supabase
         .from("partos")
-        .select("*, vaca:vaca_id!inner(id, numero_identificacao, propriedade_id)")
+        .select("*, vaca:vaca_id!inner(id, numero_identificacao, nome, propriedade_id)")
         .eq("vaca.propriedade_id", propriedadeId)
         .order("numero_identificacao", { foreignTable: "vaca" })
         .order("data_parto", { ascending: false })

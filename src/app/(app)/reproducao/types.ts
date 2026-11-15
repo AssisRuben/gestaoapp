@@ -14,7 +14,7 @@ export type Cobertura = CamposAutoria & {
   // dose do programa que era do técnico (0055); nulo = da fazenda
   dose_tecnico_id?: string | null;
   created_at: string;
-  vaca: { id: string; numero_identificacao: number };
+  vaca: { id: string; numero_identificacao: number; nome?: string | null };
 };
 
 export type Parto = CamposAutoria & {
@@ -25,7 +25,7 @@ export type Parto = CamposAutoria & {
   iep: number | null;
   ativa: boolean;
   created_at: string;
-  vaca: { id: string; numero_identificacao: number };
+  vaca: { id: string; numero_identificacao: number; nome?: string | null };
 };
 
 export type {

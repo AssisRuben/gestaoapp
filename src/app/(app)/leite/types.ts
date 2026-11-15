@@ -11,5 +11,5 @@ export type RegistroLeite = CamposAutoria & {
   data_controle: string;
   periodo: Periodo | null;
   created_at: string;
-  vaca: { id: string; numero_identificacao: number };
+  vaca: { id: string; numero_identificacao: number; nome?: string | null };
 };

@@ -14,8 +14,9 @@ import {
 import { useSuccessToast, SuccessToast } from "../../toast";
 import { formatarDataBR } from "../../format";
 import { hojeBrasil } from "@/lib/datas";
+import { rotuloNumeroNome } from "../../vaca-opcao";
 
-export type VacaPesagem = { id: string; numero: number; dataParto: string };
+export type VacaPesagem = { id: string; numero: number; nome?: string | null; dataParto: string };
 export type RegistroPesagem = { vacaId: string; data: string; periodo: string | null; litros: number };
 
 type ResultadoPesagem = {
@@ -204,7 +205,7 @@ function ListaPesagem({
             return (
               <li key={vaca.id} className="flex items-center gap-3 px-4 py-2.5">
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="font-medium text-black dark:text-zinc-50">Vaca {vaca.numero}</span>
+                  <span className="font-medium text-black dark:text-zinc-50">Vaca {rotuloNumeroNome(vaca.numero, vaca.nome)}</span>
                   <span className="truncate text-sm text-zinc-600 dark:text-zinc-400">
                     {antes
                       ? `pariu em ${formatarDataBR(vaca.dataParto)}`
@@ -224,7 +225,7 @@ function ListaPesagem({
                 )}
                 {alterado && <span className="rounded-full bg-leite-tint px-2 py-0.5 text-xs font-medium text-leite-ink">novo</span>}
                 <label className="sr-only" htmlFor={`litros_${vaca.id}`}>
-                  Litros da vaca {vaca.numero}
+                  Litros da vaca {rotuloNumeroNome(vaca.numero, vaca.nome)}
                 </label>
                 <div className="relative w-28 shrink-0">
                   <input
@@ -351,7 +352,7 @@ export function PesagemClient({
   propriedadeId: string;
   vacas: VacaPesagem[];
   registros: RegistroPesagem[];
-  semParto?: { id: string; numero: number }[];
+  semParto?: { id: string; numero: number; nome?: string | null }[];
 }) {
   const router = useRouter();
   const hoje = hojeBrasil();
@@ -420,7 +421,7 @@ export function PesagemClient({
             <span key={v.id}>
               {i > 0 && (i === semParto.length - 1 ? " e " : ", ")}
               <Link href={`/vacas/${v.id}`} className="font-medium underline">
-                {v.numero}
+                {rotuloNumeroNome(v.numero, v.nome)}
               </Link>
             </span>
           ))}{" "}

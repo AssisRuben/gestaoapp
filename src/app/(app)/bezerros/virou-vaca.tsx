@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { promoverBezerro } from "./actions";
 import type { Bezerro } from "./types";
+import { rotuloVaca } from "../vaca-opcao";
 
 export function idadeTexto(dataNascimento: string | null, hoje: string) {
   if (!dataNascimento) return null;
@@ -37,7 +38,7 @@ export function VirouVaca({ bezerro, onSucesso }: { bezerro: Bezerro; onSucesso:
         onClick={(e) => e.stopPropagation()}
         className="text-vacas-ink hover:underline"
       >
-        Vaca {bezerro.vaca_gerada.numero_identificacao}
+        Vaca {rotuloVaca(bezerro.vaca_gerada)}
       </Link>
     );
   }

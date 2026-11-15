@@ -12,6 +12,6 @@ export type Bezerro = {
   sexo: Sexo | null;
   data_nascimento: string | null;
   created_at: string;
-  mae: { id: string; numero_identificacao: number } | null;
-  vaca_gerada: { id: string; numero_identificacao: number } | null;
+  mae: { id: string; numero_identificacao: number; nome?: string | null } | null;
+  vaca_gerada: { id: string; numero_identificacao: number; nome?: string | null } | null;
 };

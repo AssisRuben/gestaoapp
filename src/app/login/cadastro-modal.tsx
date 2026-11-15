@@ -6,6 +6,7 @@ import { CampoTelefone } from "../campo-telefone";
 import { CampoSenha } from "../campo-senha";
 import { CampoLocalizacao } from "../campo-localizacao";
 import { CamposPerfilCadastro } from "../campos-perfil";
+import { useViewportVisivel, rolarCampoParaVisivel } from "../viewport-visivel";
 
 const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
@@ -70,6 +71,7 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
   // WhatsApp que já é de uma fazenda (0054): avisa antes de criar a conta, em vez de o produtor cair
   // depois numa tela de "falta liberar seu acesso" sem entender por quê
   const [whatsappRepetido, setWhatsappRepetido] = useState(false);
+  const areaVisivel = useViewportVisivel();
 
   async function conferirWhatsapp(numero: string) {
     setWhatsappRepetido(await whatsappJaCadastrado(numero));
@@ -119,12 +121,14 @@ export function CadastroModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    // ocupa só a parte da tela acima do teclado do celular (antes os botões ficavam embaixo dele)
+    <div style={areaVisivel} className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <form
         key={tipo}
         action={semFazenda ? semFazendaAction : fazendaAction}
-        className="relative flex max-h-[90vh] w-full max-w-lg flex-col gap-4 overflow-y-auto rounded-lg bg-white p-6 dark:bg-zinc-950"
+        onFocus={rolarCampoParaVisivel}
+        className="relative flex max-h-full w-full max-w-lg flex-col gap-4 overflow-y-auto rounded-lg bg-white p-6 dark:bg-zinc-950"
       >
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-black dark:text-zinc-50">Criar conta</h2>

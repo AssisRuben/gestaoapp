@@ -21,6 +21,7 @@ import { useSuccessToast, SuccessToast } from "./toast";
 import { formatarTelefoneBR } from "./format";
 import { CampoTelefone } from "../campo-telefone";
 import { CampoLocalizacao } from "../campo-localizacao";
+import { useViewportVisivel, rolarCampoParaVisivel } from "../viewport-visivel";
 
 const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
@@ -274,9 +275,11 @@ function PatrimonioSecao({
   // lista que a tela mostra: começa com a do modal e é trocada pela que cada ação devolve
   const [lista, setLista] = useState(itens);
 
-  const [criarState, criarAction] = useActionState(cadastrarPatrimonio, undefined);
-  const [editarState, editarAction] = useActionState(atualizarPatrimonio, undefined);
-  const [excluirState, excluirAction] = useActionState(deletarPatrimonio, undefined);
+  // *Pending: o botão fica bloqueado com "Salvando..." enquanto o servidor responde — sem isso não
+  // aparecia nada, e um segundo toque gravava o item duas vezes
+  const [criarState, criarAction, criarPending] = useActionState(cadastrarPatrimonio, undefined);
+  const [editarState, editarAction, editarPending] = useActionState(atualizarPatrimonio, undefined);
+  const [excluirState, excluirAction, excluirPending] = useActionState(deletarPatrimonio, undefined);
 
   // um efeito por ação: vale sempre a lista da última que terminou
   useEffect(() => {
@@ -419,9 +422,10 @@ function PatrimonioSecao({
               </button>
               <button
                 type="submit"
-                className="flex-1 rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark"
+                disabled={criarPending}
+                className="flex-1 rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark disabled:opacity-60"
               >
-                Salvar
+                {criarPending ? "Salvando..." : "Salvar"}
               </button>
             </div>
           </form>
@@ -525,9 +529,10 @@ function PatrimonioSecao({
                 </button>
                 <button
                   type="submit"
-                  className="rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark"
+                  disabled={editarPending}
+                  className="rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark disabled:opacity-60"
                 >
-                  Salvar
+                  {editarPending ? "Salvando..." : "Salvar"}
                 </button>
               </div>
             </div>
@@ -545,7 +550,7 @@ function PatrimonioSecao({
             <input type="hidden" name="id" value={paraExcluir.id} />
             <h4 className="text-base font-semibold text-black dark:text-zinc-50">Excluir item?</h4>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              {paraExcluir.tipo_ativo ?? "Item sem nome"}. Essa ação não pode ser desfeita.
+              {paraExcluir.tipo_ativo ? rotuloTipoAtivo(paraExcluir.tipo_ativo) : "Item sem nome"}. Essa ação não pode ser desfeita.
             </p>
             {excluirState?.error && <p className="text-sm text-red-600 dark:text-red-400">{excluirState.error}</p>}
             <div className="flex gap-2">
@@ -558,9 +563,10 @@ function PatrimonioSecao({
               </button>
               <button
                 type="submit"
-                className="flex-1 rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+                disabled={excluirPending}
+                className="flex-1 rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-60"
               >
-                Excluir
+                {excluirPending ? "Excluindo..." : "Excluir"}
               </button>
             </div>
           </form>
@@ -758,13 +764,15 @@ export function FazendaModal({
   const { mensagemToast, mostrarToast } = useSuccessToast();
   // nomes de quem tem acesso, pra linha "Lançado por ..." do patrimônio
   const nomes = Object.fromEntries(acessos.map((a) => [a.usuario_id, a.nome ?? a.email]));
+  // só a parte da tela acima do teclado do celular (Dados gerais e Perfil têm muitos campos)
+  const areaVisivel = useViewportVisivel();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div style={areaVisivel} className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <SuccessToast mensagem={mensagemToast} />
 
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col gap-6 overflow-y-auto rounded-2xl bg-white p-6 dark:bg-zinc-950">
+      <div onFocus={rolarCampoParaVisivel} className="relative flex max-h-full w-full max-w-2xl flex-col gap-6 overflow-y-auto rounded-2xl bg-white p-6 dark:bg-zinc-950">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-black dark:text-zinc-50">{propriedade.nome_propriedade}</h2>
           <button

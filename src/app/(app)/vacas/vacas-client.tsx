@@ -7,6 +7,7 @@ import { cadastrarVaca, atualizarVaca, deletarVaca } from "./actions";
 import { MobileCardList, MobileCard, CardHeader, CardRow, EmptyCard } from "../mobile-list";
 import { useSuccessToast, SuccessToast } from "../toast";
 import type { Vaca } from "./types";
+import { rotuloVaca } from "../vaca-opcao";
 import {
   CensoRebanho,
   chaveProdutivo,
@@ -37,10 +38,6 @@ const CAMPO_CLASSES =
   "rounded-md border border-black/[.08] bg-zinc-100 px-4 py-2.5 text-lg text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-white/[.08] dark:text-zinc-50 dark:focus:border-white/40";
 const LABEL_CLASSES = "text-base font-medium text-black dark:text-zinc-50";
 
-// "12 · Mimosa" quando a vaca tem nome; só o número quando não tem
-function rotuloVaca(v: { numero_identificacao: number; nome?: string | null }) {
-  return v.nome ? `${v.numero_identificacao} · ${v.nome}` : String(v.numero_identificacao);
-}
 
 function CamposVaca({
   vacas,

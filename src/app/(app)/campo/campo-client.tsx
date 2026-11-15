@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSuccessToast, SuccessToast } from "../toast";
 import { formatarDataBR } from "../format";
 import { hojeBrasil } from "@/lib/datas";
+import { rotuloNumeroNome } from "../vaca-opcao";
 import {
   aoMudarCampo,
   enviarCampo,
@@ -14,7 +15,7 @@ import {
   type TipoCampo,
 } from "@/lib/fila-campo";
 
-export type VacaCampo = { id: string; numero: number; produtivo: string; reprodutivo: string };
+export type VacaCampo = { id: string; numero: number; nome?: string | null; produtivo: string; reprodutivo: string };
 type TouroCampo = { id: string; nome: string; codigo: string | null; saldo: number; saldoTecnico?: number };
 
 const CAMPO =
@@ -157,10 +158,10 @@ export function CampoClient({
 
     const descricao =
       tipo === "cobertura"
-        ? `Cobertura da vaca ${vaca.numero} em ${formatarDataBR(data)}${touro ? ` (${touro.nome}${dosePrograma ? ", dose do programa" : ""})` : touroTexto.trim() ? ` (${touroTexto.trim()})` : ""}`
+        ? `Cobertura da vaca ${rotuloNumeroNome(vaca.numero, vaca.nome)} em ${formatarDataBR(data)}${touro ? ` (${touro.nome}${dosePrograma ? ", dose do programa" : ""})` : touroTexto.trim() ? ` (${touroTexto.trim()})` : ""}`
         : tipo === "parto"
-          ? `Parto da vaca ${vaca.numero} em ${formatarDataBR(data)} (${sexo === "femea" ? "fêmea" : sexo})`
-          : `Diagnóstico da vaca ${vaca.numero}: ${resultado}`;
+          ? `Parto da vaca ${rotuloNumeroNome(vaca.numero, vaca.nome)} em ${formatarDataBR(data)} (${sexo === "femea" ? "fêmea" : sexo})`
+          : `Diagnóstico da vaca ${rotuloNumeroNome(vaca.numero, vaca.nome)}: ${resultado}`;
 
     guardarLancamento({ propriedadeId, tipo, dados, descricao });
     limparFormulario();
@@ -202,7 +203,7 @@ export function CampoClient({
           />
           {numero && (
             <span className={`text-sm ${vaca ? "text-zinc-600 dark:text-zinc-400" : "text-red-600 dark:text-red-400"}`}>
-              {vaca ? `Vaca ${vaca.numero}: ${STATUS[vaca.produtivo] ?? vaca.produtivo}, ${STATUS[vaca.reprodutivo] ?? vaca.reprodutivo}` : "Não achei essa vaca no rebanho."}
+              {vaca ? `Vaca ${rotuloNumeroNome(vaca.numero, vaca.nome)}: ${STATUS[vaca.produtivo] ?? vaca.produtivo}, ${STATUS[vaca.reprodutivo] ?? vaca.reprodutivo}` : "Não achei essa vaca no rebanho."}
             </span>
           )}
         </div>
