@@ -320,7 +320,8 @@ const fila = CAPTURAS.filter(([nome]) => !pedidas.length || pedidas.includes(nom
 
 fs.mkdirSync(SAIDA, { recursive: true });
 // --lang: o campo de data do Chromium segue o idioma do navegador, não o locale do contexto
-const navegador = await chromium.launch({ args: ["--lang=pt-BR"] });
+// CAPTURAS_NAVEGADOR=msedge (ou chrome) usa o navegador já instalado, sem baixar o do Playwright
+const navegador = await chromium.launch({ channel: env.CAPTURAS_NAVEGADOR || undefined, args: ["--lang=pt-BR"] });
 const contextos = {};
 
 // Um contexto (sessão) por formato e conta, reaproveitado entre as capturas.

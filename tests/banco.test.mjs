@@ -72,6 +72,49 @@ try {
   process.exit(1);
 }
 
+// fazenda da rodada de testes do lançamento: carrega pelas funções do site e o bloco APAGAR limpa tudo
+try {
+  const script = ler("supabase/homologacao/dados_teste_lancamento.sql");
+  await db.exec(script.replace("'assismontenegro@hotmail.com'", "'teste@exemplo.invalid'"));
+  const prop = "(select id from propriedades where nome_propriedade = 'Fazenda Piloto (testes)')";
+  const { rows } = await db.query(`select
+      (select count(*)::int from vacas where propriedade_id = ${prop}) vacas,
+      (select count(*)::int from vacas where propriedade_id = ${prop} and status_produtivo = 'lactacao') lactacao,
+      (select status_reprodutivo from vacas where propriedade_id = ${prop} and numero_identificacao = 2) estrela,
+      (select status_produtivo from vacas where propriedade_id = ${prop} and numero_identificacao = 4) pintada,
+      (select saldo::int from saldo_doses where propriedade_id = ${prop} and touro_id = (select id from touros where codigo = 'TT-ALFA')) saldo_alfa,
+      (select count(*)::int from entregas_doses where propriedade_id = ${prop} and recebido_em is null) pendentes,
+      (select count(*)::int from bezerros where propriedade_id = ${prop}) bezerros,
+      (select count(*)::int from controle_leite c join vacas v on v.id = c.vaca_id where v.propriedade_id = ${prop}) pesagens,
+      (select count(*)::int from botijao_abastecimentos where propriedade_id = ${prop}) botijao,
+      (select count(*)::int from financeiro where propriedade_id = ${prop}) financeiro`);
+  const r = rows[0];
+  const esperado = { vacas: 8, lactacao: 4, estrela: "prenhe", pintada: "seca", saldo_alfa: 7, pendentes: 1, bezerros: 5, pesagens: 56, botijao: 2, financeiro: 11 };
+  for (const [k, v] of Object.entries(esperado)) {
+    if (r[k] !== v) throw new Error(`${k}: esperava ${v}, veio ${r[k]}`);
+  }
+  // doses com o técnico: 6 do Alfa a confirmar (fora do saldo) e 4 do Beta já disponíveis
+  await db.exec(`insert into auth.users (id, email) values (gen_random_uuid(), 'tecnico.lancamento@exemplo.invalid')`);
+  await db.exec(
+    ler("supabase/homologacao/dados_teste_doses_tecnico.sql").replace("'tecnico@exemplo.com'", "'tecnico.lancamento@exemplo.invalid'"),
+  );
+  const { rows: tec } = await db.query(`select
+      (select coalesce(sum(saldo), 0)::int from saldo_doses_tecnico s join auth.users u on u.id = s.tecnico_id
+        where u.email = 'tecnico.lancamento@exemplo.invalid') saldo,
+      (select count(*)::int from usuarios_propriedades up join auth.users u on u.id = up.usuario_id
+        where u.email = 'tecnico.lancamento@exemplo.invalid' and up.papel = 'tecnico' and up.propriedade_id = ${prop}) acesso`);
+  if (tec[0].saldo !== 4 || tec[0].acesso !== 1) throw new Error(`doses do técnico: veio ${JSON.stringify(tec[0])}`);
+  // o bloco APAGAR do fim do arquivo (comentado) precisa limpar sem esbarrar em chave estrangeira
+  const apagar = script.slice(script.indexOf("-- do $$")).split("\n").map((l) => l.replace(/^-- ?/, "")).join("\n");
+  await db.exec(apagar);
+  const { rows: sobrou } = await db.query(`select count(*)::int n from propriedades where nome_propriedade = 'Fazenda Piloto (testes)'`);
+  if (sobrou[0].n !== 0) throw new Error("o bloco APAGAR não removeu a fazenda");
+  console.log("fazenda de testes do lançamento: ok");
+} catch (e) {
+  console.error(`FALHOU na fazenda de testes do lançamento: ${e.message}`);
+  process.exit(1);
+}
+
 // o diagnóstico de dados antigos (rodado à mão no SQL Editor) precisa continuar válido
 try {
   const { rows } = await db.query(ler("supabase/diagnosticos/dados_antigos.sql"));
