@@ -423,7 +423,8 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   mais de uma fazenda, o seletor do cabeçalho troca entre elas.
 - Quem concede/remove (`vincular_tecnico` por e-mail, `desvincular_tecnico`): o produtor da fazenda
   (modal da fazenda → Acessos) ou o gestor (aba Técnicos — necessário pra fazenda só-WhatsApp, que
-  não tem produtor com conta). O técnico não concede nada; vínculo de produtor nunca sai por aqui.
+  não tem produtor com conta). O técnico não concede acesso de técnico; vínculo de produtor nunca sai
+  por aqui. Desde 0063 o técnico da fazenda libera o PRODUTOR (seção abaixo).
 - O técnico cria a conta antes (login → Cadastre-se → "Sou técnico", ou Google): conta sem
   `nome_propriedade` no metadata não cria fazenda (trigger de 0013).
 
@@ -575,6 +576,17 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - Localização da fazenda: `CampoLocalizacao` ("Usar minha localização" pelo GPS + "Ver no mapa")
   no cadastro, no "cadastrar minha fazenda" e no modal da fazenda; o cadastro grava
   latitude/longitude do metadata (trigger, 0048) — é o ponto do mapa do gestor.
+
+## Produtor liberado pelo e-mail (0063_tecnico_libera_produtor.sql)
+
+- Modal da fazenda → Acessos → "Dar acesso ao produtor" (produtor e técnico da fazenda) e gestor →
+  Dar acesso ao site → Produtor: digita o e-mail, confere ("Está certo") e libera. Sem conta com esse
+  e-mail, o site cria uma já confirmada (service role, nome = `nome_produtor` da fazenda) e manda o
+  e-mail "Criar nova senha" (modelo Reset Password, o do Esqueci minha senha); com conta, só liga.
+- `src/lib/liberar-produtor.ts`: confere `pode_liberar_produtor` com a sessão ANTES de criar a conta
+  (a service role não sabe quem pediu); `vincular_produtor` confere de novo; se a ligação falhar, a
+  conta recém-criada é apagada. Permissão: `_pode_liberar_produtor` = gestor, produtor ou técnico com
+  vínculo na fazenda. Remover produtor continua só com o gestor.
 
 ## Fazendas de acompanhamento (0056)
 

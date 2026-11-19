@@ -3,11 +3,12 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isGestor, semAcessoGestor } from "@/lib/propriedade";
+import { liberarProdutorPorEmail, mensagemLiberarProdutor } from "@/lib/liberar-produtor";
 
 // Quem garante a permissão é a própria RPC (0023_acesso_tecnicos.sql); o isGestor() aqui é só pra
 // devolver uma mensagem clara.
 
-export type TecnicoActionState = { error?: string; success?: boolean } | undefined;
+export type TecnicoActionState = { error?: string; success?: boolean; mensagem?: string } | undefined;
 
 export async function vincularTecnicoGestor(
   _state: TecnicoActionState,
@@ -20,10 +21,18 @@ export async function vincularTecnicoGestor(
   if (!propriedadeId) return { error: "Escolha a fazenda." };
   if (!email) return { error: "Informe o e-mail do técnico." };
 
-  // papel "produtor": conta de quem já usa o bot, ligada à fazenda que já existe (0044)
-  const produtor = formData.get("papel") === "produtor";
   const supabase = await createClient();
-  const { error } = await supabase.rpc(produtor ? "vincular_produtor" : "vincular_tecnico", {
+
+  // papel "produtor": liga à fazenda que já existe; sem conta, cria e manda o e-mail de senha (0063)
+  if (formData.get("papel") === "produtor") {
+    const { data: faz } = await supabase.from("propriedades").select("nome_produtor").eq("id", propriedadeId).maybeSingle();
+    const r = await liberarProdutorPorEmail(supabase, propriedadeId, email, faz?.nome_produtor ?? null);
+    if (r.error) return { error: r.error };
+    revalidatePath("/gestor/tecnicos");
+    return { success: true, mensagem: mensagemLiberarProdutor(email, r) };
+  }
+
+  const { error } = await supabase.rpc("vincular_tecnico", {
     p_propriedade_id: propriedadeId,
     p_email: email,
   });

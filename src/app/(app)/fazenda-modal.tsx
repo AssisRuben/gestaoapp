@@ -10,6 +10,7 @@ import {
   deletarPatrimonio,
   vincularTecnico,
   desvincularTecnico,
+  liberarProdutor,
   salvarPerfilFazenda,
 } from "./fazenda-actions";
 import { perguntasFaltando, type PerfilFazenda } from "@/lib/perfil-fazenda";
@@ -581,6 +582,103 @@ const PAPEL_LABEL: Record<string, string> = {
   tecnico: "Técnico",
 };
 
+// Produtor pelo e-mail (0063): produtor ou técnico da fazenda digita o e-mail; sem conta, o site cria e
+// manda o e-mail de criar senha. Confere o e-mail antes de enviar (digitado errado, outra pessoa entraria).
+function LiberarProdutor({
+  onChange,
+  onSuccess,
+}: {
+  onChange: (acessos: Acesso[]) => void;
+  onSuccess: (mensagem: string) => void;
+}) {
+  const [state, action, pending] = useActionState(liberarProdutor, undefined);
+  const [email, setEmail] = useState("");
+  const [conferindo, setConferindo] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (state?.success && state.acessos) {
+      const novos = state.acessos;
+      const mensagem = state.mensagem ?? null;
+      queueMicrotask(() => {
+        onChange(novos);
+        setEmail("");
+        setConferindo(false);
+        setAviso(mensagem);
+        onSuccess("Acesso liberado!");
+      });
+    } else if (state?.error) {
+      queueMicrotask(() => setConferindo(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
+
+  const valido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+  return (
+    <form action={action} className="flex flex-col gap-2">
+      <label htmlFor="produtor_email" className={LABEL_CLASSES}>
+        Dar acesso ao produtor
+      </label>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <input
+          id="produtor_email"
+          name="email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setConferindo(false);
+            setAviso(null);
+          }}
+          placeholder="e-mail do produtor"
+          className={`min-w-0 flex-1 ${CAMPO_CLASSES}`}
+        />
+        {!conferindo && (
+          <button
+            type="button"
+            disabled={!valido}
+            onClick={() => setConferindo(true)}
+            className="whitespace-nowrap rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark disabled:opacity-50"
+          >
+            Liberar
+          </button>
+        )}
+      </div>
+      {conferindo && (
+        <div className="flex flex-col gap-2 rounded-xl border border-black/[.08] p-3 dark:border-white/[.145]">
+          <p className="text-sm text-black dark:text-zinc-50">
+            Confira o e-mail: <strong className="break-all">{email.trim().toLowerCase()}</strong>. Quem tiver esse e-mail
+            vai ver e lançar os dados desta fazenda.
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setConferindo(false)}
+              className="flex-1 rounded-full border border-black/[.08] px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
+            >
+              Corrigir
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="flex-1 rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark disabled:opacity-50"
+            >
+              {pending ? "Liberando..." : "Está certo"}
+            </button>
+          </div>
+        </div>
+      )}
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        Se o produtor ainda não tem conta no site, ela é criada e ele recebe um e-mail para criar a senha.
+      </p>
+      {state?.error && <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
+      {aviso && <p className="text-sm text-brand-green-dark dark:text-green-400">{aviso}</p>}
+    </form>
+  );
+}
+
 function AcessosSecao({
   acessos,
   podeGerenciar,
@@ -693,9 +791,11 @@ function AcessosSecao({
         </form>
       ) : (
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Só o produtor da fazenda ou o gestor do programa pode alterar os acessos.
+          Só o produtor da fazenda ou o gestor do programa pode dar acesso a técnicos.
         </p>
       )}
+
+      <LiberarProdutor onChange={onChange} onSuccess={onSuccess} />
 
       {paraRemover && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">

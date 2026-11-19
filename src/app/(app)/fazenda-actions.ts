@@ -6,6 +6,7 @@ import { getPropriedadeAtual, getPropriedadesDoUsuario } from "@/lib/propriedade
 import { TIPOS_ATIVO, type UsuarioWhatsapp, type PatrimonioItem, type Acesso } from "./fazenda-types";
 import { COLUNAS_PERFIL, type PerfilFazenda } from "@/lib/perfil-fazenda";
 import { perfilDoFormulario } from "@/lib/perfil-fazenda-form";
+import { liberarProdutorPorEmail, mensagemLiberarProdutor } from "@/lib/liberar-produtor";
 
 type ActionState = { error?: string; success?: boolean } | undefined;
 export type AcessoActionState = { error?: string; success?: boolean; acessos?: Acesso[] } | undefined;
@@ -116,6 +117,25 @@ export async function vincularTecnico(
   if (error) return { error: error.message };
 
   return acessosAtualizados(propriedadeAtual.id);
+}
+
+// Produtor pelo e-mail (0063): técnico ou produtor da fazenda; cria a conta se não existir.
+export async function liberarProdutor(
+  _state: AcessoActionState & { mensagem?: string },
+  formData: FormData,
+): Promise<AcessoActionState & { mensagem?: string }> {
+  const propriedadeAtual = await getPropriedadeAtual();
+  if (!propriedadeAtual) {
+    return { error: "Nenhuma propriedade vinculada à sua conta." };
+  }
+
+  const email = String(formData.get("email") ?? "");
+  const supabase = await createClient();
+  const r = await liberarProdutorPorEmail(supabase, propriedadeAtual.id, email, propriedadeAtual.nome_produtor);
+  if (r.error) return { error: r.error };
+
+  const atualizados = await acessosAtualizados(propriedadeAtual.id);
+  return { ...atualizados, mensagem: mensagemLiberarProdutor(email, r) };
 }
 
 export async function desvincularTecnico(

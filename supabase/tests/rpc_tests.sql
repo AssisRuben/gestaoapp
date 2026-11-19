@@ -2401,6 +2401,49 @@ begin
     perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
   end;
 
+  -- ============================================================
+  -- técnico libera o acesso do produtor (0063)
+  -- ============================================================
+
+  declare
+    v_faz uuid;
+    v_tec uuid := (select id from auth.users where email = '__tecnico_teste__@exemplo.invalid');
+    v_prod uuid;
+  begin
+    insert into propriedades (nome_propriedade, nome_produtor) values ('__faz_0063__', 'x') returning id into v_faz;
+    insert into usuarios_propriedades (usuario_id, propriedade_id, papel) values (v_tec, v_faz, 'tecnico');
+    insert into auth.users (id, email) values (gen_random_uuid(), '__produtor_0063__@exemplo.invalid')
+    returning id into v_prod;
+
+    perform set_config('request.jwt.claim.sub', v_tec::text, true);
+    if not pode_liberar_produtor(v_faz) then
+      raise exception 'FALHOU [0063]: técnico da fazenda deveria poder liberar produtor';
+    end if;
+    perform vincular_produtor(v_faz, ' __PRODUTOR_0063__@exemplo.invalid');
+    if (select papel from usuarios_propriedades where usuario_id = v_prod and propriedade_id = v_faz) is distinct from 'produtor' then
+      raise exception 'FALHOU [0063]: técnico deveria ligar a conta como produtor';
+    end if;
+    -- técnico continua sem dar acesso de técnico
+    begin
+      perform vincular_tecnico(v_faz, '__produtor_0063__@exemplo.invalid');
+      raise exception 'FALHOU [0063]: técnico não deveria dar acesso de técnico';
+    exception when others then
+      if sqlerrm not ilike '%Só o produtor%' then raise exception 'FALHOU [0063]: erro inesperado: %', sqlerrm; end if;
+    end;
+    -- fazenda em que o técnico não tem vínculo: recusado
+    delete from usuarios_propriedades where usuario_id = v_tec and propriedade_id = v_faz;
+    if pode_liberar_produtor(v_faz) then
+      raise exception 'FALHOU [0063]: sem vínculo não deveria poder liberar';
+    end if;
+    begin
+      perform vincular_produtor(v_faz, '__tecnico_teste__@exemplo.invalid');
+      raise exception 'FALHOU [0063]: sem vínculo deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%Só o produtor, o técnico%' then raise exception 'FALHOU [0063]: erro inesperado: %', sqlerrm; end if;
+    end;
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

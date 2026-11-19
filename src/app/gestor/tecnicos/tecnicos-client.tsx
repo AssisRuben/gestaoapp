@@ -208,9 +208,10 @@ export function TecnicosClient({
         <div className="flex flex-col gap-0.5">
           <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Dar acesso ao site</h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            A pessoa cria a conta antes (Cadastre-se → Sou técnico, ou entrar com Google) e você libera
-            aqui pelo e-mail. &quot;Produtor&quot; serve pra ligar a conta de alguém a uma fazenda que já existe
-            (ex.: cadastrada aqui pelo gestor). O produtor também pode liberar técnicos pelo menu da fazenda.
+            Técnico: a pessoa cria a conta antes (Cadastre-se → Sou técnico, ou entrar com Google) e você
+            libera aqui pelo e-mail. Produtor: liga a uma fazenda que já existe; se o e-mail ainda não tem
+            conta, ela é criada e o produtor recebe um e-mail para criar a senha. O produtor e o técnico da
+            fazenda também liberam pelo menu da fazenda.
           </p>
         </div>
         <form ref={formRef} action={vincularAction} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr_auto] sm:items-end">
@@ -241,6 +242,9 @@ export function TecnicosClient({
         </form>
         {vincularState?.error && (
           <p className="text-sm text-red-600 dark:text-red-400">{vincularState.error}</p>
+        )}
+        {vincularState?.mensagem && (
+          <p className="text-sm text-brand-green-dark dark:text-green-400">{vincularState.mensagem}</p>
         )}
       </section>
 
