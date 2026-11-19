@@ -120,10 +120,14 @@ export async function vincularTecnico(
 }
 
 // Produtor pelo e-mail (0063): técnico ou produtor da fazenda; cria a conta se não existir.
+export type LiberarProdutorState =
+  | { error?: string; success?: boolean; acessos?: Acesso[]; mensagem?: string }
+  | undefined;
+
 export async function liberarProdutor(
-  _state: AcessoActionState & { mensagem?: string },
+  _state: LiberarProdutorState,
   formData: FormData,
-): Promise<AcessoActionState & { mensagem?: string }> {
+): Promise<LiberarProdutorState> {
   const propriedadeAtual = await getPropriedadeAtual();
   if (!propriedadeAtual) {
     return { error: "Nenhuma propriedade vinculada à sua conta." };
