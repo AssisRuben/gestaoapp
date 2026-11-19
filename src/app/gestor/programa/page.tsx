@@ -8,7 +8,14 @@ import {
   getIndicadoresAtuaisCache,
   getBaixasDosesTodasCache,
   getIndicadoresReprodutivosTodasCache,
+  getInseminacoesMesTodasCache,
+  getBotijaoSituacaoTodasCache,
+  getVacasPrenhesTodasCache,
 } from "@/lib/cached-data";
+import type { InseminacoesMes, BotijaoSituacao } from "@/lib/programa";
+import { hojeBrasil } from "@/lib/datas";
+import { EvolucaoSecao, BotijaoSecao } from "./acompanhamento";
+import type { MesInseminacoes } from "./evolucao-mensal";
 import type {
   Touro,
   EntregaDoses,
@@ -40,6 +47,9 @@ export default async function ProgramaPage() {
     entregasTecnicoRes,
     saldosTecnicoRes,
     tecnicosRes,
+    inseminacoesMesData,
+    botijaoData,
+    prenhesPorFazenda,
   ] = await Promise.all([
     getPropriedadesTodasCache(),
     getTourosCache(),
@@ -59,11 +69,43 @@ export default async function ProgramaPage() {
       .order("id"),
     createServiceClient().from("saldo_doses_tecnico").select("*").order("tecnico_id").order("touro_id"),
     (await createClient()).rpc("listar_tecnicos_programa"),
+    getInseminacoesMesTodasCache(),
+    getBotijaoSituacaoTodasCache(),
+    getVacasPrenhesTodasCache(),
   ]);
+
+  // acompanhamento (0064). Fazenda do programa = recebeu alguma entrega de doses.
+  const propriedades = propriedadesData as { id: string; nome_propriedade: string }[];
+  const doPrograma = new Set((entregasData as unknown as EntregaDoses[]).map((e) => e.propriedade_id));
+
+  // últimos 12 meses, terminando no mês atual (mês sem inseminação aparece zerado)
+  const [anoHoje, mesHoje] = hojeBrasil().split("-").map(Number);
+  const meses: MesInseminacoes[] = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(Date.UTC(anoHoje, mesHoje - 12 + i, 1));
+    return { mes: d.toISOString().slice(0, 10), prenhezes: 0, negativos: 0, pendentes: 0 };
+  });
+  const porMes = new Map(meses.map((m) => [m.mes, m]));
+  for (const l of inseminacoesMesData as unknown as InseminacoesMes[]) {
+    const m = porMes.get(String(l.mes).slice(0, 10));
+    if (!m) continue;
+    m.prenhezes += Number(l.prenhezes);
+    m.negativos += Number(l.negativos);
+    m.pendentes += Number(l.pendentes);
+  }
+  const vacasPrenhes = [...doPrograma].reduce((t, id) => t + (prenhesPorFazenda[id] ?? 0), 0);
+
+  const situacaoPorFazenda = new Map(
+    (botijaoData as unknown as BotijaoSituacao[]).map((b) => [b.propriedade_id, b]),
+  );
+  const linhasBotijao = propriedades
+    .filter((p) => doPrograma.has(p.id) || situacaoPorFazenda.has(p.id))
+    .map((p) => ({ id: p.id, nome: p.nome_propriedade, situacao: situacaoPorFazenda.get(p.id) ?? null }));
 
   return (
     <ProgramaClient
-      propriedades={propriedadesData as { id: string; nome_propriedade: string }[]}
+      propriedades={propriedades}
+      evolucao={<EvolucaoSecao meses={meses} vacasPrenhes={vacasPrenhes} />}
+      botijao={<BotijaoSecao linhas={linhasBotijao} />}
       touros={tourosData as unknown as Touro[]}
       entregas={entregasData as unknown as EntregaDoses[]}
       saldos={saldosData as unknown as SaldoDoses[]}

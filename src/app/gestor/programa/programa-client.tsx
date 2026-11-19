@@ -57,7 +57,12 @@ export function ProgramaClient({
   entregasTecnico = [],
   saldosTecnico = [],
   tecnicos = [],
+  evolucao,
+  botijao,
 }: {
+  // seções de acompanhamento montadas no servidor (0064)
+  evolucao?: React.ReactNode;
+  botijao?: React.ReactNode;
   entidades: EntidadeOpcao[];
   entregasTecnico?: EntregaDosesTecnico[];
   saldosTecnico?: SaldoDosesTecnico[];
@@ -198,7 +203,11 @@ export function ProgramaClient({
         )}
       </section>
 
+      {botijao}
+
       <ResultadosReprodutivos propriedades={propriedades} indicadores={reprodutivos} />
+
+      {evolucao}
 
       {/* doses que estão com técnicos (0055) */}
       <section className="flex flex-col gap-3">

@@ -2444,6 +2444,39 @@ begin
     perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
   end;
 
+  -- ============================================================
+  -- acompanhamento do programa: inseminações por mês, botijão e alerta de 60 dias (0064)
+  -- ============================================================
+
+  declare
+    v_faz uuid;
+    v_s botijao_situacao;
+  begin
+    -- a soma dos meses bate com as inseminações da aba Programa
+    if (select coalesce(sum(inseminacoes), 0) from programa_inseminacoes_mes)
+       <> (select coalesce(sum(doses_usadas), 0) from indicadores_reprodutivos_programa)
+       or exists (select 1 from programa_inseminacoes_mes where prenhezes + negativos + pendentes <> inseminacoes) then
+      raise exception 'FALHOU [0064]: inseminações por mês não batem com indicadores_reprodutivos_programa';
+    end if;
+
+    insert into propriedades (nome_propriedade, nome_produtor) values ('__faz_0064__', 'x') returning id into v_faz;
+    insert into botijao_abastecimentos (propriedade_id, data, nivel_cm, valor, foto_path) values
+      (v_faz, _hoje_fazenda() - 400, 10, 100, 'x/1.jpg'),
+      (v_faz, _hoje_fazenda() - 70, 30, 180, 'x/2.jpg');
+    select * into v_s from botijao_situacao where propriedade_id = v_faz;
+    if v_s.dias_desde <> 70 or v_s.ultimo_nivel_cm <> 30 or v_s.abastecimentos_12m <> 1 or v_s.gasto_12m <> 180 then
+      raise exception 'FALHOU [0064]: botijao_situacao errado (veio %)', v_s;
+    end if;
+    if not exists (select 1 from alertas_reprodutivos() where propriedade_id = v_faz and tipo = 'botijao_sem_abastecer' and dias = 70) then
+      raise exception 'FALHOU [0064]: botijão há 70 dias sem abastecer deveria alertar';
+    end if;
+    insert into botijao_abastecimentos (propriedade_id, data, nivel_cm, valor, foto_path)
+    values (v_faz, _hoje_fazenda() - 60, 40, 150, 'x/3.jpg');
+    if exists (select 1 from alertas_reprodutivos() where propriedade_id = v_faz and tipo = 'botijao_sem_abastecer') then
+      raise exception 'FALHOU [0064]: com 60 dias ainda não deveria alertar';
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

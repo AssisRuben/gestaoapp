@@ -62,6 +62,28 @@ export type BaixaDoses = {
 };
 
 // Uma linha por fazenda da view indicadores_reprodutivos_programa (0021).
+// Acompanhamento do programa (0064)
+export type InseminacoesMes = {
+  propriedade_id: string;
+  mes: string; // primeiro dia do mês, aaaa-mm-01
+  inseminacoes: number;
+  prenhezes: number;
+  negativos: number;
+  pendentes: number;
+};
+
+export type BotijaoSituacao = {
+  propriedade_id: string;
+  ultimo_abastecimento: string;
+  ultimo_nivel_cm: number;
+  dias_desde: number;
+  abastecimentos_12m: number;
+  gasto_12m: number;
+};
+
+// sem abastecer há mais que isso = alerta (mesmo número de alertas_reprodutivos, 0064)
+export const DIAS_ALERTA_BOTIJAO = 60;
+
 export type IndicadoresReprodutivos = {
   propriedade_id: string;
   doses_usadas: number;

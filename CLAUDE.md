@@ -333,6 +333,13 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 - O gestor escreve só em touros, entregas, adesões e acessos de técnicos (0023); as RPCs de dados
   da fazenda continuam sem enxergá-lo.
 
+- **Acompanhamento na aba Programa** (0064): "Botijão de nitrogênio" (view `botijao_situacao`: último
+  abastecimento, nível, dias, gasto 12 meses; fazendas do programa + quem já registrou) e "Evolução das
+  inseminações" (view `programa_inseminacoes_mes`, mesma base de `indicadores_reprodutivos_programa`;
+  barras por mês do resultado — prenhe/vazia/aguardando — e "Vacas prenhes agora" das fazendas do
+  programa). `alertas_reprodutivos` ganhou `botijao_sem_abastecer`: >60 dias desde o último registro
+  (`DIAS_ALERTA_BOTIJAO` em `src/lib/programa.ts`, mesmo número do SQL); quem nunca registrou não alerta.
+
 ### Adesão e linha de base (0019_adesao_linha_base.sql)
 
 - `adesoes_programa`: uma linha por fazenda, com data de adesão e a linha de base **gravada**

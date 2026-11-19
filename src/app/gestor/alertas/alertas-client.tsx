@@ -6,6 +6,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { formatarDataBR } from "../../(app)/format";
 
 export type NivelAlerta = "critico" | "atencao";
 
@@ -48,6 +49,8 @@ function textoItemReprodutivo(i: AlertaReprodutivo["itens"][number]) {
       return `${vaca}: ${i.dias} dias desde o parto sem prenhez confirmada`;
     case "doses_nao_confirmadas":
       return `Doses entregues há ${i.dias} dias sem confirmação de recebimento`;
+    case "botijao_sem_abastecer":
+      return `Botijão sem abastecer há ${i.dias} dias (último em ${formatarDataBR(i.dataRef)})`;
     default:
       return `${vaca} ${i.tipo}`;
   }

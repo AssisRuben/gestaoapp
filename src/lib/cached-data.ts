@@ -413,3 +413,53 @@ export const getIndicadoresReprodutivosTodasCache = unstable_cache(
   ["indicadores-reprodutivos-todas-cache"],
   { revalidate: REVALIDATE_SEGUNDOS, tags: ["coberturas", "partos", "bezerros"] },
 );
+
+// Acompanhamento do programa (0064): inseminações por fazenda/mês com o resultado.
+export const getInseminacoesMesTodasCache = unstable_cache(
+  async () => {
+    const supabase = createServiceClient();
+    return buscarTodasPaginas((de, ate) =>
+      supabase
+        .from("programa_inseminacoes_mes")
+        .select("*")
+        .order("mes")
+        .order("propriedade_id")
+        .range(de, ate),
+    );
+  },
+  ["inseminacoes-mes-todas-cache"],
+  { revalidate: REVALIDATE_SEGUNDOS, tags: ["coberturas", "partos"] },
+);
+
+// Último abastecimento do botijão de cada fazenda (0064). O abastecimento grava uma despesa, e as
+// telas que registram/excluem já invalidam "financeiro".
+export const getBotijaoSituacaoTodasCache = unstable_cache(
+  async () => {
+    const supabase = createServiceClient();
+    return buscarTodasPaginas((de, ate) =>
+      supabase.from("botijao_situacao").select("*").order("propriedade_id").range(de, ate),
+    );
+  },
+  ["botijao-situacao-todas-cache"],
+  { revalidate: REVALIDATE_SEGUNDOS, tags: ["financeiro"] },
+);
+
+// Vacas prenhes agora, por fazenda (status_reprodutivo vem do trigger das coberturas, 0024).
+export const getVacasPrenhesTodasCache = unstable_cache(
+  async () => {
+    const supabase = createServiceClient();
+    const linhas = await buscarTodasPaginas<{ propriedade_id: string }>((de, ate) =>
+      supabase
+        .from("vacas")
+        .select("propriedade_id")
+        .eq("status_reprodutivo", "prenhe")
+        .order("id")
+        .range(de, ate),
+    );
+    const porFazenda: Record<string, number> = {};
+    for (const l of linhas) porFazenda[l.propriedade_id] = (porFazenda[l.propriedade_id] ?? 0) + 1;
+    return porFazenda;
+  },
+  ["vacas-prenhes-todas-cache"],
+  { revalidate: REVALIDATE_SEGUNDOS, tags: ["vacas", "coberturas"] },
+);
