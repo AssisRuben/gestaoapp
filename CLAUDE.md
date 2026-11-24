@@ -527,6 +527,10 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   `criado_via` ('site' | 'whatsapp'), `atualizado_por`, `atualizado_em`, preenchidos por trigger
   em toda escrita (`auth.uid()` nulo = bot). Não precisa passar nada nas funções.
 - Arquivar a lactação copia período e autoria pro `controle_leite_historico` (trigger no histórico).
+- **Conta excluída** (0065): o banco zera `criado_por`/`atualizado_por` (on delete set null) e o trigger
+  aceita isso sem marcar o registro como alterado. Antes o trigger devolvia o valor antigo, os registros
+  ficavam apontando pra conta inexistente e uma segunda alteração na mesma linha (na mesma transação)
+  falhava com `vacas_criado_por_fkey` — travou a limpeza das fazendas de teste em 24/11/2026.
 - Site: linha "Lançado por ... / alterado por ..." nos formulários de edição de leite, financeiro,
   cobertura e parto; nomes via `getNomesUsuarios` (acessos da fazenda, 0023).
 
@@ -635,6 +639,11 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   (Redis)" entrega o caminho ao `bot_acao`. Foto sem legenda: o bot pede a legenda. Cada foto vale um
   abastecimento só (recusa repetida); sem foto, nível ou valor o bot pergunta e não grava.
   Vale só depois de reimportar o workflow no n8n; foto enviada e não usada fica no Storage.
+- **Mídia pela Evolution (16/11/2026)**: a instância "Gestao Pec" não manda o base64 no webhook (só a
+  url criptografada do WhatsApp), mesmo com "Webhook Base64" ligado. "Baixar Foto (Evolution)" e
+  "Baixar Áudio (Evolution)" pedem a mídia em `{server_url}/chat/getBase64FromMediaMessage/{instance}`
+  (apikey e server_url vêm no próprio webhook) antes de "Extrair Foto"/"Extrair Áudio Base64"; o base64
+  do webhook continua valendo como reserva.
 
 ## Perfil da fazenda (0053_perfil_fazenda.sql)
 

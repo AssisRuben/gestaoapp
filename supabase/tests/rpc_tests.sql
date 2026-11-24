@@ -2477,6 +2477,42 @@ begin
     end if;
   end;
 
+  -- ============================================================
+  -- autoria de conta excluída (0065)
+  -- ============================================================
+
+  declare
+    v_conta uuid;
+    v_vaca uuid;
+    v_quando timestamptz;
+  begin
+    insert into auth.users (id, email) values (gen_random_uuid(), '__conta_que_sai__@exemplo.invalid') returning id into v_conta;
+    insert into usuarios_propriedades (usuario_id, propriedade_id, papel) values (v_conta, v_propriedade_id, 'tecnico');
+    perform set_config('request.jwt.claim.sub', v_conta::text, true);
+    insert into vacas (propriedade_id, numero_identificacao, status_produtivo) values (v_propriedade_id, 94001, 'novilha')
+      returning id into v_vaca;
+    update vacas set nome = 'Saideira' where id = v_vaca;   -- atualizado_por = a mesma conta
+    select atualizado_em into v_quando from vacas where id = v_vaca;
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+
+    delete from auth.users where id = v_conta;
+    if (select criado_por from vacas where id = v_vaca) is not null
+       or (select atualizado_por from vacas where id = v_vaca) is not null then
+      raise exception 'FALHOU [0065]: conta excluída deveria sair do criado_por/atualizado_por';
+    end if;
+    if (select atualizado_em from vacas where id = v_vaca) is distinct from v_quando
+       or (select criado_via from vacas where id = v_vaca) <> 'site' then
+      raise exception 'FALHOU [0065]: excluir a conta não deveria marcar a vaca como alterada';
+    end if;
+
+    -- duas alterações seguidas na mesma linha (o que travava a limpeza das fazendas de teste)
+    update vacas set nome = 'Saideira 2' where id = v_vaca;
+    update vacas set status_produtivo = 'lactacao' where id = v_vaca;
+    if (select atualizado_por from vacas where id = v_vaca) is distinct from v_usuario_id then
+      raise exception 'FALHOU [0065]: alteração normal deveria continuar gravando quem alterou';
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 
