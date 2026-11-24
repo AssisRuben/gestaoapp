@@ -171,11 +171,12 @@ end $$;
 --   if v_prop is null then raise notice 'nada a apagar'; return; end if;
 --   delete from controle_leite where vaca_id in (select id from vacas where propriedade_id = v_prop);
 --   delete from controle_leite_historico where vaca_id in (select id from vacas where propriedade_id = v_prop);
+--   delete from bezerros where propriedade_id = v_prop;
+--   delete from partos where vaca_id in (select id from vacas where propriedade_id = v_prop);   -- antes das coberturas: o parto aponta pra cobertura
+--   delete from partos_historico where vaca_id in (select id from vacas where propriedade_id = v_prop);
 --   delete from coberturas where vaca_id in (select id from vacas where propriedade_id = v_prop);
 --   delete from coberturas_historico where vaca_id in (select id from vacas where propriedade_id = v_prop);
---   delete from bezerros where propriedade_id = v_prop;
---   delete from partos where vaca_id in (select id from vacas where propriedade_id = v_prop);
---   delete from partos_historico where vaca_id in (select id from vacas where propriedade_id = v_prop);
+--   update vacas set mae_id = null where propriedade_id = v_prop;
 --   delete from vacas where propriedade_id = v_prop;
 --   delete from botijao_abastecimentos where propriedade_id = v_prop;
 --   delete from financeiro where propriedade_id = v_prop;

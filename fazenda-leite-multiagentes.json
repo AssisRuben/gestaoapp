@@ -1205,7 +1205,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const msg = $('Webhook').item.json.body.data.message;\nconst base64 = (msg.audioMessage && msg.audioMessage.base64) || msg.base64 || null;\nif (!base64) {\n  throw new Error('Audio recebido mas nenhum campo base64 foi encontrado no payload. Verifique a estrutura real do webhook de audio da Evolution API (body.data.message) e ajuste este node.');\n}\nreturn [{\n  json: {},\n  binary: {\n    audio: { data: base64, mimeType: 'audio/ogg', fileName: 'audio.ogg' }\n  }\n}];"
+        "jsCode": "const msg = $('Webhook').item.json.body.data.message;\n// base64 pedido à Evolution (Baixar Áudio); se não vier, o do próprio webhook\nconst baixado = $('Baixar Áudio (Evolution)').isExecuted ? ($('Baixar Áudio (Evolution)').first().json || {}) : {};\nconst base64 = baixado.base64 || (msg.audioMessage && msg.audioMessage.base64) || msg.base64 || null;\nif (!base64) {\n  throw new Error('Audio recebido mas nenhum campo base64 foi encontrado no payload. Verifique a estrutura real do webhook de audio da Evolution API (body.data.message) e ajuste este node.');\n}\nreturn [{\n  json: {},\n  binary: {\n    audio: { data: base64, mimeType: 'audio/ogg', fileName: 'audio.ogg' }\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2704,7 +2704,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const msg = $('Webhook').item.json.body.data.message;\nconst img = msg.imageMessage || {};\nconst base64 = img.base64 || msg.base64 || null;\nif (!base64) {\n  throw new Error('Foto recebida mas nenhum campo base64 foi encontrado no payload (body.data.message.imageMessage.base64 ou message.base64). Confira se o webhook da Evolution esta com \"Webhook Base64\" ligado (o mesmo que o audio usa).');\n}\nconst propriedadeId = $('Identificar Usuario').first().json.propriedade_id;\nif (!propriedadeId) {\n  throw new Error('Foto recebida de um numero sem fazenda cadastrada.');\n}\nconst mime = String(img.mimetype || 'image/jpeg').split(';')[0].trim().toLowerCase();\nconst ext = mime === 'image/png' ? 'png' : (mime === 'image/webp' ? 'webp' : 'jpg');\nconst tipo = ext === 'png' ? 'image/png' : (ext === 'webp' ? 'image/webp' : 'image/jpeg');\nconst nome = Date.now() + '-' + Math.random().toString(36).slice(2, 10) + '.' + ext;\nreturn [{\n  json: { caminho: propriedadeId + '/' + nome, legenda: String(img.caption || '').trim() },\n  binary: { foto: { data: base64, mimeType: tipo, fileName: nome } }\n}];"
+        "jsCode": "const msg = $('Webhook').item.json.body.data.message;\nconst img = msg.imageMessage || {};\n// base64 pedido à Evolution (Baixar Foto); se não vier, o do próprio webhook\nconst baixada = $('Baixar Foto (Evolution)').isExecuted ? ($('Baixar Foto (Evolution)').first().json || {}) : {};\nconst base64 = baixada.base64 || img.base64 || msg.base64 || null;\nif (!base64) {\n  throw new Error('Foto recebida mas a Evolution nao devolveu a imagem (Baixar Foto (Evolution) sem base64, e o webhook tambem sem). Confira server_url/apikey da instancia.');\n}\nconst propriedadeId = $('Identificar Usuario').first().json.propriedade_id;\nif (!propriedadeId) {\n  throw new Error('Foto recebida de um numero sem fazenda cadastrada.');\n}\nconst mime = String(img.mimetype || 'image/jpeg').split(';')[0].trim().toLowerCase();\nconst ext = mime === 'image/png' ? 'png' : (mime === 'image/webp' ? 'webp' : 'jpg');\nconst tipo = ext === 'png' ? 'image/png' : (ext === 'webp' ? 'image/webp' : 'image/jpeg');\nconst nome = Date.now() + '-' + Math.random().toString(36).slice(2, 10) + '.' + ext;\nreturn [{\n  json: { caminho: propriedadeId + '/' + nome, legenda: String(img.caption || '').trim() },\n  binary: { foto: { data: base64, mimeType: tipo, fileName: nome } }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -3103,6 +3103,66 @@
       ],
       "id": "2cb112e7-ee92-4aff-a018-34ca911e47cf",
       "name": "Mensagem Vaca Não Achada"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').item.json.body.server_url }}/chat/getBase64FromMediaMessage/{{ encodeURIComponent($('Webhook').item.json.body.instance) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Webhook').item.json.body.apikey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ message: { key: { id: $('Webhook').item.json.body.data.key.id } }, convertToMp4: false }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6712,
+        12652
+      ],
+      "id": "9db4744f-ea92-4a46-ac3a-315ca63d39bb",
+      "name": "Baixar Foto (Evolution)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').item.json.body.server_url }}/chat/getBase64FromMediaMessage/{{ encodeURIComponent($('Webhook').item.json.body.instance) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Webhook').item.json.body.apikey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ message: { key: { id: $('Webhook').item.json.body.data.key.id } }, convertToMp4: false }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6472,
+        13312
+      ],
+      "id": "2e3827bf-e196-4be1-bdaf-280677fce183",
+      "name": "Baixar Áudio (Evolution)",
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
@@ -3618,7 +3678,7 @@
       "main": [
         [
           {
-            "node": "Extrair Áudio Base64",
+            "node": "Baixar Áudio (Evolution)",
             "type": "main",
             "index": 0
           }
@@ -4347,7 +4407,7 @@
       "main": [
         [
           {
-            "node": "Extrair Foto",
+            "node": "Baixar Foto (Evolution)",
             "type": "main",
             "index": 0
           }
@@ -4565,6 +4625,28 @@
           },
           {
             "node": "Registrar Interação (Log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baixar Foto (Evolution)": {
+      "main": [
+        [
+          {
+            "node": "Extrair Foto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baixar Áudio (Evolution)": {
+      "main": [
+        [
+          {
+            "node": "Extrair Áudio Base64",
             "type": "main",
             "index": 0
           }
