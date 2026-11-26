@@ -8,7 +8,7 @@ import { formatarDataBR } from "../format";
 import type { Bezerro, VacaOpcao } from "./types";
 import { VirouVaca, idadeTexto } from "./virou-vaca";
 import { hojeBrasil } from "@/lib/datas";
-import { rotuloVaca } from "../vaca-opcao";
+import { rotuloNumeroNome, rotuloVaca } from "../vaca-opcao";
 
 const SEXO_LABEL: Record<string, string> = {
   macho: "Macho",
@@ -24,6 +24,7 @@ function CamposBezerro({
   vacas,
   numeroObrigatorio,
   defaultNumero,
+  defaultNome,
   defaultMaeId,
   defaultSexo,
   defaultDataNascimento,
@@ -31,6 +32,7 @@ function CamposBezerro({
   vacas: VacaOpcao[];
   numeroObrigatorio?: boolean;
   defaultNumero?: number | null;
+  defaultNome?: string | null;
   defaultMaeId?: string;
   defaultSexo?: string;
   defaultDataNascimento?: string;
@@ -48,6 +50,20 @@ function CamposBezerro({
           required={numeroObrigatorio}
           placeholder={numeroObrigatorio ? undefined : "automático"}
           defaultValue={defaultNumero ?? undefined}
+          className={CAMPO_CLASSES}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="nome" className={LABEL_CLASSES}>
+          Nome (opcional)
+        </label>
+        <input
+          id="nome"
+          name="nome"
+          type="text"
+          maxLength={60}
+          defaultValue={defaultNome ?? ""}
           className={CAMPO_CLASSES}
         />
       </div>
@@ -138,8 +154,11 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
   }, [excluirState, mostrarToast]);
 
   const bezerrosFiltrados = useMemo(() => {
-    if (!busca.trim()) return bezerros;
-    return bezerros.filter((b) => String(b.numero_identificacao) === busca.trim());
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return bezerros;
+    return bezerros.filter(
+      (b) => String(b.numero_identificacao) === termo || (b.nome ?? "").toLowerCase().includes(termo),
+    );
   }, [bezerros, busca]);
 
   return (
@@ -149,7 +168,7 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <input
           type="text"
-          placeholder="Buscar por número..."
+          placeholder="Buscar por número ou nome..."
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           className={`w-full sm:max-w-xs ${CAMPO_CLASSES}`}
@@ -184,7 +203,7 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
                 }`}
               >
                 <td className="px-4 py-2 text-black dark:text-zinc-50">
-                  {bezerro.numero_identificacao}
+                  {rotuloNumeroNome(bezerro.numero_identificacao, bezerro.nome) || "—"}
                 </td>
                 <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
                   {bezerro.mae ? rotuloVaca(bezerro.mae) : "—"}
@@ -218,7 +237,7 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
         {bezerrosFiltrados.map((bezerro) => (
           <MobileCard key={bezerro.id} onClick={() => setBezerroEmEdicao(bezerro)}>
             <CardHeader
-              title={`Bezerro ${bezerro.numero_identificacao ?? "sem número"}`}
+              title={`Bezerro ${rotuloNumeroNome(bezerro.numero_identificacao, bezerro.nome) || "sem número"}`}
               accentClassName="bg-bezerros"
               badge={
                 <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-sm font-medium text-zinc-600 dark:text-zinc-400">
@@ -296,13 +315,14 @@ export function BezerrosClient({ bezerros, vacas }: { bezerros: Bezerro[]; vacas
             <input type="hidden" name="bezerro_id" value={bezerroEmEdicao.id} />
 
             <h2 className="text-lg font-semibold text-black dark:text-zinc-50">
-              Editar bezerro {bezerroEmEdicao.numero_identificacao ?? "sem número"}
+              Editar bezerro {rotuloNumeroNome(bezerroEmEdicao.numero_identificacao, bezerroEmEdicao.nome) || "sem número"}
             </h2>
 
             <CamposBezerro
               vacas={vacas}
               numeroObrigatorio
               defaultNumero={bezerroEmEdicao.numero_identificacao}
+              defaultNome={bezerroEmEdicao.nome}
               defaultMaeId={bezerroEmEdicao.mae_id ?? ""}
               defaultSexo={bezerroEmEdicao.sexo ?? ""}
               defaultDataNascimento={bezerroEmEdicao.data_nascimento ?? ""}

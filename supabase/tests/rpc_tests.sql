@@ -2667,6 +2667,120 @@ begin
     end if;
   end;
 
+  -- ============================================================
+  -- WhatsApp: cadastro pelo nome, filha com o número da bezerra (0070)
+  -- ============================================================
+
+  declare
+    v_r jsonb;
+    v_mae uuid;
+    v_mae2 uuid;
+  begin
+    insert into vacas (propriedade_id, numero_identificacao, nome, status_produtivo, status_reprodutivo)
+    values (v_propriedade_id, 95001, 'Graúna Bot', 'lactacao', 'vazia') returning id into v_mae;
+    insert into vacas (propriedade_id, numero_identificacao, nome, status_produtivo, status_reprodutivo)
+    values (v_propriedade_id, 95002, 'Calçada Bot', 'lactacao', 'vazia') returning id into v_mae2;
+    insert into bezerros (propriedade_id, mae_id, numero_identificacao, sexo, data_nascimento) values
+      (v_propriedade_id, v_mae, 95011, 'femea', _hoje_fazenda() - 600),
+      (v_propriedade_id, v_mae, 95012, 'macho', _hoje_fazenda() - 200),
+      (v_propriedade_id, v_mae2, 95021, 'femea', _hoje_fazenda() - 500),
+      (v_propriedade_id, v_mae2, 95022, 'femea', _hoje_fazenda() - 100);
+
+    -- no cadastro, o nome da vaca nova não é procurado; a mãe pelo nome continua
+    v_r := bot_resolver_vacas('5500000000001', '{"nome_vaca": "Malu Bot", "nome_mae": "grauna bot"}', 'cadastrar_vaca');
+    if not (v_r->>'ok')::boolean or v_r->'entidades'->>'numero_mae' <> '95001'
+       or v_r->'entidades'->>'nome_vaca' <> 'Malu Bot' or v_r->'entidades' ? 'numero_vaca' then
+      raise exception 'FALHOU [0070]: cadastro pelo nome deveria resolver só a mãe (veio %)', v_r;
+    end if;
+    -- fora do cadastro, nome que não existe continua perguntando
+    v_r := bot_resolver_vacas('5500000000001', '{"nome_vaca": "Malu Bot"}', 'consultar_vaca');
+    if (v_r->>'ok')::boolean then
+      raise exception 'FALHOU [0070]: consulta de nome inexistente deveria perguntar (veio %)', v_r;
+    end if;
+
+    -- filha sem número: fica com o número da bezerra (a fêmea; o macho não conta) e com o nome
+    v_r := bot_cadastrar_vaca('5500000000001', null, 95001, 'nascida', 'novilha', null, '  Malu   Bot ');
+    if not (v_r->>'ok')::boolean or (v_r->>'numero')::integer <> 95011
+       or v_r->>'mensagem' not ilike 'Vaca 95011 · Malu Bot (mesmo número da bezerra) cadastrada%vaca 95001 · Graúna Bot, vinculada ao registro de nascimento%' then
+      raise exception 'FALHOU [0070]: Malu deveria virar a vaca 95011 com nome e mãe (veio %)', v_r;
+    end if;
+    if (select nome from vacas where propriedade_id = v_propriedade_id and numero_identificacao = 95011) <> 'Malu Bot'
+       or (select vaca_id_gerada from bezerros where numero_identificacao = 95011 and mae_id = v_mae) is null
+       or (select vaca_id_gerada from bezerros where numero_identificacao = 95012 and mae_id = v_mae) is not null then
+      raise exception 'FALHOU [0070]: vaca 95011 deveria ter o nome e estar ligada só à bezerra 95011';
+    end if;
+
+    -- mesmo nome de novo: recusa, sem cadastrar outra
+    v_r := bot_cadastrar_vaca('5500000000001', null, 95001, 'nascida', 'novilha', null, 'malu bot');
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%Já tem a vaca 95011%' then
+      raise exception 'FALHOU [0070]: nome repetido deveria ser recusado (veio %)', v_r;
+    end if;
+
+    -- mãe com duas bezerras sem cadastro: pergunta qual, não adivinha
+    v_r := bot_cadastrar_vaca('5500000000001', null, 95002, 'nascida', 'novilha', null, 'Florzinha Bot');
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%95021, 95022%'
+       or exists (select 1 from vacas where propriedade_id = v_propriedade_id and nome = 'Florzinha Bot') then
+      raise exception 'FALHOU [0070]: duas bezerras deveriam virar pergunta (veio %)', v_r;
+    end if;
+    -- com o número falado, cadastra
+    v_r := bot_cadastrar_vaca('5500000000001', 95022, 95002, 'nascida', 'novilha', null, 'Florzinha Bot');
+    if not (v_r->>'ok')::boolean
+       or (select vaca_id_gerada from bezerros where numero_identificacao = 95022 and mae_id = v_mae2) is null then
+      raise exception 'FALHOU [0070]: com o número, Florzinha deveria ser cadastrada e ligada (veio %)', v_r;
+    end if;
+
+    -- sem nome (n8n antigo, 6 parâmetros) continua funcionando
+    v_r := bot_cadastrar_vaca('5500000000001', null, null, null, null, null);
+    if not (v_r->>'ok')::boolean then
+      raise exception 'FALHOU [0070]: cadastro sem nome deveria continuar funcionando (veio %)', v_r;
+    end if;
+  end;
+
+  -- ============================================================
+  -- bezerro com nome, que passa pra vaca quando ela vira vaca (0071)
+  -- ============================================================
+
+  declare
+    v_mae uuid;
+    v_b1 uuid;
+    v_b2 uuid;
+    v_vaca vacas;
+  begin
+    insert into vacas (propriedade_id, numero_identificacao, nome, status_produtivo, status_reprodutivo)
+    values (v_propriedade_id, 96001, 'Mãe 0071', 'lactacao', 'vazia') returning id into v_mae;
+    insert into bezerros (propriedade_id, mae_id, numero_identificacao, sexo) values
+      (v_propriedade_id, v_mae, 96011, 'femea') returning id into v_b1;
+    insert into bezerros (propriedade_id, mae_id, numero_identificacao, sexo) values
+      (v_propriedade_id, v_mae, 96012, 'femea') returning id into v_b2;
+
+    perform definir_nome_bezerro(v_b1, '  Florzinha   Bot ');
+    if (select nome from bezerros where id = v_b1) <> 'Florzinha Bot' then
+      raise exception 'FALHOU [0071]: nome do bezerro deveria ser gravado limpo';
+    end if;
+    perform definir_nome_bezerro(v_b2, 'Mimosa Bot');   -- nome que já é de uma vaca (0061)
+
+    -- sem vínculo com a fazenda: recusa
+    perform set_config('request.jwt.claim.sub', gen_random_uuid()::text, true);
+    begin
+      perform definir_nome_bezerro(v_b1, 'Intrusa');
+      raise exception 'FALHOU [0071]: quem não é da fazenda não muda o nome';
+    exception when others then
+      if sqlerrm not ilike '%sem acesso%' then raise exception 'FALHOU [0071]: erro inesperado: %', sqlerrm; end if;
+    end;
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+
+    -- virou vaca: leva o nome
+    v_vaca := promover_bezerro(v_b1);
+    if (select nome from vacas where id = v_vaca.id) <> 'Florzinha Bot' then
+      raise exception 'FALHOU [0071]: a vaca deveria herdar o nome da bezerra';
+    end if;
+    -- nome já usado por outra vaca: a vaca nova fica sem nome (não duplica)
+    v_vaca := promover_bezerro(v_b2);
+    if (select nome from vacas where id = v_vaca.id) is not null then
+      raise exception 'FALHOU [0071]: nome repetido não deveria passar pra vaca';
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

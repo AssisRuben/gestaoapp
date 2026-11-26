@@ -2238,7 +2238,7 @@
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_numero_vaca: ($('Entidades Resolvidas').item.json.entidades.numero_vaca ? Number($('Entidades Resolvidas').item.json.entidades.numero_vaca) : null),\n  p_numero_mae: ($('Entidades Resolvidas').item.json.entidades.numero_mae ? Number($('Entidades Resolvidas').item.json.entidades.numero_mae) : null),\n  p_origem: ($('Entidades Resolvidas').item.json.entidades.origem_animal || null),\n  p_status_produtivo: ($('Entidades Resolvidas').item.json.entidades.status_produtivo || null),\n  p_status_reprodutivo: ($('Entidades Resolvidas').item.json.entidades.status_reprodutivo || null)\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_numero_vaca: ($('Entidades Resolvidas').item.json.entidades.numero_vaca ? Number($('Entidades Resolvidas').item.json.entidades.numero_vaca) : null),\n  p_numero_mae: ($('Entidades Resolvidas').item.json.entidades.numero_mae ? Number($('Entidades Resolvidas').item.json.entidades.numero_mae) : null),\n  p_origem: ($('Entidades Resolvidas').item.json.entidades.origem_animal || null),\n  p_status_produtivo: ($('Entidades Resolvidas').item.json.entidades.status_produtivo || null),\n  p_status_reprodutivo: ($('Entidades Resolvidas').item.json.entidades.status_reprodutivo || null),\n  p_nome: ($('Entidades Resolvidas').item.json.entidades.nome_vaca || null)\n}) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -2985,7 +2985,7 @@
           "conditions": [
             {
               "id": "82a436f0-81ef-4f8c-ae2f-c438fc94a2ee",
-              "leftValue": "={{ !!(($json.entidades.nome_vaca && !$json.entidades.numero_vaca) || ($json.entidades.nome_mae && !$json.entidades.numero_mae)) }}",
+              "leftValue": "={{ !!(($json.entidades.nome_vaca && !$json.entidades.numero_vaca && $json.intencao !== 'cadastrar_vaca') || ($json.entidades.nome_mae && !$json.entidades.numero_mae)) }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -3015,7 +3015,7 @@
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ p_telefone: $('Webhook').first().json.body.data.key.remoteJid, p_entidades: $('Parsear Resposta IA').first().json.entidades }) }}",
+        "jsonBody": "={{ JSON.stringify({ p_telefone: $('Webhook').first().json.body.data.key.remoteJid, p_entidades: $('Parsear Resposta IA').first().json.entidades, p_intencao: $('Parsear Resposta IA').first().json.intencao }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",

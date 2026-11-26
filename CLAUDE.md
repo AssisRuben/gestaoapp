@@ -553,6 +553,10 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
 
 - `promover_bezerro` (botão "Virou vaca" em Bezerros): cria a novilha com o mesmo número e liga
   bezerro ↔ vaca direto (sem a heurística de `cadastrar_vaca`). Macho/natimorto recusado.
+- **Bezerro com nome** (0071): `bezerros.nome`, gravado por `definir_nome_bezerro` (tela Bezerros, depois
+  de cadastrar/atualizar). Ao virar vaca (qualquer caminho que liga `vaca_id_gerada`), trigger passa o
+  nome pra vaca se ela não tem nome e nenhuma outra vaca da fazenda usa esse nome. O bot não acha
+  bezerro pelo nome, só vaca.
 
 ## Resumo da fazenda (gestor e relatório de visita)
 
@@ -708,6 +712,10 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   `$('Entidades Resolvidas')`, não mais o Parsear.
 - Nunca grava por aproximação: nome que não existe ou de duas vacas responde pedindo o número e não
   faz nada. Número falado vale mais que o nome. Bezerro continua só pelo número.
+- **Cadastro pelo nome** (0070, "Malu, uma bezerra, filha da Graúna"): no `cadastrar_vaca` o
+  `nome_vaca` é o da vaca NOVA — o resolver não procura (`p_intencao`) e `bot_cadastrar_vaca` grava
+  (`p_nome`; nome já usado na fazenda é recusado). Filha sem número falado fica com o número da bezerra
+  da mãe ainda sem vaca (`_bezerras_sem_vaca`, vale pro site também); duas bezerras → pergunta qual.
 - A resposta da consulta de uma vaca com nome sai como "Vaca 1 · Mimosa" (0062: `bot_consultar` troca
   "Vaca N" no texto pronto; os `_rel_vaca_*` não mudaram).
 - Respostas de registro também (0066): leite (registrar/corrigir/excluir), cobertura, parto, diagnóstico,

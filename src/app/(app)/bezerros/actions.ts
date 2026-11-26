@@ -21,7 +21,7 @@ export async function cadastrarBezerro(
   const dataNascimentoRaw = formData.get("data_nascimento") as string;
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("cadastrar_bezerro", {
+  const { data, error } = await supabase.rpc("cadastrar_bezerro", {
     p_propriedade_id: propriedadeAtual.id,
     p_numero_identificacao: numeroRaw ? Number(numeroRaw) : null,
     p_mae_id: maeIdRaw || null,
@@ -31,6 +31,13 @@ export async function cadastrarBezerro(
 
   if (error) {
     return { error: error.message };
+  }
+
+  const nome = String(formData.get("nome") ?? "").trim();
+  const bezerroId = (data as { id?: string } | null)?.id;
+  if (nome && bezerroId) {
+    const { error: erroNome } = await supabase.rpc("definir_nome_bezerro", { p_bezerro_id: bezerroId, p_nome: nome });
+    if (erroNome) return { error: `Bezerro cadastrado, mas o nome não foi salvo: ${erroNome.message}` };
   }
 
   revalidatePath("/bezerros");
@@ -103,6 +110,12 @@ export async function atualizarBezerro(
   if (error) {
     return { error: error.message };
   }
+
+  const { error: erroNome } = await supabase.rpc("definir_nome_bezerro", {
+    p_bezerro_id: bezerroId,
+    p_nome: String(formData.get("nome") ?? ""),
+  });
+  if (erroNome) return { error: `Bezerro salvo, mas o nome não foi salvo: ${erroNome.message}` };
 
   revalidatePath("/bezerros");
   updateTag("bezerros");
