@@ -312,6 +312,11 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   trigger recusa entrega sem saldo e recusa apagar doses já repassadas; transferência do técnico não
   conta). A entrega não pede mais "quantidade de kits" (a coluna `kits` fica com o que já foi gravado).
   Só o gestor vê e escreve (a entidade não tem conta).
+- **Kit cedido leva as doses** (0069): o kit SEMPRE vai com as doses dele (decisão do usuário). Ceder
+  (`gestor_ceder_kit`) com "Entregar também as doses do kit" cria, na mesma transação, uma entrega por
+  touro de `kit_composicao` (doses por kit; CODEVASF = 220: Holandês 70, Holandês sexado 40, Girolando ¾
+  35, Girolando 5/8 35, Girolando ¾ sexado 20, Girolando 5/8 sexado 20). A entrega guarda `kit_id`: as
+  doses de um kit saem uma vez só (devolvido e cedido de novo, vai sem doses).
 - Fazenda "participa" do programa = tem alguma linha em `entregas_doses`. Sem isso, o site do
   produtor/técnico não mostra nada do programa (catálogo de touros e dose na cobertura, Reprodução
   e Lançar no campo; bloco "Programa de sêmen" nos Índices). A comparação com a linha de base da

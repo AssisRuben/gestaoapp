@@ -4,7 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isGestor, semAcessoGestor } from "@/lib/propriedade";
 
-export type EntidadeState = { error?: string; success?: boolean } | undefined;
+export type EntidadeState = { error?: string; success?: boolean; mensagem?: string } | undefined;
 
 // Cadastro/edição de entidade pela aba Entidades (0050). CNPJ conferido no banco.
 export async function salvarEntidade(_state: EntidadeState, formData: FormData): Promise<EntidadeState> {
@@ -120,7 +120,9 @@ export async function excluirKit(_state: EntidadeState, formData: FormData): Pro
   return { success: true };
 }
 
-// Cessão de uso: o kit continua da entidade e fica com uma fazenda OU um técnico.
+// Cessão de uso: o kit continua da entidade e fica com uma fazenda OU um técnico. Com "entregar as
+// doses" marcado, gestor_ceder_kit (0069) cria também uma entrega por touro da composição do kit, na
+// mesma transação (sem saldo na entidade, nada é gravado).
 export async function cederKit(_state: EntidadeState, formData: FormData): Promise<EntidadeState> {
   if (!(await isGestor())) return { error: await semAcessoGestor() };
 
@@ -131,21 +133,25 @@ export async function cederKit(_state: EntidadeState, formData: FormData): Promi
   if (!data) return { error: "Informe a data da cessão." };
 
   const supabase = await createClient();
-  const { data: linhas, error } = await supabase
-    .from("kits_inseminacao")
-    .update({
-      propriedade_id: paraTecnico ? null : destinoId,
-      tecnico_id: paraTecnico ? destinoId : null,
-      cedido_em: data,
-      observacao: texto(formData, "observacao"),
-    })
-    .eq("id", texto(formData, "id") ?? "")
-    .select("id");
+  const { data: doses, error } = await supabase.rpc("gestor_ceder_kit", {
+    p_kit_id: texto(formData, "id") ?? "",
+    p_propriedade_id: paraTecnico ? null : destinoId,
+    p_tecnico_id: paraTecnico ? destinoId : null,
+    p_cedido_em: data,
+    p_observacao: texto(formData, "observacao"),
+    p_entregar_doses: formData.get("entregar_doses") === "1",
+  });
   if (error) return { error: error.message };
-  if (!linhas?.length) return { error: "Kit não encontrado." };
 
-  revalidarEntidades();
-  return { success: true };
+  revalidarEntidades(true);
+  if (doses) {
+    revalidatePath("/reproducao");
+    updateTag("entregas_doses");
+  }
+  return {
+    success: true,
+    mensagem: doses ? `Kit cedido com ${doses} doses (aguardando confirmação do recebimento)!` : "Cessão do kit salva!",
+  };
 }
 
 // O kit volta pra entidade (fim da cessão).

@@ -1792,6 +1792,41 @@ begin
     exception when unique_violation then null;
     end;
 
+    -- kit cedido leva as doses (0069): uma entrega por touro da composição, uma vez só por kit
+    insert into kit_composicao (touro_id, doses) values (v_touro_id, 2);
+    if gestor_ceder_kit((select id from kits_inseminacao where patrimonio = '__999.001-1'),
+                        v_propriedade_id, null, _hoje_fazenda(), null, true) <> 2 then
+      raise exception 'FALHOU [gestor_ceder_kit]: deveria entregar as 2 doses da composição';
+    end if;
+    if (select count(*) from entregas_doses e join kits_inseminacao k on k.id = e.kit_id
+        where k.patrimonio = '__999.001-1' and e.propriedade_id = v_propriedade_id and e.quantidade = 2) <> 1
+       or (select propriedade_id from kits_inseminacao where patrimonio = '__999.001-1') <> v_propriedade_id
+       or (select saldo from saldo_doses_entidade where entidade_id = v_ent and touro_id = v_touro_id) <> 0 then
+      raise exception 'FALHOU [gestor_ceder_kit]: cessão + entrega + saldo da entidade não bateram';
+    end if;
+    begin
+      perform gestor_ceder_kit((select id from kits_inseminacao where patrimonio = '__999.001-1'),
+                               v_propriedade_id, null, _hoje_fazenda(), null, true);
+      raise exception 'FALHOU [gestor_ceder_kit]: doses do mesmo kit não podem ser entregues duas vezes';
+    exception when others then
+      if sqlerrm not ilike '%já foram entregues%' then raise exception 'FALHOU [gestor_ceder_kit]: erro inesperado: %', sqlerrm; end if;
+    end;
+    insert into kits_inseminacao (entidade_id, patrimonio) values (v_ent, '__999.002-2');
+    begin
+      perform gestor_ceder_kit((select id from kits_inseminacao where patrimonio = '__999.002-2'),
+                               v_propriedade_id, null, _hoje_fazenda(), null, true);
+      raise exception 'FALHOU [gestor_ceder_kit]: sem saldo na entidade deveria recusar';
+    exception when others then
+      if sqlerrm not ilike '%não tem doses suficientes%' then raise exception 'FALHOU [gestor_ceder_kit]: erro inesperado: %', sqlerrm; end if;
+    end;
+    if (select propriedade_id from kits_inseminacao where patrimonio = '__999.002-2') is not null then
+      raise exception 'FALHOU [gestor_ceder_kit]: entrega recusada não pode deixar o kit cedido';
+    end if;
+    if gestor_ceder_kit((select id from kits_inseminacao where patrimonio = '__999.002-2'),
+                        v_propriedade_id, null, _hoje_fazenda(), null, false) <> 0 then
+      raise exception 'FALHOU [gestor_ceder_kit]: cessão sem doses deveria devolver 0';
+    end if;
+
     if (select latitude from propriedades where nome_propriedade = '__com_gps__') <> -5.123456
        or (select longitude from propriedades where nome_propriedade = '__com_gps__') is not null then
       raise exception 'FALHOU [cadastro com localização]: latitude deveria gravar e longitude inválida ficar vazia';

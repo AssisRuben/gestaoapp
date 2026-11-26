@@ -20,6 +20,8 @@ export type KitEntidade = {
   tecnico_id: string | null;
   cedido_em: string | null;
   observacao: string | null;
+  // as doses do kit já foram entregues (entrega com kit_id, 0069)
+  doses_entregues?: boolean;
 };
 
 export type DosesRecebidasEntidade = {
@@ -43,6 +45,8 @@ export type OpcoesKitsDoses = {
   touros: Touro[];
   propriedades: { id: string; nome_propriedade: string }[];
   tecnicos: TecnicoPrograma[];
+  // doses que vêm em cada kit, por touro (kit_composicao, 0069)
+  composicao: { touro_id: string; doses: number }[];
 };
 
 const SUBTITULO = "text-base font-semibold text-black dark:text-zinc-50";
@@ -185,6 +189,7 @@ export function KitsDosesEntidade({
                           <>
                             {quem}
                             {k.cedido_em && <span className={TEXTO_FRACO}> · desde {formatarDataBR(k.cedido_em)}</span>}
+                            {k.doses_entregues && <span className={TEXTO_FRACO}> · com as doses</span>}
                           </>
                         ) : (
                           <span className={TEXTO_FRACO}>Na entidade</span>
@@ -355,7 +360,7 @@ function CessaoModal({
   const cedido = !!(kit.propriedade_id || kit.tecnico_id);
 
   useEffect(() => {
-    if (cederState?.success) queueMicrotask(() => onSalvo("Cessão do kit salva!"));
+    if (cederState?.success) queueMicrotask(() => onSalvo(cederState.mensagem ?? "Cessão do kit salva!"));
   }, [cederState, onSalvo]);
   useEffect(() => {
     if (devolverState?.success) queueMicrotask(() => onSalvo("Kit de volta à entidade!"));
@@ -436,6 +441,19 @@ function CessaoModal({
         <Campo id="kit_obs" label="Observação (opcional)">
           <input id="kit_obs" name="observacao" defaultValue={kit.observacao ?? ""} className={CAMPO_CLASSES} />
         </Campo>
+
+        {kit.doses_entregues ? (
+          <p className={TEXTO_FRACO}>As doses deste kit já foram entregues. A cessão muda só com quem o kit está.</p>
+        ) : opcoes.composicao.length > 0 ? (
+          <label className="flex items-start gap-2 text-sm text-black dark:text-zinc-50">
+            <input type="checkbox" name="entregar_doses" value="1" defaultChecked className="mt-1 h-4 w-4" />
+            <span>
+              Entregar também as doses do kit ({opcoes.composicao.reduce((t, c) => t + c.doses, 0)} doses:{" "}
+              {opcoes.composicao.map((c) => `${nomeTouro(opcoes.touros, c.touro_id)} ${c.doses}`).join(", ")}). Saem do
+              saldo da entidade e esperam a confirmação de quem recebe.
+            </span>
+          </label>
+        ) : null}
 
         {erro && <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>}
 

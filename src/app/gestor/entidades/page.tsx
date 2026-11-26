@@ -34,6 +34,14 @@ export default async function EntidadesPage() {
   ]);
   const erroKits = e3 ?? e4 ?? e5;
 
+  // kit cedido com as doses (0069): composição do kit e quais kits já tiveram as doses entregues
+  const [{ data: composicao }, { data: kitsFazenda }, { data: kitsTecnico }] = await Promise.all([
+    supabase.from("kit_composicao").select("touro_id, doses").order("doses", { ascending: false }).order("touro_id"),
+    supabase.from("entregas_doses").select("kit_id").not("kit_id", "is", null),
+    supabase.from("entregas_doses_tecnico").select("kit_id").not("kit_id", "is", null),
+  ]);
+  const comDoses = new Set([...(kitsFazenda ?? []), ...(kitsTecnico ?? [])].map((e) => e.kit_id as string));
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 sm:p-6">
       <div className="flex flex-col gap-1">
@@ -57,7 +65,7 @@ export default async function EntidadesPage() {
           <EntidadesClient
             entidades={(entidades ?? []) as Entidade[]}
             fazendas={(fazendas ?? []) as FazendaEntidade[]}
-            kits={(kits ?? []) as KitEntidade[]}
+            kits={((kits ?? []) as KitEntidade[]).map((k) => ({ ...k, doses_entregues: comDoses.has(k.id) }))}
             recebidas={(recebidas ?? []) as DosesRecebidasEntidade[]}
             saldos={((saldos ?? []) as SaldoEntidade[]).map((s) => ({
               ...s,
@@ -71,6 +79,7 @@ export default async function EntidadesPage() {
                 .map((p) => ({ id: p.id, nome_propriedade: p.nome_propriedade }))
                 .sort((a, b) => a.nome_propriedade.localeCompare(b.nome_propriedade, "pt-BR")),
               tecnicos: (tecnicos ?? []) as TecnicoPrograma[],
+              composicao: (composicao ?? []) as { touro_id: string; doses: number }[],
             }}
           />
         </>
