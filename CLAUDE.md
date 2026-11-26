@@ -759,6 +759,11 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   na mesma transação; sem cobertura nova → `diagnosticar_prenhez` negativo. Cobertura repetida (mesma
   data) também é recusada ali. O nó JavaScript "Validar Cobertura" (e os de busca antes dele) saiu do
   workflow: recusava "vaca prenhe" sem dizer como sair (vaca 2, 26/11/2026).
+- **Vaca fora do cadastro pelo WhatsApp** (0073): a recusa "Não encontrei a vaca N no cadastro" de
+  qualquer função do bot ganha, em `_bot_resposta_com_nome`, o caminho do cadastro ("cadastra a vaca
+  N", depois parto e coberturas). Os nós do n8n que conferiam a vaca antes do parto ("Buscar Vaca
+  (Parto)", "If1", "Code in JavaScript1") saíram: o parto vai direto pra `bot_registrar_parto`.
+  Nenhum ramo do workflow confere vaca no n8n — a regra é do banco.
 
 ## Leite da lactação e parto duplicado (0039)
 

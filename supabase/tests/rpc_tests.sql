@@ -2823,6 +2823,23 @@ begin
     end if;
   end;
 
+  -- ============================================================
+  -- vaca que não está no cadastro: a resposta diz como cadastrar (0073)
+  -- ============================================================
+
+  declare
+    v_r jsonb;
+  begin
+    v_r := bot_registrar_parto('5500000000001', 97999, _hoje_fazenda(), null, 'femea');
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike 'Não encontrei a vaca 97999 no cadastro.%cadastra a vaca 97999%' then
+      raise exception 'FALHOU [0073]: parto de vaca sem cadastro deveria orientar o cadastro (veio %)', v_r;
+    end if;
+    v_r := bot_registrar_cobertura('5500000000001', 97999, _hoje_fazenda(), null);
+    if v_r->>'mensagem' not ilike '%cadastra a vaca 97999%' then
+      raise exception 'FALHOU [0073]: cobertura de vaca sem cadastro deveria orientar o cadastro (veio %)', v_r;
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 

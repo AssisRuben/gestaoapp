@@ -1058,40 +1058,6 @@
     },
     {
       "parameters": {
-        "operation": "get",
-        "tableId": "vacas",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "numero_identificacao",
-              "keyValue": "={{ $json.entidades.numero_vaca }}"
-            },
-            {
-              "keyName": "propriedade_id",
-              "keyValue": "={{ $json.propriedade_id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        279216,
-        202464
-      ],
-      "id": "6e8ff596-959e-4248-a472-1c00e502e0b2",
-      "name": "Buscar Vaca (Parto)",
-      "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "n5A2qlsmhmmPqxSz",
-          "name": "Supabase account 2"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
@@ -1588,53 +1554,6 @@
       ],
       "id": "044643e2-027a-4994-b55e-d0d8baa7e5e3",
       "name": "Acesso Liberado?"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "9e6ef60b-7efe-46b4-87e1-544312c72be0",
-              "leftValue": "={{ $json.created_at }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "exists",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        279552,
-        202464
-      ],
-      "id": "1d2051f9-7f83-4cf1-8967-ddb185013c5d",
-      "name": "If1"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Este nó roda na rota FALSE do IF (Vaca não encontrada no banco)\nreturn [\n  {\n    json: {\n      sucesso: false,\n      resposta_sugerida: \"Vaca não localizada no sistema. Por favor, verifique o número ou nome digitado e tente novamente.\",\n      // Passa os metadados para o fluxo de resposta saber para quem responder\n      telefone: $('Identificar Usuario').first().json.telefone || null,\n      waba_id: $('Identificar Usuario').first().json.waba_id || null\n    }\n  }\n];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        279792,
-        202576
-      ],
-      "id": "3255eb72-05ca-49a3-83d9-69a7a466d98e",
-      "name": "Code in JavaScript1"
     },
     {
       "parameters": {},
@@ -3107,7 +3026,7 @@
         ],
         [
           {
-            "node": "Buscar Vaca (Parto)",
+            "node": "Registrar Parto (RPC)",
             "type": "main",
             "index": 0
           }
@@ -3516,17 +3435,6 @@
         ]
       ]
     },
-    "Buscar Vaca (Parto)": {
-      "main": [
-        [
-          {
-            "node": "If1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Confirmar Parto": {
       "main": [
         [
@@ -3813,40 +3721,6 @@
         [
           {
             "node": "Avisar Acesso Bloqueado?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "If1": {
-      "main": [
-        [
-          {
-            "node": "Registrar Parto (RPC)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Code in JavaScript1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code in JavaScript1": {
-      "main": [
-        [
-          {
-            "node": "Origem Áudio? (Principal)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar Interação (Log)",
             "type": "main",
             "index": 0
           }
