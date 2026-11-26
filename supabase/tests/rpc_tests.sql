@@ -1717,7 +1717,17 @@ begin
     values (gen_random_uuid(), '__produtor_gps__@exemplo.invalid',
             '{"nome_propriedade": "__com_gps__", "nome_produtor": "X", "whatsapp": "(88) 97777-6666", "latitude": "-5.123456", "longitude": "abc"}')
     returning id into v_conta;
-    -- índices por entidade (0049): a fazenda de teste recebe 10 doses (2 kits) pela associação
+    -- índices por entidade (0049): a fazenda de teste recebe 10 doses (2 kits) pela associação.
+    -- Desde 0068 a entidade precisa ter recebido as doses antes de repassar.
+    begin
+      insert into entregas_doses (propriedade_id, touro_id, quantidade, data_entrega, entidade_id)
+      values (v_propriedade_id, v_touro_id, 10, _hoje_fazenda(), v_ent);
+      raise exception 'FALHOU [saldo da entidade]: entrega sem doses na entidade deveria ser recusada';
+    exception when others then
+      if sqlerrm not ilike '%não tem doses suficientes%' then raise exception 'FALHOU [saldo da entidade]: erro inesperado: %', sqlerrm; end if;
+    end;
+    insert into entregas_doses_entidade (entidade_id, touro_id, quantidade, data_entrega)
+    values (v_ent, v_touro_id, 12, _hoje_fazenda());
     insert into entregas_doses (propriedade_id, touro_id, quantidade, data_entrega, entidade_id, kits, recebido_em)
     values (v_propriedade_id, v_touro_id, 10, _hoje_fazenda(), v_ent, 2, now());
     if (select fazendas from indicadores_entidades() where entidade_id = v_ent) <> 1
@@ -1752,6 +1762,35 @@ begin
     if (select fazendas from indicadores_entidades() where entidade_nome = 'Sindicato Sem Fazenda') <> 0 then
       raise exception 'FALHOU [indicadores_entidades]: entidade sem fazenda deveria aparecer com 0';
     end if;
+
+    -- kits e doses pela entidade (0068)
+    if (select saldo from saldo_doses_entidade where entidade_id = v_ent and touro_id = v_touro_id) <> 2 then
+      raise exception 'FALHOU [saldo_doses_entidade]: 12 recebidas - 10 repassadas deveria dar 2';
+    end if;
+    begin
+      update entregas_doses set quantidade = 13 where entidade_id = v_ent and touro_id = v_touro_id;
+      raise exception 'FALHOU [saldo da entidade]: aumentar a entrega além do saldo deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%não tem doses suficientes%' then raise exception 'FALHOU [saldo da entidade]: erro inesperado: %', sqlerrm; end if;
+    end;
+    begin
+      delete from entregas_doses_entidade where entidade_id = v_ent;
+      raise exception 'FALHOU [doses da entidade]: apagar doses já repassadas deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%já foram repassadas%' then raise exception 'FALHOU [doses da entidade]: erro inesperado: %', sqlerrm; end if;
+    end;
+    insert into kits_inseminacao (entidade_id, patrimonio, processo) values (v_ent, '__999.001-1', 'teste');
+    begin
+      update kits_inseminacao set propriedade_id = v_propriedade_id, tecnico_id = v_usuario_id, cedido_em = _hoje_fazenda()
+      where patrimonio = '__999.001-1';
+      raise exception 'FALHOU [kits]: kit com fazenda e técnico ao mesmo tempo deveria ser recusado';
+    exception when check_violation then null;
+    end;
+    begin
+      insert into kits_inseminacao (entidade_id, patrimonio) values (v_ent, '__999.001-1');
+      raise exception 'FALHOU [kits]: patrimônio repetido deveria ser recusado';
+    exception when unique_violation then null;
+    end;
 
     if (select latitude from propriedades where nome_propriedade = '__com_gps__') <> -5.123456
        or (select longitude from propriedades where nome_propriedade = '__com_gps__') is not null then

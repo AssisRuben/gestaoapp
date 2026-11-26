@@ -50,6 +50,7 @@ export default async function ProgramaPage() {
     inseminacoesMesData,
     botijaoData,
     prenhesPorFazenda,
+    saldosEntidadeRes,
   ] = await Promise.all([
     getPropriedadesTodasCache(),
     getTourosCache(),
@@ -72,7 +73,17 @@ export default async function ProgramaPage() {
     getInseminacoesMesTodasCache(),
     getBotijaoSituacaoTodasCache(),
     getVacasPrenhesTodasCache(),
+    // doses que cada entidade ainda tem (0068) — sem a migration, o formulário só não mostra o saldo
+    createServiceClient().from("saldo_doses_entidade").select("entidade_id, touro_id, saldo"),
   ]);
+
+  const saldosEntidade = (saldosEntidadeRes.data ?? []) as { entidade_id: string; touro_id: string; saldo: number }[];
+  const entidadesComSaldo = ((entidadesData ?? []) as EntidadeOpcao[]).map((e) => ({
+    ...e,
+    saldos: saldosEntidade
+      .filter((s) => s.entidade_id === e.id)
+      .map((s) => ({ touro_id: s.touro_id, saldo: Number(s.saldo) })),
+  }));
 
   // acompanhamento (0064). Fazenda do programa = recebeu alguma entrega de doses.
   const propriedades = propriedadesData as { id: string; nome_propriedade: string }[];
@@ -113,7 +124,7 @@ export default async function ProgramaPage() {
       atuais={atuaisData as unknown as IndicadoresAtuais[]}
       baixas={baixasData as unknown as BaixaDoses[]}
       reprodutivos={reprodutivosData as unknown as IndicadoresReprodutivos[]}
-      entidades={(entidadesData ?? []) as EntidadeOpcao[]}
+      entidades={entidadesComSaldo}
       entregasTecnico={(entregasTecnicoRes.data ?? []) as unknown as EntregaDosesTecnico[]}
       saldosTecnico={((saldosTecnicoRes.data ?? []) as unknown as SaldoDosesTecnico[]).map((s) => ({
         ...s,

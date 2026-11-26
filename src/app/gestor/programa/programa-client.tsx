@@ -486,16 +486,37 @@ function TouroModal({
   );
 }
 
-export type EntidadeOpcao = { id: string; nome: string; responsavel: string | null; telefone: string | null };
+export type EntidadeOpcao = {
+  id: string;
+  nome: string;
+  responsavel: string | null;
+  telefone: string | null;
+  // doses que a entidade ainda tem, por touro (0068): a entrega sai desse saldo
+  saldos?: { touro_id: string; saldo: number }[];
+};
 
 // Entrega aberta no formulário: da fazenda (como antes) ou de um técnico (0055).
 type EntregaEmEdicao = Partial<EntregaDoses> & { tecnico_id?: string; destino?: "fazenda" | "tecnico" };
 
 // Entidade beneficiada (associação, cooperativa…) por onde a fazenda recebe — 0048. Escolhida na
 // lista das cadastradas na aba Entidades (é lá que se cria e corrige responsável/telefone/CNPJ).
-function CamposEntidade({ entidades, inicialId }: { entidades: EntidadeOpcao[]; inicialId: string }) {
+// Desde 0068 as doses saem do saldo da entidade: o formulário mostra quanto ela tem de cada touro.
+function CamposEntidade({
+  entidades,
+  touros,
+  inicialId,
+}: {
+  entidades: EntidadeOpcao[];
+  touros: Touro[];
+  inicialId: string;
+}) {
   const [entidadeId, setEntidadeId] = useState(inicialId);
   const escolhida = entidades.find((e) => e.id === entidadeId);
+  const comSaldo = (escolhida?.saldos ?? []).filter((s) => s.saldo > 0);
+  const nomeTouro = (id: string) => {
+    const t = touros.find((x) => x.id === id);
+    return t ? rotuloTouro(t) : "touro";
+  };
 
   if (entidades.length === 0) {
     return (
@@ -531,6 +552,13 @@ function CamposEntidade({ entidades, inicialId }: { entidades: EntidadeOpcao[]; 
       {escolhida && (escolhida.responsavel || escolhida.telefone) && (
         <span className="text-sm text-zinc-600 dark:text-zinc-400">
           Responsável: {[escolhida.responsavel, escolhida.telefone && mascaraTelefone(escolhida.telefone)].filter(Boolean).join(" · ")}
+        </span>
+      )}
+      {escolhida && (
+        <span className="text-sm text-zinc-600 dark:text-zinc-400">
+          {comSaldo.length
+            ? `Doses na entidade: ${comSaldo.map((s) => `${nomeTouro(s.touro_id)} ${s.saldo}`).join(" · ")}`
+            : "A entidade não tem doses. Registre as doses que ela recebeu na aba Entidades."}
         </span>
       )}
       <Link href="/gestor/entidades" className="text-sm font-medium text-brand-green hover:underline">
@@ -583,8 +611,9 @@ function EntregaModal({
         </h2>
         <input type="hidden" name="destino" value={destino} />
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          As doses só entram no saldo depois que {destino === "tecnico" ? "o técnico" : "a fazenda"} confirmar o
-          recebimento. Até lá, a entrega pode ser corrigida ou excluída.
+          As doses saem do saldo da entidade na hora e só entram no saldo{" "}
+          {destino === "tecnico" ? "do técnico" : "da fazenda"} depois que {destino === "tecnico" ? "ele" : "ela"}{" "}
+          confirmar o recebimento. Até lá, a entrega pode ser corrigida ou excluída.
         </p>
 
         {!edicao && (
@@ -613,7 +642,7 @@ function EntregaModal({
           </div>
         )}
 
-        <CamposEntidade entidades={entidades} inicialId={entrega.entidade_id ?? ""} />
+        <CamposEntidade entidades={entidades} touros={touros} inicialId={entrega.entidade_id ?? ""} />
 
         {destino === "tecnico" ? (
           <Campo id="tecnico_id" label="Técnico que recebe">
@@ -683,19 +712,6 @@ function EntregaModal({
             step={1}
             required
             defaultValue={entrega.quantidade ?? ""}
-            className={CAMPO_CLASSES}
-          />
-        </Campo>
-
-        <Campo id="kits" label="Quantidade de kits">
-          <input
-            id="kits"
-            name="kits"
-            type="number"
-            min={1}
-            step={1}
-            required
-            defaultValue={entrega.kits ?? ""}
             className={CAMPO_CLASSES}
           />
         </Campo>

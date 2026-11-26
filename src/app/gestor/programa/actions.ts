@@ -98,11 +98,6 @@ export async function salvarEntrega(
     return { error: "A quantidade deve ser um número inteiro maior que zero." };
   }
 
-  const kits = Number(formData.get("kits"));
-  if (!Number.isInteger(kits) || kits <= 0) {
-    return { error: "Informe quantos kits a fazenda vai receber (número inteiro maior que zero)." };
-  }
-
   // a fazenda recebe pela entidade (0048), escolhida entre as cadastradas na aba Entidades
   const entidadeId = textoOuNull(formData.get("entidade_id"));
   if (!entidadeId) return { error: "Escolha a entidade beneficiada (cadastre na aba Entidades se não estiver na lista)." };
@@ -117,7 +112,6 @@ export async function salvarEntrega(
       tecnico_id: tecnicoId,
       touro_id: formData.get("touro_id") as string,
       quantidade,
-      kits,
       entidade_id: entidadeId,
       data_entrega: formData.get("data_entrega") as string,
       observacao: textoOuNull(formData.get("observacao")),
@@ -139,7 +133,6 @@ export async function salvarEntrega(
     propriedade_id: formData.get("propriedade_id") as string,
     touro_id: formData.get("touro_id") as string,
     quantidade,
-    kits,
     entidade_id: entidadeId,
     data_entrega: formData.get("data_entrega") as string,
     observacao: textoOuNull(formData.get("observacao")),

@@ -303,6 +303,15 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   aba Entidades; a entrega (aba Programa) escolhe numa lista das entidades cadastradas e grava o
   `entidade_id` direto (12/10/2026 — antes criava pelo nome dentro da entrega;
   `gestor_salvar_entidade` continua no banco, sem uso pela entrega).
+- **Kits e doses pela entidade** (0068, aba Entidades → "Kits e doses"): o kit de inseminação é doado à
+  ENTIDADE (`kits_inseminacao`, um por patrimônio, com o processo de doação; os 87 kits da CODEVASF de
+  25/11/2026 entram pela própria migration, ligados pelo CNPJ) e vai pra uma fazenda OU um técnico como
+  cessão de uso (`propriedade_id`/`tecnico_id` + `cedido_em`; vazio = na entidade; sem histórico de
+  cessões). As doses passam pela entidade: o gestor registra as que ela recebeu
+  (`entregas_doses_entidade`) e a entrega pra fazenda/técnico sai do saldo (`saldo_doses_entidade`;
+  trigger recusa entrega sem saldo e recusa apagar doses já repassadas; transferência do técnico não
+  conta). A entrega não pede mais "quantidade de kits" (a coluna `kits` fica com o que já foi gravado).
+  Só o gestor vê e escreve (a entidade não tem conta).
 - Fazenda "participa" do programa = tem alguma linha em `entregas_doses`. Sem isso, o site do
   produtor/técnico não mostra nada do programa (catálogo de touros e dose na cobertura, Reprodução
   e Lançar no campo; bloco "Programa de sêmen" nos Índices). A comparação com a linha de base da

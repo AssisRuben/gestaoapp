@@ -74,6 +74,12 @@ begin
     values ('Associação Teste do Lançamento', 'Maria Teste', '(85) 98888-0000') returning id into v_ent;
   end if;
 
+  -- doses passam pela entidade (0068): ela recebe antes de repassar (sobra pro técnico de
+  -- dados_teste_doses_tecnico.sql: Alfa 6, Beta 4)
+  insert into entregas_doses_entidade (entidade_id, touro_id, quantidade, data_entrega, observacao)
+  values (v_ent, v_alfa, 20, h - 120, 'Teste do lançamento'),
+         (v_ent, v_beta, 10, h - 120, 'Teste do lançamento');
+
   -- Alfa: 10 doses entregues e já confirmadas; Beta: 5 doses esperando a fazenda confirmar
   insert into entregas_doses (propriedade_id, touro_id, quantidade, kits, entidade_id, data_entrega, recebido_em, recebido_por)
   values (v_prop, v_alfa, 10, 2, v_ent, h - 90, now(), v_usuario);

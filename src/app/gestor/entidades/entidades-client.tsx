@@ -7,9 +7,18 @@ import { Modal, Campo, CAMPO_CLASSES, BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from ".
 import { useSuccessToast, SuccessToast } from "../../(app)/toast";
 import { mascaraCnpj } from "@/lib/cnpj";
 import { mascaraTelefone } from "@/lib/telefone";
+import {
+  KitsDosesEntidade,
+  ResumoKitsDoses,
+  type KitEntidade,
+  type DosesRecebidasEntidade,
+  type SaldoEntidade,
+  type OpcoesKitsDoses,
+} from "./kits-doses";
 
 // Índices por entidade em MÉDIA POR FAZENDA (0050) — pra comparar a eficiência entre entidades.
-// Totais só pro que é contagem (doses, kits, gestações, nascidos). A "Média geral" usa todas as
+// Totais só pro que é contagem (doses, gestações, nascidos). Kits e saldo de doses da entidade vêm de
+// kits_inseminacao / saldo_doses_entidade (0068), não mais do campo "kits" da entrega. A "Média geral" usa todas as
 // fazendas que recebem por alguma entidade: verde = melhor que a média geral, vermelho = pior.
 
 type Num = number | string | null;
@@ -268,9 +277,24 @@ function EntidadeModal({ entidade, onFechar, onSalvo }: { entidade: Partial<Enti
   );
 }
 
-export function EntidadesClient({ entidades, fazendas }: { entidades: Entidade[]; fazendas: FazendaEntidade[] }) {
+export function EntidadesClient({
+  entidades,
+  fazendas,
+  kits,
+  recebidas,
+  saldos,
+  opcoes,
+}: {
+  entidades: Entidade[];
+  fazendas: FazendaEntidade[];
+  kits: KitEntidade[];
+  recebidas: DosesRecebidasEntidade[];
+  saldos: SaldoEntidade[];
+  opcoes: OpcoesKitsDoses;
+}) {
   const [ordem, setOrdem] = useState("nome");
   const [aberta, setAberta] = useState<string | null>(null);
+  const [kitsAberta, setKitsAberta] = useState<string | null>(null);
   const [editando, setEditando] = useState<Partial<Entidade> | null>(null);
   const { mensagemToast, mostrarToast } = useSuccessToast();
 
@@ -330,6 +354,9 @@ export function EntidadesClient({ entidades, fazendas }: { entidades: Entidade[]
       {lista.map(({ e, i }) => {
         const daEntidade = fazendas.filter((f) => f.entidade_id === e.entidade_id);
         const expandida = aberta === e.entidade_id;
+        const kitsDaEntidade = kits.filter((k) => k.entidade_id === e.entidade_id);
+        const saldosDaEntidade = saldos.filter((s) => s.entidade_id === e.entidade_id);
+        const kitsAbertos = kitsAberta === e.entidade_id;
         return (
           <section key={e.entidade_id} className={`flex flex-col gap-3 p-4 ${CARTAO}`}>
             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -350,6 +377,28 @@ export function EntidadesClient({ entidades, fazendas }: { entidades: Entidade[]
               </div>
             </div>
 
+            <div className="flex flex-col gap-1">
+              <ResumoKitsDoses kits={kitsDaEntidade} saldos={saldosDaEntidade} touros={opcoes.touros} />
+              <button
+                type="button"
+                onClick={() => setKitsAberta(kitsAbertos ? null : e.entidade_id)}
+                aria-expanded={kitsAbertos}
+                className="self-start text-sm font-medium text-brand-green hover:underline"
+              >
+                {kitsAbertos ? "Esconder kits e doses" : "Kits e doses"}
+              </button>
+            </div>
+            {kitsAbertos && (
+              <KitsDosesEntidade
+                entidadeId={e.entidade_id}
+                kits={kitsDaEntidade}
+                recebidas={recebidas.filter((r) => r.entidade_id === e.entidade_id)}
+                saldos={saldosDaEntidade}
+                opcoes={opcoes}
+                onSucesso={mostrarToast}
+              />
+            )}
+
             {e.fazendas > 0 ? (
               <>
                 <p className="text-xs text-zinc-600 dark:text-zinc-400">
@@ -357,7 +406,7 @@ export function EntidadesClient({ entidades, fazendas }: { entidades: Entidade[]
                 </p>
                 <GradeIndices i={i} geral={geral} />
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  {e.doses_recebidas} doses recebidas ({e.kits} kits)
+                  {e.doses_recebidas} doses entregues às fazendas
                   {e.doses_pendentes ? ` · ${e.doses_pendentes} a confirmar` : ""} · {e.gestacoes_em_curso} gestações em curso ·{" "}
                   {e.nascimentos} nascidos do programa
                 </p>
@@ -386,7 +435,8 @@ export function EntidadesClient({ entidades, fazendas }: { entidades: Entidade[]
                       <th className="px-3 py-2 text-right font-medium">Produção/dia</th>
                       <th className="px-3 py-2 text-right font-medium">Faturamento/mês</th>
                       <th className="px-3 py-2 text-right font-medium">Custo/L</th>
-                      <th className="px-3 py-2 text-right font-medium">Doses (kits)</th>
+                      <th className="px-3 py-2 text-right font-medium">Doses</th>
+                      <th className="px-3 py-2 text-right font-medium">Kits</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -403,8 +453,9 @@ export function EntidadesClient({ entidades, fazendas }: { entidades: Entidade[]
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">{reais(n(f.receita_mensal), 0)}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{reais(n(f.custo_litro))}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{f.doses_recebidas}</td>
                         <td className="px-3 py-2 text-right tabular-nums">
-                          {f.doses_recebidas} ({f.kits})
+                          {kitsDaEntidade.filter((k) => k.propriedade_id === f.propriedade_id).length}
                         </td>
                       </tr>
                     ))}
