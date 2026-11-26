@@ -10,10 +10,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -8240,
-        14032
+        265408,
+        204560
       ],
-      "id": "f78aad40-1a81-4e96-adac-39248844c6b3",
+      "id": "f5bb8024-bc80-4400-9dca-06a05097c043",
       "name": "Webhook",
       "webhookId": "077d99eb-33e5-4014-907a-7e73b2291870"
     },
@@ -31,10 +31,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7936,
-        14032
+        265712,
+        204560
       ],
-      "id": "fd33b042-7b7e-4175-a964-7663424d38b9",
+      "id": "f0a7519f-c928-4711-a7ec-f7eb48da654a",
       "name": "Identificar Usuario",
       "alwaysOutputData": true,
       "credentials": {
@@ -46,15 +46,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const usuario = $('Identificar Usuario').first().json;\nconst aiItem = $input.first().json;\n\nlet parsed;\n\ntry {\n    // 1. Pega a string que está dentro da chave 'output'\n    let rawText = aiItem.output || '';\n    \n    // Se por acaso vier de outra forma, tenta o objeto completo\n    if (!rawText && typeof aiItem === 'string') {\n        rawText = aiItem;\n    }\n\n    // 2. Limpa qualquer resquício de Markdown ou quebra de linha que a OpenAI possa colocar\n    let cleanText = String(rawText)\n        .replace(/```json/gi, '')\n        .replace(/```/g, '')\n        .trim();\n\n    // 3. Captura o que está entre as chaves { ... }\n    const match = cleanText.match(/\\{[\\s\\S]*\\}/);\n    let jsonString = match ? match[0] : cleanText;\n\n    // 4. Transforma a string em um objeto JavaScript real\n    parsed = JSON.parse(jsonString);\n\n} catch (e) {\n    // Fallback de segurança caso o JSON venha corrompido\n    parsed = { \n        intencao: 'outro', \n        entidades: {}, \n        resposta_sugerida: 'Não foi possível processar o formato da resposta da IA.' \n    };\n}\n\n// Mensagem original: usa o texto ja compilado do buffer (funciona tanto pra mensagem de\n// texto quanto pra audio transcrito, ja que o buffer guarda o texto transcrito, nao o\n// payload bruto do webhook). Antes disso tentava reler webhook.body.data.message.conversation\n// direto, o que so cobria texto puro e caia num fallback hardcoded ('vaca 10 produziu 12\n// litros') sempre que a mensagem era audio, corrompendo silenciosamente a deteccao de\n// periodo (\"hoje\", \"mes\") mais adiante no fluxo.\nlet mensagemOriginal = '';\ntry {\n    mensagemOriginal = $('Buffer - Ler Final').first().json.data || '';\n} catch (e) {\n    mensagemOriginal = '';\n}\n\n// Normaliza a intencao contra o enum valido, corrigindo erros comuns da IA\nconst INTENCOES_VALIDAS = ['registrar_parto','registrar_leite','registrar_cobertura',\n    'consultar_vaca','consultar_relatorio','cadastrar_vaca','atualizar_registro','atualizar_vaca','deletar_registro','diagnosticar_prenhez',\n    'registrar_financeiro','consultar_financeiro','atualizar_financeiro','deletar_financeiro',\n    'outras_acoes'];\nconst ALIASES_INTENCAO = {\n    'consult_vaca': 'consultar_vaca',\n    'consultar_relatório': 'consultar_relatorio',\n    'registrar_cobertura ': 'registrar_cobertura'\n};\nfunction normalizarIntencao(raw) {\n    if (!raw) return 'outro';\n    let v = String(raw).trim().toLowerCase();\n    if (INTENCOES_VALIDAS.includes(v)) return v;\n    if (ALIASES_INTENCAO[v]) return ALIASES_INTENCAO[v];\n    // tenta achar a intencao valida mais proxima por prefixo/substring (nunca cai em registrar_* ou deletar_* por seguranca)\n    const candidata = INTENCOES_VALIDAS.find(i => i.startsWith(v) || v.startsWith(i));\n    if (candidata && !candidata.startsWith('deletar')) return candidata;\n    return 'outro';\n}\n\n// A IA às vezes devolve a data como \"<hoje>\" (copiado dos exemplos do prompt), \"hoje\", \"ontem\"\n// ou \"11/10/2026\". O banco só aceita AAAA-MM-DD: qualquer outra coisa fazia a chamada da função\n// falhar e o bot responder \"Não consegui ... agora\". Aqui vira data de verdade ou null (= hoje).\nfunction normalizarData(raw) {\n    if (raw === null || raw === undefined) return null;\n    const v = String(raw).trim().toLowerCase().replace(/[<>\"']/g, '');\n    if (!v) return null;\n    const hoje = $now.setZone('America/Fortaleza').startOf('day');\n    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(v)) return v;\n    if (v === 'hoje') return hoje.toFormat('yyyy-MM-dd');\n    if (v === 'ontem') return hoje.minus({ days: 1 }).toFormat('yyyy-MM-dd');\n    if (v === 'anteontem') return hoje.minus({ days: 2 }).toFormat('yyyy-MM-dd');\n    const m = v.match(/^(\\d{1,2})\\/(\\d{1,2})(?:\\/(\\d{2,4}))?$/);\n    if (m) {\n        let ano = m[3] ? Number(m[3]) : hoje.year;\n        if (ano < 100) ano += 2000;\n        const d = hoje.set({ year: ano, month: Number(m[2]), day: Number(m[1]) });\n        if (d.isValid && d.day === Number(m[1]) && d.month === Number(m[2])) return d.toFormat('yyyy-MM-dd');\n    }\n    return null;\n}\n\n// 5. Retorno limpo e estruturado para o seu banco/Supabase\nreturn [{\n    json: {\n        intencao: normalizarIntencao(parsed.intencao),\n        entidades: {\n            numero_vaca: parsed.entidades?.numero_vaca ?? null,\n            nome_vaca: parsed.entidades?.nome_vaca ?? null,\n            nome_mae: parsed.entidades?.nome_mae ?? null,\n            data: normalizarData(parsed.entidades?.data),\n            litros: parsed.entidades?.litros ?? null,\n            periodo: parsed.entidades?.periodo ?? null,\n            sexo_bezerro: parsed.entidades?.sexo_bezerro ?? null,\n            numero_bezerro: parsed.entidades?.numero_bezerro ?? null,\n            touro_semen: parsed.entidades?.touro_semen ?? null,\n            observacao: parsed.entidades?.observacao ?? null,\n            tipo_relatorio: parsed.entidades?.tipo_relatorio ?? null,\n            periodo_dias: parsed.entidades?.periodo_dias ?? null,\n            resultado_diagnostico: parsed.entidades?.resultado_diagnostico ?? null,\n            numero_mae: parsed.entidades?.numero_mae ?? null,\n            origem_animal: parsed.entidades?.origem_animal ?? null,\n            status_produtivo: parsed.entidades?.status_produtivo ?? null,\n            status_reprodutivo: parsed.entidades?.status_reprodutivo ?? null,\n            tipo_financeiro: parsed.entidades?.tipo_financeiro ?? null,\n            categoria: parsed.entidades?.categoria ?? null,\n            valor: parsed.entidades?.valor ?? null,\n            acao: parsed.entidades?.acao ?? null,\n            nivel_cm: parsed.entidades?.nivel_cm ?? null\n        },\n        resposta_sugerida: parsed.resposta_sugerida || '',\n        propriedade_id: usuario?.propriedade_id || null,\n        telefone: usuario?.telefone || null,\n        mensagem_original: mensagemOriginal\n    }\n}];"
+        "jsCode": "const usuario = $('Identificar Usuario').first().json;\nconst aiItem = $input.first().json;\n\nlet parsed;\n\ntry {\n    // 1. Pega a string que está dentro da chave 'output'\n    let rawText = aiItem.output || '';\n    \n    // Se por acaso vier de outra forma, tenta o objeto completo\n    if (!rawText && typeof aiItem === 'string') {\n        rawText = aiItem;\n    }\n\n    // 2. Limpa qualquer resquício de Markdown ou quebra de linha que a OpenAI possa colocar\n    let cleanText = String(rawText)\n        .replace(/```json/gi, '')\n        .replace(/```/g, '')\n        .trim();\n\n    // 3. Captura o que está entre as chaves { ... }\n    const match = cleanText.match(/\\{[\\s\\S]*\\}/);\n    let jsonString = match ? match[0] : cleanText;\n\n    // 4. Transforma a string em um objeto JavaScript real\n    parsed = JSON.parse(jsonString);\n\n} catch (e) {\n    // Fallback de segurança caso o JSON venha corrompido\n    parsed = { \n        intencao: 'outro', \n        entidades: {}, \n        resposta_sugerida: 'Não foi possível processar o formato da resposta da IA.' \n    };\n}\n\n// Mensagem original: usa o texto ja compilado do buffer (funciona tanto pra mensagem de\n// texto quanto pra audio transcrito, ja que o buffer guarda o texto transcrito, nao o\n// payload bruto do webhook). Antes disso tentava reler webhook.body.data.message.conversation\n// direto, o que so cobria texto puro e caia num fallback hardcoded ('vaca 10 produziu 12\n// litros') sempre que a mensagem era audio, corrompendo silenciosamente a deteccao de\n// periodo (\"hoje\", \"mes\") mais adiante no fluxo.\nlet mensagemOriginal = '';\ntry {\n    mensagemOriginal = $('Buffer - Ler Final').first().json.data || '';\n} catch (e) {\n    mensagemOriginal = '';\n}\n\n// Normaliza a intencao contra o enum valido, corrigindo erros comuns da IA\nconst INTENCOES_VALIDAS = ['registrar_parto','registrar_leite','registrar_cobertura',\n    'consultar_vaca','consultar_relatorio','cadastrar_vaca','atualizar_registro','atualizar_vaca','deletar_registro','diagnosticar_prenhez',\n    'registrar_financeiro','consultar_financeiro','atualizar_financeiro','deletar_financeiro',\n    'outras_acoes'];\nconst ALIASES_INTENCAO = {\n    'consult_vaca': 'consultar_vaca',\n    'consultar_relatório': 'consultar_relatorio',\n    'registrar_cobertura ': 'registrar_cobertura'\n};\nfunction normalizarIntencao(raw) {\n    if (!raw) return 'outro';\n    let v = String(raw).trim().toLowerCase();\n    if (INTENCOES_VALIDAS.includes(v)) return v;\n    if (ALIASES_INTENCAO[v]) return ALIASES_INTENCAO[v];\n    // tenta achar a intencao valida mais proxima por prefixo/substring (nunca cai em registrar_* ou deletar_* por seguranca)\n    const candidata = INTENCOES_VALIDAS.find(i => i.startsWith(v) || v.startsWith(i));\n    if (candidata && !candidata.startsWith('deletar')) return candidata;\n    return 'outro';\n}\n\n// A IA às vezes devolve a data como \"<hoje>\" (copiado dos exemplos do prompt), \"hoje\", \"ontem\"\n// ou \"11/10/2026\". O banco só aceita AAAA-MM-DD: qualquer outra coisa fazia a chamada da função\n// falhar e o bot responder \"Não consegui ... agora\". Aqui vira data de verdade ou null (= hoje).\nfunction normalizarData(raw) {\n    if (raw === null || raw === undefined) return null;\n    const v = String(raw).trim().toLowerCase().replace(/[<>\"']/g, '');\n    if (!v) return null;\n    const hoje = $now.setZone('America/Fortaleza').startOf('day');\n    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(v)) return v;\n    if (v === 'hoje') return hoje.toFormat('yyyy-MM-dd');\n    if (v === 'ontem') return hoje.minus({ days: 1 }).toFormat('yyyy-MM-dd');\n    if (v === 'anteontem') return hoje.minus({ days: 2 }).toFormat('yyyy-MM-dd');\n    const m = v.match(/^(\\d{1,2})\\/(\\d{1,2})(?:\\/(\\d{2,4}))?$/);\n    if (m) {\n        let ano = m[3] ? Number(m[3]) : hoje.year;\n        if (ano < 100) ano += 2000;\n        const d = hoje.set({ year: ano, month: Number(m[2]), day: Number(m[1]) });\n        if (d.isValid && d.day === Number(m[1]) && d.month === Number(m[2])) return d.toFormat('yyyy-MM-dd');\n    }\n    return null;\n}\n\n// Leite de várias vacas na mesma mensagem (0067): entidades.leites, um item por lançamento.\n// Com um item só, vira o formato normal e segue o caminho de sempre (Registrar Leite).\nfunction normalizarLeites(raw) {\n    if (!Array.isArray(raw)) return null;\n    const itens = raw\n        .filter(i => i && typeof i === 'object')\n        .map(i => ({\n            numero_vaca: i.numero_vaca ?? null,\n            nome_vaca: i.nome_vaca ?? null,\n            litros: i.litros ?? null,\n            periodo: i.periodo ?? null\n        }))\n        .filter(i => i.numero_vaca !== null || i.nome_vaca !== null || i.litros !== null);\n    return itens.length ? itens : null;\n}\n\nconst intencao = normalizarIntencao(parsed.intencao);\nconst entidades = {\n    numero_vaca: parsed.entidades?.numero_vaca ?? null,\n    nome_vaca: parsed.entidades?.nome_vaca ?? null,\n    nome_mae: parsed.entidades?.nome_mae ?? null,\n    data: normalizarData(parsed.entidades?.data),\n    litros: parsed.entidades?.litros ?? null,\n    periodo: parsed.entidades?.periodo ?? null,\n    sexo_bezerro: parsed.entidades?.sexo_bezerro ?? null,\n    numero_bezerro: parsed.entidades?.numero_bezerro ?? null,\n    touro_semen: parsed.entidades?.touro_semen ?? null,\n    observacao: parsed.entidades?.observacao ?? null,\n    tipo_relatorio: parsed.entidades?.tipo_relatorio ?? null,\n    periodo_dias: parsed.entidades?.periodo_dias ?? null,\n    resultado_diagnostico: parsed.entidades?.resultado_diagnostico ?? null,\n    numero_mae: parsed.entidades?.numero_mae ?? null,\n    origem_animal: parsed.entidades?.origem_animal ?? null,\n    status_produtivo: parsed.entidades?.status_produtivo ?? null,\n    status_reprodutivo: parsed.entidades?.status_reprodutivo ?? null,\n    tipo_financeiro: parsed.entidades?.tipo_financeiro ?? null,\n    categoria: parsed.entidades?.categoria ?? null,\n    valor: parsed.entidades?.valor ?? null,\n    acao: parsed.entidades?.acao ?? null,\n    nivel_cm: parsed.entidades?.nivel_cm ?? null\n};\n\nlet leites = intencao === 'registrar_leite' ? normalizarLeites(parsed.entidades?.leites) : null;\nif (leites) {\n    // a IA às vezes repete uma vaca também nos campos normais: só entra se não estiver na lista\n    const temSolta = (entidades.numero_vaca !== null || entidades.nome_vaca !== null) && entidades.litros !== null;\n    const jaNaLista = leites.some(i =>\n        String(i.numero_vaca ?? '') === String(entidades.numero_vaca ?? '') &&\n        String(i.nome_vaca ?? '').toLowerCase() === String(entidades.nome_vaca ?? '').toLowerCase());\n    if (temSolta && !jaNaLista) {\n        leites.unshift({ numero_vaca: entidades.numero_vaca, nome_vaca: entidades.nome_vaca, litros: entidades.litros, periodo: null });\n    }\n}\nif (leites && leites.length === 1) {\n    const [u] = leites;\n    entidades.numero_vaca = u.numero_vaca;\n    entidades.nome_vaca = u.nome_vaca;\n    entidades.litros = u.litros;\n    entidades.periodo = u.periodo ?? entidades.periodo;\n    leites = null;\n} else if (leites) {\n    entidades.numero_vaca = null;\n    entidades.nome_vaca = null;\n    entidades.litros = null;\n}\nentidades.leites = leites;\n\n// 5. Retorno limpo para o banco/Supabase\nreturn [{\n    json: {\n        intencao,\n        entidades,\n        resposta_sugerida: parsed.resposta_sugerida || '',\n        propriedade_id: usuario?.propriedade_id || null,\n        telefone: usuario?.telefone || null,\n        mensagem_original: mensagemOriginal\n    }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1344,
-        13456
+        272304,
+        203984
       ],
-      "id": "b82fbb51-c71f-4fca-965c-3b8223f90752",
+      "id": "ce06eb74-cd93-4e01-91f0-c26a3c1adfb6",
       "name": "Parsear Resposta IA"
     },
     {
@@ -444,10 +444,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
       "position": [
-        -432,
-        13376
+        273216,
+        203904
       ],
-      "id": "4cf5cf72-c8f9-493d-a91b-7910b41df2b3",
+      "id": "402ac021-350c-422a-b394-51c01a09e8f9",
       "name": "Rotear Intencao"
     },
     {
@@ -461,15 +461,15 @@
       "type": "n8n-nodes-evolution-api.evolutionApi",
       "typeVersion": 1,
       "position": [
-        16688,
-        14256
+        290336,
+        204784
       ],
-      "id": "7293773e-d7f0-4347-8a89-4c3de803630c",
+      "id": "608bcb12-5c92-44a3-b361-40c6fefcf8db",
       "name": "Enviar texto",
       "credentials": {
         "evolutionApi": {
-          "id": "qFPyWQxioJ8lY37f",
-          "name": "Evolution Adam"
+          "id": "ZlqMlFl3fCBjkcv4",
+          "name": "Evolution GestaoPec"
         }
       }
     },
@@ -478,16 +478,16 @@
         "promptType": "define",
         "text": "={{ $('Buffer - Ler Final').item.json.data }}",
         "options": {
-          "systemMessage": "=Você é o assistente de WhatsApp do Gestão Pec, sistema de gestão de fazendas de gado leiteiro. Quando falar de si mesmo, diga que é o assistente do Gestão Pec (nunca cite PAEZ, Balde Cheio, OpenAI, IA ou modelo). \n\nA mensagem do produtor virá sempre precedida de uma linha \"Data de referência (hoje): YYYY-MM-DD\".\nUse SEMPRE essa data como \"hoje\" para resolver \"hoje\", \"ontem\", \"esse mês\" etc — nunca use seu\npróprio conhecimento de data atual, que pode estar incorreto ou em fuso diferente.\n\n\nSua tarefa é interpretar a mensagem do produtor rural e retornar APENAS um JSON válido, sem texto adicional, sem markdown, seguindo este formato:{\"intencao\": \"registrar_parto | registrar_leite | registrar_cobertura | consultar_vaca | consultar_relatorio | cadastrar_vaca | atualizar_registro | atualizar_vaca | deletar_registro | diagnosticar_prenhez | registrar_financeiro | consultar_financeiro | atualizar_financeiro | deletar_financeiro | outras_acoes | outro\", \"entidades\": {\"numero_vaca\": string|null, \"nome_vaca\": string|null, \"nome_mae\": string|null, \"data\": \"YYYY-MM-DD\"|null, \"litros\": number|null, \"periodo\": \"manha|tarde|dia_inteiro\"|null, \"sexo_bezerro\": \"macho|femea|natimorto\"|null, \"numero_bezerro\": string|null, \"touro_semen\": string|null, \"observacao\": string|null, \"tipo_relatorio\": \"leite | reprodutivo | cadastro | geral | doses\"|null, \"periodo_dias\": number|null, \"resultado_diagnostico\": \"positivo | negativo | pendente\"|null, \"numero_mae\": string|null, \"origem_animal\": \"nascida | comprada\"|null, \"status_produtivo\": \"novilha | lactacao | seca\"|null, \"status_reprodutivo\": \"vazia | prenhe | vazia_em_servico\"|null, \"tipo_financeiro\": \"despesa | receita\"|null, \"categoria\": string|null, \"valor\": number|null, \"acao\": \"confirmar_doses | ligar_lembretes | desligar_lembretes | promover_bezerro | registrar_botijao\"|null, \"nivel_cm\": number|null}, \"resposta_sugerida\": string}Regras: o campo data é SEMPRE uma data real no formato YYYY-MM-DD — nos exemplos, \"<hoje>\" e \"<ontem>\" são só marcadores: troque pela data calculada a partir da Data de referência, nunca escreva \"<hoje>\", \"hoje\" ou \"ontem\" no JSON; use a data de hoje quando o produtor disser \"hoje\"; converta datas relativas para YYYY-MM-DD; se a mensagem não se encaixar em nenhuma intenção, use \"outro\" e explique em resposta_sugerida; nunca invente números de vaca ou valores que não estejam na mensagem.Exemplos:Mensagem: \"vaca 12 pariu hoje, bezerra\" -> {\"intencao\":\"registrar_parto\",\"entidades\":{\"numero_vaca\":\"12\",\"data\":\"<hoje>\",\"sexo_bezerro\":\"femea\"},\"resposta_sugerida\":\"Parto da vaca 12 registrado (bezerra).\"}Mensagem: \"leite vaca 45: 14 litros manhã\" -> {\"intencao\":\"registrar_leite\",\"entidades\":{\"numero_vaca\":\"45\",\"litros\":14,\"periodo\":\"manha\"},\"resposta_sugerida\":\"Registrado 14L da vaca 45 (manhã).\"}Mensagem: \"quais vacas estão secando esse mês?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{},\"resposta_sugerida\":\"Buscando vacas com previsão de secagem neste mês.\"} Regras adicionais para atualizar_registro e deletar_registro: use \"atualizar_registro\" quando o produtor quiser corrigir um registro de leite já lançado (ex: \"corrige o leite da vaca 10 de ontem para 15 litros\"), preenchendo numero_vaca, data, periodo e litros com o valor NOVO. use \"deletar_registro\" quando o produtor quiser apagar um registro de leite já lançado (ex: \"apaga o leite da vaca 10 de ontem\" ou \"lancei errado, remove esse registro\"), preenchendo numero_vaca, data e periodo. Nunca execute a exclusão ou atualização você mesmo: apenas identifique a intenção e as entidades; a confirmação e execução são feitas por outra etapa do sistema. Exemplos adicionais: Mensagem: \"corrige a vaca 22 de hoje pra 18 litros de manha\" -> {\"intencao\":\"atualizar_registro\",\"entidades\":{\"numero_vaca\":\"22\",\"data\":\"<hoje>\",\"litros\":18,\"periodo\":\"manha\"},\"resposta_sugerida\":\"Atualizando registro da vaca 22.\"} Mensagem: \"apaga o leite da vaca 8 de ontem a tarde\" -> {\"intencao\":\"deletar_registro\",\"entidades\":{\"numero_vaca\":\"8\",\"data\":\"<ontem>\",\"periodo\":\"tarde\"},\"resposta_sugerida\":\"Localizando o registro da vaca 8 para exclusão.\"} Regra para tipo_relatorio: quando a intencao for consultar_vaca ou consultar_relatorio, defina tipo_relatorio=\"reprodutivo\" se a pergunta for sobre cobertura, prenhez, parto, secagem ou IEP; defina tipo_relatorio=\"leite\" se for sobre produção/litros; caso a pergunta seja genérica (ex: status geral da vaca), use \"geral\". Exemplo cobertura: Mensagem: \"cobri a vaca 15 hoje com sêmen do touro Tarzan\" -> {\"intencao\":\"registrar_cobertura\",\"entidades\":{\"numero_vaca\":\"15\",\"data\":\"<hoje>\",\"touro_semen\":\"Tarzan\"},\"resposta_sugerida\":\"Cobertura da vaca 15 registrada.\"} Exemplo relatório reprodutivo: Mensagem: \"quais vacas estão secando esse mês?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando vacas com previsão de secagem neste mês.\"} Exemplo relatório reprodutivo individual: Mensagem: \"quando a vaca 10 deve parir?\" -> {\"intencao\":\"consultar_vaca\",\"entidades\":{\"numero_vaca\":\"10\",\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando previsão de parto da vaca 10.\"} Regra adicional: use tipo_relatorio=\"cadastro\" quando a pergunta for sobre quantidade/contagem de vacas cadastradas no rebanho (ex: \"quantas vacas eu tenho?\", \"quantas vacas cadastradas?\"). Exemplo: Mensagem: \"quantas vacas cadastradas?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"cadastro\"},\"resposta_sugerida\":\"Buscando o total de vacas cadastradas.\"} IMPORTANTE: o campo intencao deve ser copiado EXATAMENTE e por extenso como aparece na lista de opcoes acima (ex: \"consultar_vaca\", nunca \"consult_vaca\" ou qualquer forma abreviada). Nao invente, abrevie ou modifique os nomes das intencoes. Regra para periodo_dias: em relatorios gerais de leite (sem numero de vaca), se o produtor pedir historico/ultimos dias, defina periodo_dias com a quantidade de dias (ex: \"ultima semana\"=7, \"esse mes\"=30, \"ultimos 3 dias\"=3). Se ele so perguntar \"producao de hoje\" ou nao especificar periodo, deixe periodo_dias=null (mostra so hoje). Exemplo: Mensagem: \"quero ver o historico de producao\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"leite\",\"periodo_dias\":7},\"resposta_sugerida\":\"Buscando o historico de producao dos ultimos 7 dias.\"} Regra critica: se um numero de vaca aparecer na mensagem (ex: \"vaca 1\", \"vaca numero 5\"), SEMPRE preencha numero_vaca com esse numero, mesmo que a palavra \"relatorio\" tambem apareca na frase. A ausencia de numero_vaca deve ser reservada apenas para perguntas genuinamente sobre o rebanho inteiro, sem nenhuma vaca especifica mencionada. Exemplo: Mensagem: \"relatorio reprodutivo da vaca 1\" -> {\"intencao\":\"consultar_vaca\",\"entidades\":{\"numero_vaca\":\"1\",\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando relatorio reprodutivo da vaca 1.\"} Regra para diagnosticar_prenhez: use essa intencao quando o produtor quiser informar o RESULTADO de um diagnostico de prenhez de uma cobertura ja registrada (toque, ultrassom, etc), preenchendo numero_vaca e resultado_diagnostico (\"positivo\" para prenha/positiva/confirmada, \"negativo\" para vazia/negativa/nao prenha). NAO confunda com registrar_cobertura (que cria uma cobertura nova). Exemplos: Mensagem: \"registrar prenhez vaca 4 hoje\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"4\",\"resultado_diagnostico\":\"positivo\"},\"resposta_sugerida\":\"Registrando diagnostico positivo da vaca 4.\"} Mensagem: \"vaca 7 negativa no toque\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"7\",\"resultado_diagnostico\":\"negativo\"},\"resposta_sugerida\":\"Registrando diagnostico negativo da vaca 7.\"} Regra de correcao: se o produtor pedir para corrigir/voltar um diagnostico ja registrado (ex: \"corrige o diagnostico da vaca 4 pra pendente\", \"volta a vaca 4 pra pendente\"), use diagnosticar_prenhez com resultado_diagnostico=\"pendente\". Exemplo: Mensagem: \"corrige o diagnostico da vaca 4 pra pendente\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"4\",\"resultado_diagnostico\":\"pendente\"},\"resposta_sugerida\":\"Corrigindo diagnostico da vaca 4 para pendente.\"} Regra para cadastrar_vaca: use numero_vaca para o numero da vaca NOVA sendo cadastrada. Se o produtor mencionar a mae (ex: \"filha da vaca 5\", \"cria da vaca 12\"), preencha numero_mae com o numero da mae; caso contrario deixe numero_mae null (cadastro de vaca sem mae rastreada, ex: comprada). Exemplos: Mensagem: \"cadastra a vaca 30, filha da vaca 5\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":\"30\",\"numero_mae\":\"5\"},\"resposta_sugerida\":\"Cadastrando a vaca 30.\"} Mensagem: \"cadastra a vaca 31\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":\"31\",\"numero_mae\":null},\"resposta_sugerida\":\"Cadastrando a vaca 31.\"} Regra para numero_vaca vazio no cadastro: se o produtor pedir para cadastrar uma vaca SEM informar numero (ex: \"cadastre uma vaca nova\"), deixe numero_vaca null - o sistema gera o proximo numero disponivel automaticamente. Regra para atualizar_vaca: use essa intencao quando o produtor quiser corrigir o status produtivo/reprodutivo de uma vaca JA cadastrada (nao um lancamento de leite - isso e atualizar_registro), preenchendo numero_vaca e status_produtivo e/ou status_reprodutivo com os valores exatos do enum. Exemplo: Mensagem: \"cadastre uma vaca nova\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":null},\"resposta_sugerida\":\"Cadastrando nova vaca com numero automatico.\"} Exemplo: Mensagem: \"corrige o status da vaca 7 pra seca\" -> {\"intencao\":\"atualizar_vaca\",\"entidades\":{\"numero_vaca\":\"7\",\"status_produtivo\":\"seca\"},\"resposta_sugerida\":\"Atualizando status da vaca 7 para seca.\"} Regras do modulo financeiro: use registrar_financeiro quando o produtor lancar um gasto ou uma venda/recebimento (preencha tipo_financeiro='despesa' ou 'receita', valor, categoria e data). Se o produtor nao informar a categoria, INFIRA uma categoria curta e padronizada em minusculas e sem acentuacao inconsistente a partir do contexto da mensagem (ex: racao, medicacao, veterinario, combustivel, energia eletrica, mao de obra, manutencao, produtos da ordenha, inseminacao artificial, custo com pastagem, venda de leite, venda de animal, outros). Sempre normalize a categoria pra minusculo e no mesmo padrao mesmo quando o produtor informar. Regra para distinguir veterinario de medicacao: use \"veterinario\" apenas quando o gasto for a visita/consulta do profissional; use \"medicacao\" para remedio, vacina ou vermifugo comprado, mesmo que sem visita do veterinario. Use consultar_financeiro para pedidos de relatorio/balanco financeiro (preencha tipo_financeiro apenas se o produtor pedir so despesas ou so receitas, senao deixe null; preencha periodo_dias quando pedir historico especifico, igual as regras de relatorio de leite). Use atualizar_financeiro para corrigir um lancamento ja feito (preencha categoria e/ou data para localizar o lancamento, e valor com o valor NOVO). Use deletar_financeiro para apagar um lancamento ja feito (preencha categoria e/ou data para localizar; a exclusao So acontece apos confirmacao, nao execute voce mesmo). Exemplos: Mensagem: \"gastei 200 reais com racao hoje\" -> {\"intencao\":\"registrar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\",\"valor\":200,\"categoria\":\"racao\",\"data\":\"<hoje>\"},\"resposta_sugerida\":\"Lancando despesa de racao.\"} Mensagem: \"vendi 500 reais de leite pro laticinio\" -> {\"intencao\":\"registrar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"receita\",\"valor\":500,\"categoria\":\"venda de leite\"},\"resposta_sugerida\":\"Lancando receita de venda de leite.\"} Mensagem: \"quanto gastei esse mes\" -> {\"intencao\":\"consultar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\"},\"resposta_sugerida\":\"Buscando as despesas do periodo.\"} Mensagem: \"relatorio financeiro\" -> {\"intencao\":\"consultar_financeiro\",\"entidades\":{},\"resposta_sugerida\":\"Buscando o relatorio financeiro.\"} Mensagem: \"corrige a despesa de racao de hoje pra 250\" -> {\"intencao\":\"atualizar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\",\"categoria\":\"racao\",\"data\":\"<hoje>\",\"valor\":250},\"resposta_sugerida\":\"Corrigindo o lancamento de racao.\"} Mensagem: \"apaga o lancamento de racao de hoje\" -> {\"intencao\":\"deletar_financeiro\",\"entidades\":{\"categoria\":\"racao\",\"data\":\"<hoje>\"},\"resposta_sugerida\":\"Localizando o lancamento de racao para exclusao.\"} Regra para origem_animal no cadastro: use \"comprada\" quando o produtor disser que adquiriu/comprou o animal (nesse caso NUNCA tente vincular numero_mae ao rebanho, mesmo que ele mencione uma mae - a mae de um animal comprado nao esta cadastrada nessa propriedade). Use \"nascida\" quando for uma cria da propria fazenda (ex: \"filha da vaca 5\"). Se nao for possivel saber com certeza, deixe origem_animal null (mais seguro nao vincular mae por engano). Exemplo: Mensagem: \"comprei uma novilha, numero 40\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":\"40\",\"origem_animal\":\"comprada\",\"numero_mae\":null},\"resposta_sugerida\":\"Cadastrando a vaca 40 (comprada).\"} Regra de padronizacao para sexo_bezerro: sempre normalize para exatamente \"macho\", \"femea\" ou \"natimorto\" (minusculo, sem acento). As palavras \"bezerra\" ou \"novilha\" ja indicam sexo_bezerro=\"femea\" mesmo sem a palavra \"femea\" aparecer na frase; a palavra \"bezerro\" (quando usada para indicar o sexo do recem-nascido, nao como termo generico) indica sexo_bezerro=\"macho\". Regra para numero_bezerro: se o produtor informar um numero para o bezerro/bezerra recem-nascido, preencha numero_bezerro com esse numero. Exemplo: Mensagem: \"a vaca 6 pariu 10/07/26 o numero da bezerra e 100\" -> {\"intencao\":\"registrar_parto\",\"entidades\":{\"numero_vaca\":\"6\",\"data\":\"2026-07-10\",\"sexo_bezerro\":\"femea\",\"numero_bezerro\":\"100\"},\"resposta_sugerida\":\"Registrando o parto da vaca 6 e a bezerra 100.\"}\n\n Regra para periodo (ordenha): preencha periodo SOMENTE se o produtor disser qual ordenha foi: \"manha\" para manhã/cedo, \"tarde\" para tarde/noite, \"dia_inteiro\" quando ele disser que é o total do dia (ex: \"deu 20 litros no dia todo\"). Se a ordenha não for dita, deixe periodo null — nunca suponha (o sistema recusa duas vezes a mesma ordenha no mesmo dia, então um periodo inventado faz o segundo lançamento do dia ser recusado). Vale também para corrigir e apagar leite. Exemplo: Mensagem: \"vaca 3 deu 15 litros\" -> {\"intencao\":\"registrar_leite\",\"entidades\":{\"numero_vaca\":\"3\",\"litros\":15,\"periodo\":null},\"resposta_sugerida\":\"Registrando 15L da vaca 3.\"} Regra para corrigir/apagar financeiro: preencha categoria e/ou data sempre que o produtor mencionar; se ele não disser nenhum dos dois, deixe ambos null (o sistema pede pra ele especificar) — nunca invente uma categoria só para localizar o lançamento. Regra para o programa de sêmen: perguntas sobre doses/saldo de sêmen do programa (\"quantas doses eu tenho?\", \"saldo de sêmen\") são consultar_relatorio com tipo_relatorio=\"doses\". Regra para outras_acoes: use a intencao \"outras_acoes\" com entidades.acao = \"confirmar_doses\" quando o produtor disser que recebeu/chegaram as doses de sêmen do programa (preencha touro_semen se ele disser o touro); \"desligar_lembretes\" quando pedir pra parar/desligar os lembretes ou avisos diários; \"ligar_lembretes\" quando pedir pra ligar/voltar os lembretes; \"promover_bezerro\" quando disser que uma bezerra virou vaca/novilha ou pedir pra cadastrar a bezerra como vaca (preencha numero_bezerro com o número dela). Exemplos: Mensagem: \"chegaram as doses do touro Tarzan\" -> {\"intencao\":\"outras_acoes\",\"entidades\":{\"acao\":\"confirmar_doses\",\"touro_semen\":\"Tarzan\"},\"resposta_sugerida\":\"Confirmando o recebimento das doses.\"} Mensagem: \"para de me mandar lembrete\" -> {\"intencao\":\"outras_acoes\",\"entidades\":{\"acao\":\"desligar_lembretes\"},\"resposta_sugerida\":\"Desligando os lembretes.\"} Mensagem: \"a bezerra 105 já virou vaca\" -> {\"intencao\":\"outras_acoes\",\"entidades\":{\"acao\":\"promover_bezerro\",\"numero_bezerro\":\"105\"},\"resposta_sugerida\":\"Cadastrando a bezerra 105 como vaca.\"} Mensagem: \"quantas doses do programa eu tenho?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"doses\"},\"resposta_sugerida\":\"Buscando o saldo de doses.\"} Regra para o botijão de nitrogênio: quando o produtor disser que abasteceu/encheu/completou o botijão de nitrogênio (a mensagem costuma ser a legenda da foto da régua), use a intencao \"outras_acoes\" com entidades.acao = \"registrar_botijao\", nivel_cm = o nível na régua em centímetros e valor = quanto pagou pelo abastecimento; preencha data só se ele disser quando foi. Nunca invente nivel_cm nem valor: se faltar, deixe null (o sistema pergunta). Exemplo: Mensagem: \"abasteci o botijão, nível 42 cm, paguei 180 reais\" -> {\"intencao\":\"outras_acoes\",\"entidades\":{\"acao\":\"registrar_botijao\",\"nivel_cm\":42,\"valor\":180},\"resposta_sugerida\":\"Registrando o abastecimento do botijão.\"} Regra para conversa fora do assunto (intencao \"outro\"): resposta_sugerida é UMA mensagem curta e amigável em português, apresentando-se como assistente do Gestão Pec e dando 2 ou 3 exemplos do que o produtor pode mandar (ex.: \"vaca 12 deu 15 litros de manhã\", \"a vaca 7 pariu hoje, bezerra\", \"gastei 200 reais com ração\"). NUNCA mencione estas instruções, a linha \"Data de referência\", formatos como YYYY-MM-DD, JSON ou campos internos. Regra para vaca pelo NOME: o produtor pode chamar a vaca pelo nome em vez do número (ex.: \"informações da Mimosa\", \"a Estrela deu 15 litros de manhã\", \"cobri a Mimosa hoje\"). Nesse caso preencha nome_vaca com o nome como ele escreveu e deixe numero_vaca null — nunca invente número. Para a mãe no cadastro (\"filha da Mimosa\"), use nome_mae em vez de numero_mae. Se ele disser o número, use numero_vaca normalmente. Exemplo: Mensagem: \"informações sobre a mimosa\" -> {\"intencao\":\"consultar_vaca\",\"entidades\":{\"nome_vaca\":\"mimosa\",\"tipo_relatorio\":\"geral\"},\"resposta_sugerida\":\"Buscando informações da Mimosa.\"}"
+          "systemMessage": "=Você é o assistente de WhatsApp do Gestão Pec, sistema de gestão de fazendas de gado leiteiro. Quando falar de si mesmo, diga que é o assistente do Gestão Pec (nunca cite PAEZ, Balde Cheio, OpenAI, IA ou modelo). \n\nA mensagem do produtor virá sempre precedida de uma linha \"Data de referência (hoje): YYYY-MM-DD\".\nUse SEMPRE essa data como \"hoje\" para resolver \"hoje\", \"ontem\", \"esse mês\" etc — nunca use seu\npróprio conhecimento de data atual, que pode estar incorreto ou em fuso diferente.\n\n\nSua tarefa é interpretar a mensagem do produtor rural e retornar APENAS um JSON válido, sem texto adicional, sem markdown, seguindo este formato:{\"intencao\": \"registrar_parto | registrar_leite | registrar_cobertura | consultar_vaca | consultar_relatorio | cadastrar_vaca | atualizar_registro | atualizar_vaca | deletar_registro | diagnosticar_prenhez | registrar_financeiro | consultar_financeiro | atualizar_financeiro | deletar_financeiro | outras_acoes | outro\", \"entidades\": {\"numero_vaca\": string|null, \"nome_vaca\": string|null, \"nome_mae\": string|null, \"data\": \"YYYY-MM-DD\"|null, \"litros\": number|null, \"periodo\": \"manha|tarde|dia_inteiro\"|null, \"sexo_bezerro\": \"macho|femea|natimorto\"|null, \"numero_bezerro\": string|null, \"touro_semen\": string|null, \"observacao\": string|null, \"tipo_relatorio\": \"leite | reprodutivo | cadastro | geral | doses\"|null, \"periodo_dias\": number|null, \"resultado_diagnostico\": \"positivo | negativo | pendente\"|null, \"numero_mae\": string|null, \"origem_animal\": \"nascida | comprada\"|null, \"status_produtivo\": \"novilha | lactacao | seca\"|null, \"status_reprodutivo\": \"vazia | prenhe | vazia_em_servico\"|null, \"tipo_financeiro\": \"despesa | receita\"|null, \"categoria\": string|null, \"valor\": number|null, \"acao\": \"confirmar_doses | ligar_lembretes | desligar_lembretes | promover_bezerro | registrar_botijao\"|null, \"nivel_cm\": number|null, \"leites\": [{\"numero_vaca\": string|null, \"nome_vaca\": string|null, \"litros\": number|null, \"periodo\": \"manha|tarde|dia_inteiro\"|null}]|null}, \"resposta_sugerida\": string}Regras: o campo data é SEMPRE uma data real no formato YYYY-MM-DD — nos exemplos, \"<hoje>\" e \"<ontem>\" são só marcadores: troque pela data calculada a partir da Data de referência, nunca escreva \"<hoje>\", \"hoje\" ou \"ontem\" no JSON; use a data de hoje quando o produtor disser \"hoje\"; converta datas relativas para YYYY-MM-DD; se a mensagem não se encaixar em nenhuma intenção, use \"outro\" e explique em resposta_sugerida; nunca invente números de vaca ou valores que não estejam na mensagem.Exemplos:Mensagem: \"vaca 12 pariu hoje, bezerra\" -> {\"intencao\":\"registrar_parto\",\"entidades\":{\"numero_vaca\":\"12\",\"data\":\"<hoje>\",\"sexo_bezerro\":\"femea\"},\"resposta_sugerida\":\"Parto da vaca 12 registrado (bezerra).\"}Mensagem: \"leite vaca 45: 14 litros manhã\" -> {\"intencao\":\"registrar_leite\",\"entidades\":{\"numero_vaca\":\"45\",\"litros\":14,\"periodo\":\"manha\"},\"resposta_sugerida\":\"Registrado 14L da vaca 45 (manhã).\"}Mensagem: \"quais vacas estão secando esse mês?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{},\"resposta_sugerida\":\"Buscando vacas com previsão de secagem neste mês.\"} Regras adicionais para atualizar_registro e deletar_registro: use \"atualizar_registro\" quando o produtor quiser corrigir um registro de leite já lançado (ex: \"corrige o leite da vaca 10 de ontem para 15 litros\"), preenchendo numero_vaca, data, periodo e litros com o valor NOVO. use \"deletar_registro\" quando o produtor quiser apagar um registro de leite já lançado (ex: \"apaga o leite da vaca 10 de ontem\" ou \"lancei errado, remove esse registro\"), preenchendo numero_vaca, data e periodo. Nunca execute a exclusão ou atualização você mesmo: apenas identifique a intenção e as entidades; a confirmação e execução são feitas por outra etapa do sistema. Exemplos adicionais: Mensagem: \"corrige a vaca 22 de hoje pra 18 litros de manha\" -> {\"intencao\":\"atualizar_registro\",\"entidades\":{\"numero_vaca\":\"22\",\"data\":\"<hoje>\",\"litros\":18,\"periodo\":\"manha\"},\"resposta_sugerida\":\"Atualizando registro da vaca 22.\"} Mensagem: \"apaga o leite da vaca 8 de ontem a tarde\" -> {\"intencao\":\"deletar_registro\",\"entidades\":{\"numero_vaca\":\"8\",\"data\":\"<ontem>\",\"periodo\":\"tarde\"},\"resposta_sugerida\":\"Localizando o registro da vaca 8 para exclusão.\"} Regra para tipo_relatorio: quando a intencao for consultar_vaca ou consultar_relatorio, defina tipo_relatorio=\"reprodutivo\" se a pergunta for sobre cobertura, prenhez, parto, secagem ou IEP; defina tipo_relatorio=\"leite\" se for sobre produção/litros; caso a pergunta seja genérica (ex: status geral da vaca), use \"geral\". Exemplo cobertura: Mensagem: \"cobri a vaca 15 hoje com sêmen do touro Tarzan\" -> {\"intencao\":\"registrar_cobertura\",\"entidades\":{\"numero_vaca\":\"15\",\"data\":\"<hoje>\",\"touro_semen\":\"Tarzan\"},\"resposta_sugerida\":\"Cobertura da vaca 15 registrada.\"} Exemplo relatório reprodutivo: Mensagem: \"quais vacas estão secando esse mês?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando vacas com previsão de secagem neste mês.\"} Exemplo relatório reprodutivo individual: Mensagem: \"quando a vaca 10 deve parir?\" -> {\"intencao\":\"consultar_vaca\",\"entidades\":{\"numero_vaca\":\"10\",\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando previsão de parto da vaca 10.\"} Regra adicional: use tipo_relatorio=\"cadastro\" quando a pergunta for sobre quantidade/contagem de vacas cadastradas no rebanho (ex: \"quantas vacas eu tenho?\", \"quantas vacas cadastradas?\"). Exemplo: Mensagem: \"quantas vacas cadastradas?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"cadastro\"},\"resposta_sugerida\":\"Buscando o total de vacas cadastradas.\"} IMPORTANTE: o campo intencao deve ser copiado EXATAMENTE e por extenso como aparece na lista de opcoes acima (ex: \"consultar_vaca\", nunca \"consult_vaca\" ou qualquer forma abreviada). Nao invente, abrevie ou modifique os nomes das intencoes. Regra para periodo_dias: em relatorios gerais de leite (sem numero de vaca), se o produtor pedir historico/ultimos dias, defina periodo_dias com a quantidade de dias (ex: \"ultima semana\"=7, \"esse mes\"=30, \"ultimos 3 dias\"=3). Se ele so perguntar \"producao de hoje\" ou nao especificar periodo, deixe periodo_dias=null (mostra so hoje). Exemplo: Mensagem: \"quero ver o historico de producao\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"leite\",\"periodo_dias\":7},\"resposta_sugerida\":\"Buscando o historico de producao dos ultimos 7 dias.\"} Regra critica: se um numero de vaca aparecer na mensagem (ex: \"vaca 1\", \"vaca numero 5\"), SEMPRE preencha numero_vaca com esse numero, mesmo que a palavra \"relatorio\" tambem apareca na frase. A ausencia de numero_vaca deve ser reservada apenas para perguntas genuinamente sobre o rebanho inteiro, sem nenhuma vaca especifica mencionada. Exemplo: Mensagem: \"relatorio reprodutivo da vaca 1\" -> {\"intencao\":\"consultar_vaca\",\"entidades\":{\"numero_vaca\":\"1\",\"tipo_relatorio\":\"reprodutivo\"},\"resposta_sugerida\":\"Buscando relatorio reprodutivo da vaca 1.\"} Regra para diagnosticar_prenhez: use essa intencao quando o produtor quiser informar o RESULTADO de um diagnostico de prenhez de uma cobertura ja registrada (toque, ultrassom, etc), preenchendo numero_vaca e resultado_diagnostico (\"positivo\" para prenha/positiva/confirmada, \"negativo\" para vazia/negativa/nao prenha). NAO confunda com registrar_cobertura (que cria uma cobertura nova). Exemplos: Mensagem: \"registrar prenhez vaca 4 hoje\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"4\",\"resultado_diagnostico\":\"positivo\"},\"resposta_sugerida\":\"Registrando diagnostico positivo da vaca 4.\"} Mensagem: \"vaca 7 negativa no toque\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"7\",\"resultado_diagnostico\":\"negativo\"},\"resposta_sugerida\":\"Registrando diagnostico negativo da vaca 7.\"} Regra de correcao: se o produtor pedir para corrigir/voltar um diagnostico ja registrado (ex: \"corrige o diagnostico da vaca 4 pra pendente\", \"volta a vaca 4 pra pendente\"), use diagnosticar_prenhez com resultado_diagnostico=\"pendente\". Exemplo: Mensagem: \"corrige o diagnostico da vaca 4 pra pendente\" -> {\"intencao\":\"diagnosticar_prenhez\",\"entidades\":{\"numero_vaca\":\"4\",\"resultado_diagnostico\":\"pendente\"},\"resposta_sugerida\":\"Corrigindo diagnostico da vaca 4 para pendente.\"} Regra para cadastrar_vaca: use numero_vaca para o numero da vaca NOVA sendo cadastrada. Se o produtor mencionar a mae (ex: \"filha da vaca 5\", \"cria da vaca 12\"), preencha numero_mae com o numero da mae; caso contrario deixe numero_mae null (cadastro de vaca sem mae rastreada, ex: comprada). Exemplos: Mensagem: \"cadastra a vaca 30, filha da vaca 5\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":\"30\",\"numero_mae\":\"5\"},\"resposta_sugerida\":\"Cadastrando a vaca 30.\"} Mensagem: \"cadastra a vaca 31\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":\"31\",\"numero_mae\":null},\"resposta_sugerida\":\"Cadastrando a vaca 31.\"} Regra para numero_vaca vazio no cadastro: se o produtor pedir para cadastrar uma vaca SEM informar numero (ex: \"cadastre uma vaca nova\"), deixe numero_vaca null - o sistema gera o proximo numero disponivel automaticamente. Regra para atualizar_vaca: use essa intencao quando o produtor quiser corrigir o status produtivo/reprodutivo de uma vaca JA cadastrada (nao um lancamento de leite - isso e atualizar_registro), preenchendo numero_vaca e status_produtivo e/ou status_reprodutivo com os valores exatos do enum. Exemplo: Mensagem: \"cadastre uma vaca nova\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":null},\"resposta_sugerida\":\"Cadastrando nova vaca com numero automatico.\"} Exemplo: Mensagem: \"corrige o status da vaca 7 pra seca\" -> {\"intencao\":\"atualizar_vaca\",\"entidades\":{\"numero_vaca\":\"7\",\"status_produtivo\":\"seca\"},\"resposta_sugerida\":\"Atualizando status da vaca 7 para seca.\"} Regras do modulo financeiro: use registrar_financeiro quando o produtor lancar um gasto ou uma venda/recebimento (preencha tipo_financeiro='despesa' ou 'receita', valor, categoria e data). Se o produtor nao informar a categoria, INFIRA uma categoria curta e padronizada em minusculas e sem acentuacao inconsistente a partir do contexto da mensagem (ex: racao, medicacao, veterinario, combustivel, energia eletrica, mao de obra, manutencao, produtos da ordenha, inseminacao artificial, custo com pastagem, venda de leite, venda de animal, outros). Sempre normalize a categoria pra minusculo e no mesmo padrao mesmo quando o produtor informar. Regra para distinguir veterinario de medicacao: use \"veterinario\" apenas quando o gasto for a visita/consulta do profissional; use \"medicacao\" para remedio, vacina ou vermifugo comprado, mesmo que sem visita do veterinario. Use consultar_financeiro para pedidos de relatorio/balanco financeiro (preencha tipo_financeiro apenas se o produtor pedir so despesas ou so receitas, senao deixe null; preencha periodo_dias quando pedir historico especifico, igual as regras de relatorio de leite). Use atualizar_financeiro para corrigir um lancamento ja feito (preencha categoria e/ou data para localizar o lancamento, e valor com o valor NOVO). Use deletar_financeiro para apagar um lancamento ja feito (preencha categoria e/ou data para localizar; a exclusao So acontece apos confirmacao, nao execute voce mesmo). Exemplos: Mensagem: \"gastei 200 reais com racao hoje\" -> {\"intencao\":\"registrar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\",\"valor\":200,\"categoria\":\"racao\",\"data\":\"<hoje>\"},\"resposta_sugerida\":\"Lancando despesa de racao.\"} Mensagem: \"vendi 500 reais de leite pro laticinio\" -> {\"intencao\":\"registrar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"receita\",\"valor\":500,\"categoria\":\"venda de leite\"},\"resposta_sugerida\":\"Lancando receita de venda de leite.\"} Mensagem: \"quanto gastei esse mes\" -> {\"intencao\":\"consultar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\"},\"resposta_sugerida\":\"Buscando as despesas do periodo.\"} Mensagem: \"relatorio financeiro\" -> {\"intencao\":\"consultar_financeiro\",\"entidades\":{},\"resposta_sugerida\":\"Buscando o relatorio financeiro.\"} Mensagem: \"corrige a despesa de racao de hoje pra 250\" -> {\"intencao\":\"atualizar_financeiro\",\"entidades\":{\"tipo_financeiro\":\"despesa\",\"categoria\":\"racao\",\"data\":\"<hoje>\",\"valor\":250},\"resposta_sugerida\":\"Corrigindo o lancamento de racao.\"} Mensagem: \"apaga o lancamento de racao de hoje\" -> {\"intencao\":\"deletar_financeiro\",\"entidades\":{\"categoria\":\"racao\",\"data\":\"<hoje>\"},\"resposta_sugerida\":\"Localizando o lancamento de racao para exclusao.\"} Regra para origem_animal no cadastro: use \"comprada\" quando o produtor disser que adquiriu/comprou o animal (nesse caso NUNCA tente vincular numero_mae ao rebanho, mesmo que ele mencione uma mae - a mae de um animal comprado nao esta cadastrada nessa propriedade). Use \"nascida\" quando for uma cria da propria fazenda (ex: \"filha da vaca 5\"). Se nao for possivel saber com certeza, deixe origem_animal null (mais seguro nao vincular mae por engano). Exemplo: Mensagem: \"comprei uma novilha, numero 40\" -> {\"intencao\":\"cadastrar_vaca\",\"entidades\":{\"numero_vaca\":\"40\",\"origem_animal\":\"comprada\",\"numero_mae\":null},\"resposta_sugerida\":\"Cadastrando a vaca 40 (comprada).\"} Regra de padronizacao para sexo_bezerro: sempre normalize para exatamente \"macho\", \"femea\" ou \"natimorto\" (minusculo, sem acento). As palavras \"bezerra\" ou \"novilha\" ja indicam sexo_bezerro=\"femea\" mesmo sem a palavra \"femea\" aparecer na frase; a palavra \"bezerro\" (quando usada para indicar o sexo do recem-nascido, nao como termo generico) indica sexo_bezerro=\"macho\". Regra para numero_bezerro: se o produtor informar um numero para o bezerro/bezerra recem-nascido, preencha numero_bezerro com esse numero. Exemplo: Mensagem: \"a vaca 6 pariu 10/07/26 o numero da bezerra e 100\" -> {\"intencao\":\"registrar_parto\",\"entidades\":{\"numero_vaca\":\"6\",\"data\":\"2026-07-10\",\"sexo_bezerro\":\"femea\",\"numero_bezerro\":\"100\"},\"resposta_sugerida\":\"Registrando o parto da vaca 6 e a bezerra 100.\"}\n\n Regra para periodo (ordenha): preencha periodo SOMENTE se o produtor disser qual ordenha foi: \"manha\" para manhã/cedo, \"tarde\" para tarde/noite, \"dia_inteiro\" quando ele disser que é o total do dia (ex: \"deu 20 litros no dia todo\"). Se a ordenha não for dita, deixe periodo null — nunca suponha (o sistema recusa duas vezes a mesma ordenha no mesmo dia, então um periodo inventado faz o segundo lançamento do dia ser recusado). Vale também para corrigir e apagar leite. Exemplo: Mensagem: \"vaca 3 deu 15 litros\" -> {\"intencao\":\"registrar_leite\",\"entidades\":{\"numero_vaca\":\"3\",\"litros\":15,\"periodo\":null},\"resposta_sugerida\":\"Registrando 15L da vaca 3.\"} Regra para corrigir/apagar financeiro: preencha categoria e/ou data sempre que o produtor mencionar; se ele não disser nenhum dos dois, deixe ambos null (o sistema pede pra ele especificar) — nunca invente uma categoria só para localizar o lançamento. Regra para o programa de sêmen: perguntas sobre doses/saldo de sêmen do programa (\"quantas doses eu tenho?\", \"saldo de sêmen\") são consultar_relatorio com tipo_relatorio=\"doses\". Regra para outras_acoes: use a intencao \"outras_acoes\" com entidades.acao = \"confirmar_doses\" quando o produtor disser que recebeu/chegaram as doses de sêmen do programa (preencha touro_semen se ele disser o touro); \"desligar_lembretes\" quando pedir pra parar/desligar os lembretes ou avisos diários; \"ligar_lembretes\" quando pedir pra ligar/voltar os lembretes; \"promover_bezerro\" quando disser que uma bezerra virou vaca/novilha ou pedir pra cadastrar a bezerra como vaca (preencha numero_bezerro com o número dela). Exemplos: Mensagem: \"chegaram as doses do touro Tarzan\" -> {\"intencao\":\"outras_acoes\",\"entidades\":{\"acao\":\"confirmar_doses\",\"touro_semen\":\"Tarzan\"},\"resposta_sugerida\":\"Confirmando o recebimento das doses.\"} Mensagem: \"para de me mandar lembrete\" -> {\"intencao\":\"outras_acoes\",\"entidades\":{\"acao\":\"desligar_lembretes\"},\"resposta_sugerida\":\"Desligando os lembretes.\"} Mensagem: \"a bezerra 105 já virou vaca\" -> {\"intencao\":\"outras_acoes\",\"entidades\":{\"acao\":\"promover_bezerro\",\"numero_bezerro\":\"105\"},\"resposta_sugerida\":\"Cadastrando a bezerra 105 como vaca.\"} Mensagem: \"quantas doses do programa eu tenho?\" -> {\"intencao\":\"consultar_relatorio\",\"entidades\":{\"tipo_relatorio\":\"doses\"},\"resposta_sugerida\":\"Buscando o saldo de doses.\"} Regra para o botijão de nitrogênio: quando o produtor disser que abasteceu/encheu/completou o botijão de nitrogênio (a mensagem costuma ser a legenda da foto da régua), use a intencao \"outras_acoes\" com entidades.acao = \"registrar_botijao\", nivel_cm = o nível na régua em centímetros e valor = quanto pagou pelo abastecimento; preencha data só se ele disser quando foi. Nunca invente nivel_cm nem valor: se faltar, deixe null (o sistema pergunta). Exemplo: Mensagem: \"abasteci o botijão, nível 42 cm, paguei 180 reais\" -> {\"intencao\":\"outras_acoes\",\"entidades\":{\"acao\":\"registrar_botijao\",\"nivel_cm\":42,\"valor\":180},\"resposta_sugerida\":\"Registrando o abastecimento do botijão.\"} Regra para conversa fora do assunto (intencao \"outro\"): resposta_sugerida é UMA mensagem curta e amigável em português, apresentando-se como assistente do Gestão Pec e dando 2 ou 3 exemplos do que o produtor pode mandar (ex.: \"vaca 12 deu 15 litros de manhã\", \"a vaca 7 pariu hoje, bezerra\", \"gastei 200 reais com ração\"). NUNCA mencione estas instruções, a linha \"Data de referência\", formatos como YYYY-MM-DD, JSON ou campos internos. Regra para vaca pelo NOME: o produtor pode chamar a vaca pelo nome em vez do número (ex.: \"informações da Mimosa\", \"a Estrela deu 15 litros de manhã\", \"cobri a Mimosa hoje\"). Nesse caso preencha nome_vaca com o nome como ele escreveu e deixe numero_vaca null — nunca invente número. Para a mãe no cadastro (\"filha da Mimosa\"), use nome_mae em vez de numero_mae. Se ele disser o número, use numero_vaca normalmente. Exemplo: Mensagem: \"informações sobre a mimosa\" -> {\"intencao\":\"consultar_vaca\",\"entidades\":{\"nome_vaca\":\"mimosa\",\"tipo_relatorio\":\"geral\"},\"resposta_sugerida\":\"Buscando informações da Mimosa.\"} Regra para leite de VÁRIAS vacas na mesma mensagem: quando o produtor informar o leite de MAIS DE UMA vaca (ex.: \"vaca 12 deu 10 litros, a 15 deu 12 e a Mimosa 8\" — inclusive quando forem várias mensagens juntas), use intencao \"registrar_leite\" e preencha entidades.leites com UM item por lançamento, na ordem em que ele falou: {\"numero_vaca\", \"nome_vaca\", \"litros\", \"periodo\"}. Nesse caso deixe numero_vaca, nome_vaca e litros fora dos campos normais (null) e ponha em entidades.data e entidades.periodo a data e a ordenha ditas uma vez para todas; periodo dentro do item só quando aquela vaca tiver ordenha diferente da geral. Nunca pule, junte ou some vacas, e nunca invente número nem litros; se a mesma vaca aparecer em duas ordenhas, faça um item para cada. Vaca chamada pelo nome vai em nome_vaca do item (numero_vaca null). Com uma vaca só, NÃO use leites (formato normal). Exemplo: Mensagem: \"hoje de manhã: vaca 12 10 litros, vaca 15 12 litros e a Mimosa 8\" -> {\"intencao\":\"registrar_leite\",\"entidades\":{\"data\":\"<hoje>\",\"periodo\":\"manha\",\"leites\":[{\"numero_vaca\":\"12\",\"litros\":10},{\"numero_vaca\":\"15\",\"litros\":12},{\"nome_vaca\":\"Mimosa\",\"litros\":8}]},\"resposta_sugerida\":\"Registrando o leite de 3 vacas.\"}"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        -1744,
-        13456
+        271904,
+        203984
       ],
-      "id": "322daba8-168b-45fa-97d9-06e89661c477",
+      "id": "d4faafc8-9b29-4329-bdd9-2cd90318f54f",
       "name": "AI Agent"
     },
     {
@@ -503,10 +503,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        -1808,
-        13744
+        271840,
+        204272
       ],
-      "id": "cad521d4-0c4d-4539-a4af-c0cbb18d7cfa",
+      "id": "e923965e-d926-45ed-bdaa-7530ca25b467",
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
@@ -525,10 +525,10 @@
       "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
       "typeVersion": 1.6,
       "position": [
-        -1552,
-        13744
+        272096,
+        204272
       ],
-      "id": "a957ffcc-7fef-4ada-af86-3676629b6755",
+      "id": "5bf30743-a0c9-40a5-8ffa-0f4905728c3b",
       "name": "Redis Chat Memory",
       "credentials": {
         "redis": {
@@ -572,10 +572,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -5472,
-        13728
+        268176,
+        204256
       ],
-      "id": "671782fe-2597-479d-906c-49528fa1ce18",
+      "id": "38285a86-4c57-42b0-92f3-f4718dd515d4",
       "name": "Preparar Dados Buffer"
     },
     {
@@ -588,10 +588,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -5264,
-        13728
+        268384,
+        204256
       ],
-      "id": "b8a93ec3-8217-462a-b4e0-2b816b5be426",
+      "id": "b3f458a6-46c5-4aab-86f0-ca1508c65593",
       "name": "Buffer - Ler Existente",
       "credentials": {
         "redis": {
@@ -608,10 +608,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -5056,
-        13728
+        268592,
+        204256
       ],
-      "id": "b175cd63-022f-4dfd-92cb-8568ff50484e",
+      "id": "25fe425b-7e80-4f77-ac01-c304fe418dc7",
       "name": "Concatenar Mensagem"
     },
     {
@@ -625,10 +625,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -4848,
-        13728
+        268800,
+        204256
       ],
-      "id": "78dda4d8-6ed0-4818-85c9-5184f64b1a04",
+      "id": "4b3f4a69-395a-421f-9dab-4b637edf6931",
       "name": "Buffer - Salvar",
       "credentials": {
         "redis": {
@@ -648,10 +648,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -4640,
-        13728
+        269008,
+        204256
       ],
-      "id": "a40bcebf-fe44-455d-ba30-144f9d738a6a",
+      "id": "63cc2790-a284-4a2a-a4f7-4883ce74fb66",
       "name": "Timestamp - Salvar",
       "credentials": {
         "redis": {
@@ -667,10 +667,10 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        -4432,
-        13728
+        269216,
+        204256
       ],
-      "id": "88c149d6-d526-4508-91c8-e2e0733f6246",
+      "id": "3a1aee43-f240-446c-ab61-27dd93146b49",
       "name": "Aguardar Mensagens",
       "webhookId": "4ec44f8b-138d-4807-86bd-bcabbd21106e"
     },
@@ -684,10 +684,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -4224,
-        13728
+        269424,
+        204256
       ],
-      "id": "36633e1b-8f5c-4ef3-ba54-1fd97c5536d9",
+      "id": "6e604f49-6a22-4f56-b776-129719df417b",
       "name": "Timestamp - Ler",
       "credentials": {
         "redis": {
@@ -724,10 +724,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -4016,
-        13728
+        269632,
+        204256
       ],
-      "id": "04626fc6-5306-4b0c-a532-432f8ebf785b",
+      "id": "8d5be581-2c72-4b15-88d2-6aaba5a0bae4",
       "name": "É a Última Mensagem?"
     },
     {
@@ -740,10 +740,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -3488,
-        13584
+        270160,
+        204112
       ],
-      "id": "356280b7-77c7-4567-ba72-b0639b3df2fa",
+      "id": "147ff166-4622-4c0e-8934-d3748d29a46f",
       "name": "Buffer - Ler Final",
       "credentials": {
         "redis": {
@@ -781,10 +781,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -2720,
-        13744
+        270928,
+        204272
       ],
-      "id": "e8df7a9b-29a5-4a48-b571-be53664e4fc5",
+      "id": "6578b933-98a4-4010-9ab1-34e8eab4539b",
       "name": "Preparar Entrada Agente"
     },
     {
@@ -792,10 +792,10 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        -3776,
-        14000
+        269872,
+        204528
       ],
-      "id": "2600f969-b2d9-4412-b5f7-241ab38b7448",
+      "id": "54c69d4d-f28d-4b6b-8202-a4c3d0841e43",
       "name": "Não é a última - Parar"
     },
     {
@@ -806,10 +806,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -2352,
-        13872
+        271296,
+        204400
       ],
-      "id": "7e8bb303-ed77-4e78-8a33-b3c33aea556c",
+      "id": "93a64b5c-5bdb-4ffd-aeb0-79c7ea57695d",
       "name": "Buffer - Limpar",
       "credentials": {
         "redis": {
@@ -835,10 +835,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        7456,
-        13792
+        281104,
+        204320
       ],
-      "id": "80b4f85a-80f5-4778-82ab-6a60fa906a33",
+      "id": "3edf1af5-49f5-4754-8e7d-d33817ba635b",
       "name": "Confirmar Atualização"
     },
     {
@@ -848,10 +848,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7056,
-        14448
+        280704,
+        204976
       ],
-      "id": "ee9e348f-eb4c-4904-931f-25068e90afd7",
+      "id": "7366a3de-84e8-48f0-9b5d-adfc90a812a9",
       "name": "Preparar Pendência Delete"
     },
     {
@@ -864,10 +864,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -2352,
-        13456
+        271296,
+        203984
       ],
-      "id": "31b9a331-2438-494a-86ed-feeea46c558a",
+      "id": "76396e3c-0824-46bb-aafd-016cb376df78",
       "name": "Checar Pendência Delete",
       "credentials": {
         "redis": {
@@ -916,10 +916,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -2128,
-        13456
+        271520,
+        203984
       ],
-      "id": "c1a79689-4ec2-4dd5-aea6-68848bb2006e",
+      "id": "dbe24895-7316-4add-babd-38cd073b79db",
       "name": "Tem Pendência Delete?"
     },
     {
@@ -929,10 +929,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1376,
-        13168
+        272272,
+        203696
       ],
-      "id": "1f8bb8e0-4760-4c28-aaaf-33ed39e6702f",
+      "id": "1bab2bf4-eb86-46d3-8d49-9189671950c7",
       "name": "Processar Confirmação Delete"
     },
     {
@@ -964,10 +964,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        5680,
-        11072
+        279328,
+        201600
       ],
-      "id": "7449f64a-5ac7-41c7-9352-92e162d17037",
+      "id": "8cbd1629-9451-4b3f-8372-30429ed41813",
       "name": "Confirmado?"
     },
     {
@@ -978,10 +978,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        7040,
-        10864
+        280688,
+        201392
       ],
-      "id": "65281cee-2f55-4e33-bfb2-d4f0193605c1",
+      "id": "f6508720-e5dc-4390-b45d-c9e2d1a26494",
       "name": "Limpar Pendência (Excluído)",
       "credentials": {
         "redis": {
@@ -1007,10 +1007,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        7840,
-        11040
+        281488,
+        201568
       ],
-      "id": "587f6134-b4dc-4382-ab4a-3049465d0fc2",
+      "id": "7b2f32bc-e73b-4bdd-8af6-e811df0b6b56",
       "name": "Confirmar Delete"
     },
     {
@@ -1021,10 +1021,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        6512,
-        11376
+        280160,
+        201904
       ],
-      "id": "1fd5a8a7-547f-4f9c-ae9f-1aa3e3ff79e6",
+      "id": "5df0cb0a-7d91-46de-8c25-123d9147f5fb",
       "name": "Limpar Pendência (Cancelado)",
       "credentials": {
         "redis": {
@@ -1050,10 +1050,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        7392,
-        11248
+        281040,
+        201776
       ],
-      "id": "953f6820-b570-45ef-bee7-96b0bd0693d3",
+      "id": "e1bed191-9123-450e-8035-4504998416e1",
       "name": "Cancelar Delete"
     },
     {
@@ -1076,10 +1076,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        5568,
-        11936
+        279216,
+        202464
       ],
-      "id": "66d58f9a-0da7-41c3-96a0-9adadf1d4b9d",
+      "id": "6e8ff596-959e-4248-a472-1c00e502e0b2",
       "name": "Buscar Vaca (Parto)",
       "alwaysOutputData": true,
       "credentials": {
@@ -1107,10 +1107,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        8608,
-        11968
+        282256,
+        202496
       ],
-      "id": "37261fb2-4953-491d-9047-a9b5f9fb57fd",
+      "id": "54d1b8e8-2f0c-4d85-a2fa-2da726acc56a",
       "name": "Confirmar Parto"
     },
     {
@@ -1133,10 +1133,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        4368,
-        12400
+        278016,
+        202928
       ],
-      "id": "31d47b08-8b31-4a9b-afbb-28ec508d0e5c",
+      "id": "6b4f6a45-9016-419a-85fe-1422766938dd",
       "name": "Buscar Vaca (Cobertura)",
       "alwaysOutputData": true,
       "credentials": {
@@ -1163,10 +1163,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        6944,
-        12288
+        280592,
+        202816
       ],
-      "id": "67ebbc32-48d2-4e18-9014-6eec5a85fd60",
+      "id": "e2c359df-0465-4116-8a61-9db205e4368d",
       "name": "Confirmar Cobertura"
     },
     {
@@ -1197,10 +1197,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -6212,
-        13712
+        267440,
+        204240
       ],
-      "id": "b6fe4fa2-6848-4904-862f-42638494d08c",
+      "id": "adb3422f-776e-482c-b255-d5cd3a5f302e",
       "name": "É Áudio?"
     },
     {
@@ -1210,10 +1210,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -6272,
-        13472
+        267376,
+        204000
       ],
-      "id": "c1cd5c9d-83f5-4760-accd-8c71b28d07d2",
+      "id": "2a38cd6b-8484-4ec2-990e-1dda4da78de9",
       "name": "Extrair Áudio Base64"
     },
     {
@@ -1246,10 +1246,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -5984,
-        13472
+        267664,
+        204000
       ],
-      "id": "dc952495-9d21-483b-b8d2-4b9d26ac356a",
+      "id": "a718e9ec-681a-4dcc-ab39-ca3a798408bd",
       "name": "Transcrever Áudio (Whisper)",
       "credentials": {
         "openAiApi": {
@@ -1281,10 +1281,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -5696,
-        13472
+        267952,
+        204000
       ],
-      "id": "173c45db-aff2-4ea3-b22b-baf096fb5854",
+      "id": "0fd6a74d-09c2-4b77-92a2-1089ae9518c0",
       "name": "Definir Texto Transcrito"
     },
     {
@@ -1304,10 +1304,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        8032,
-        14656
+        281680,
+        205184
       ],
-      "id": "c68a56d0-49c9-49c7-9458-d3ba8b94cfb7",
+      "id": "7f4118a6-10d3-433f-9dc4-44aa65dfc2da",
       "name": "Confirmar Diagnóstico"
     },
     {
@@ -1327,10 +1327,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        10096,
-        13520
+        283744,
+        204048
       ],
-      "id": "f6fef31e-257c-455a-bca0-6b86f67aa77a",
+      "id": "ea24569c-18b9-48e7-b3c6-079a20a52b3e",
       "name": "Confirmar Cadastro"
     },
     {
@@ -1350,10 +1350,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        7776,
-        15184
+        281424,
+        205712
       ],
-      "id": "f47c42e1-5fd2-4d59-94db-584d8e92b58f",
+      "id": "5d8ab01c-637a-4807-8400-d2e00efc24a0",
       "name": "Confirmar Atualização Vaca"
     },
     {
@@ -1367,10 +1367,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        7496,
-        14328
+        281152,
+        204864
       ],
-      "id": "8178076b-5acd-4925-b25b-ba2813f4f9c3",
+      "id": "84b5dd67-10a9-4282-829e-1e4dd1195d5d",
       "name": "Salvar Pendência Delete Leite",
       "credentials": {
         "redis": {
@@ -1396,10 +1396,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        6544,
-        15584
+        280192,
+        206112
       ],
-      "id": "302c52c8-2cb9-411f-a43d-4ff62aa0ff7f",
+      "id": "67ae9302-156c-4c5e-8b7e-8f8972ba801f",
       "name": "Confirmar Financeiro"
     },
     {
@@ -1419,10 +1419,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        8112,
-        16048
+        281760,
+        206576
       ],
-      "id": "beac40a9-e9c1-46eb-b467-e64713c387df",
+      "id": "f0034857-8cee-4542-ab40-7146f5216c3b",
       "name": "Confirmar Atualização Financeiro"
     },
     {
@@ -1432,10 +1432,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        8448,
-        16528
+        282096,
+        207056
       ],
-      "id": "632bfcd5-4413-4ca3-ac1b-9cd81aa64ffa",
+      "id": "48ae0ef9-8a6e-405c-a3a3-6e8e4898ed33",
       "name": "Preparar Pendência Delete Financeiro"
     },
     {
@@ -1449,10 +1449,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        8888,
-        16408
+        282544,
+        206944
       ],
-      "id": "380e76a2-fe73-41fc-87ef-0818be677e73",
+      "id": "c74b252a-56d6-49c6-b7a7-64a511fed1b2",
       "name": "Salvar Pendência Delete Financeiro",
       "credentials": {
         "redis": {
@@ -1489,10 +1489,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        6304,
-        10864
+        279952,
+        201392
       ],
-      "id": "a73ee973-8fe7-4ec3-b593-67e67702c2df",
+      "id": "268e5e8c-c4ce-4e33-b74f-5d7d8532026c",
       "name": "Tipo de Pendência (Delete)?"
     },
     {
@@ -1512,10 +1512,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        7856,
-        10800
+        281504,
+        201328
       ],
-      "id": "1517d4e5-0619-43d0-93dc-fb2271774959",
+      "id": "8513a8c4-c65c-4e8d-91a8-4d79e77e7f02",
       "name": "Confirmar Delete Financeiro"
     },
     {
@@ -1546,10 +1546,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        7408,
-        10864
+        281056,
+        201392
       ],
-      "id": "1e4f2ed0-b1e6-4667-a694-884439e057e1",
+      "id": "cf6065f5-5cff-47c9-b0fb-4e4571c019c8",
       "name": "Tipo de Pendência (Confirmação)?"
     },
     {
@@ -1563,15 +1563,15 @@
       "type": "n8n-nodes-evolution-api.evolutionApi",
       "typeVersion": 1,
       "position": [
-        4448,
-        17408
+        278096,
+        207936
       ],
-      "id": "bbb06639-d638-4a3b-baa1-5d0c87ee5947",
+      "id": "af9898d8-40e4-416b-b94e-47acac15b49e",
       "name": "Enviar texto1",
       "credentials": {
         "evolutionApi": {
-          "id": "qFPyWQxioJ8lY37f",
-          "name": "Evolution Adam"
+          "id": "ZlqMlFl3fCBjkcv4",
+          "name": "Evolution GestaoPec"
         }
       }
     },
@@ -1603,10 +1603,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        6192,
-        12224
+        279840,
+        202752
       ],
-      "id": "c6006438-07a8-4327-80c6-6c21fcd7f142",
+      "id": "ae5a17c3-9d96-41ab-9321-cb3d3d217972",
       "name": "If"
     },
     {
@@ -1627,10 +1627,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        4656,
-        12400
+        278304,
+        202928
       ],
-      "id": "a7797ba3-520b-42c4-9b2f-cc5dde588f97",
+      "id": "ad3f0c71-3f84-49ee-b533-947a7c2f6212",
       "name": "Get a row",
       "alwaysOutputData": true,
       "credentials": {
@@ -1658,10 +1658,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        5296,
-        12368
+        278944,
+        202896
       ],
-      "id": "87e9d1da-a19d-4d23-8e3a-cc8194487b1d",
+      "id": "ca658ece-6509-4edb-b9f9-ec6bd43e7395",
       "name": "Buscar Partos (Validação Cobertura)",
       "alwaysOutputData": true,
       "credentials": {
@@ -1678,10 +1678,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5824,
-        12336
+        279472,
+        202864
       ],
-      "id": "3bdf485e-f29f-47a7-b5f1-c7a183a63cfa",
+      "id": "970ab3f7-2ae2-4baa-959b-ebacc40fc479",
       "name": "Validar Cobertura"
     },
     {
@@ -1701,10 +1701,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        6944,
-        12112
+        280592,
+        202640
       ],
-      "id": "0ed36607-b1b1-4a4e-8b00-0a946df714c6",
+      "id": "43dcc909-e1f7-4e7b-a64a-c0efbdbf634a",
       "name": "Cobertura Rejeitada"
     },
     {
@@ -1714,10 +1714,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7600,
-        14032
+        266048,
+        204560
       ],
-      "id": "999b842d-9b04-43d2-ab42-ce4875ee78ae",
+      "id": "96478d09-9ad2-4a5c-be2f-b514f8195a18",
       "name": "Verificar Status Usuário"
     },
     {
@@ -1748,10 +1748,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -7296,
-        14032
+        266352,
+        204560
       ],
-      "id": "157f53c5-e02b-45eb-a165-164499cd17f5",
+      "id": "044643e2-027a-4994-b55e-d0d8baa7e5e3",
       "name": "Acesso Liberado?"
     },
     {
@@ -1782,10 +1782,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        5904,
-        11936
+        279552,
+        202464
       ],
-      "id": "0325035e-688a-454b-9d15-1ab1aef05e06",
+      "id": "1d2051f9-7f83-4cf1-8967-ddb185013c5d",
       "name": "If1"
     },
     {
@@ -1795,10 +1795,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6144,
-        12048
+        279792,
+        202576
       ],
-      "id": "20e0c2d8-e0b2-4572-af97-d3b00f79e162",
+      "id": "3255eb72-05ca-49a3-83d9-69a7a466d98e",
       "name": "Code in JavaScript1"
     },
     {
@@ -1806,10 +1806,10 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        -6696,
-        14432
+        266960,
+        204960
       ],
-      "id": "1ad26b07-cd97-4009-ba3d-9ab103183e24",
+      "id": "5ed1a894-8b00-4ba9-8189-a91018f72c9d",
       "name": "No Operation, do nothing"
     },
     {
@@ -1824,10 +1824,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -5104,
-        14208
+        268544,
+        204736
       ],
-      "id": "6bc5ef1e-3924-4e17-a6d3-0276b7b32471",
+      "id": "d4dc3c4c-73a4-4f42-a568-825712d26bd5",
       "name": "Salvar Flag Áudio",
       "credentials": {
         "redis": {
@@ -1846,10 +1846,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -3488,
-        13808
+        270160,
+        204336
       ],
-      "id": "745b0b0d-feb9-49ec-96ea-2aa8f05e9248",
+      "id": "d1f4eb7e-b716-4f84-8a1d-43b06f19b832",
       "name": "Ler Flag Áudio",
       "credentials": {
         "redis": {
@@ -1867,10 +1867,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        -3056,
-        13744
+        270592,
+        204272
       ],
-      "id": "6a5b0bdd-74b8-43b1-acf8-c6b7f52c6d2a",
+      "id": "41453e70-c481-44de-86d8-499660f1d114",
       "name": "Combinar Dados Finais"
     },
     {
@@ -1900,10 +1900,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        16160,
-        13472
+        289808,
+        204000
       ],
-      "id": "f29aa787-b69d-4853-b809-39bb13b3d7e3",
+      "id": "682bc955-fe3b-4a0a-aebc-f61562af72b4",
       "name": "Origem Áudio? (Principal)"
     },
     {
@@ -1933,10 +1933,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        3424,
-        16976
+        277072,
+        207504
       ],
-      "id": "f48a61e7-b148-40df-8eed-378931f6d108",
+      "id": "71e49015-e325-4916-9ed7-6432ca937b22",
       "name": "Origem Áudio? (Fallback)"
     },
     {
@@ -1959,10 +1959,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        16864,
-        17008
+        290512,
+        207536
       ],
-      "id": "bc35132c-b446-43fe-a0c4-dbfbc26041c1",
+      "id": "3e29fa6b-14e2-4435-bf27-29b217d9cd8c",
       "name": "Gerar Áudio (OpenAI TTS)",
       "credentials": {
         "openAiApi": {
@@ -1983,15 +1983,15 @@
       "type": "n8n-nodes-evolution-api.evolutionApi",
       "typeVersion": 1,
       "position": [
-        17504,
-        17008
+        291152,
+        207536
       ],
-      "id": "31cc97c9-9b00-44a2-bc9f-fea0f8725e84",
+      "id": "0b671318-05ec-45df-888f-abb6e9b1a1ac",
       "name": "Enviar Áudio",
       "credentials": {
         "evolutionApi": {
-          "id": "qFPyWQxioJ8lY37f",
-          "name": "Evolution Adam"
+          "id": "ZlqMlFl3fCBjkcv4",
+          "name": "Evolution GestaoPec"
         }
       },
       "notes": "AJUSTAR: escolher a operation certa de enviar audio/voice, e apontar o campo de midia para o binario gerado no node anterior."
@@ -2003,10 +2003,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        17152,
-        17008
+        290800,
+        207536
       ],
-      "id": "1459731d-6a13-4fdf-9303-2fec4627e7db",
+      "id": "6f654104-c0d2-497c-a437-aff860302865",
       "name": "Code in JavaScript2"
     },
     {
@@ -2023,10 +2023,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        6656,
-        12288
+        280304,
+        202816
       ],
-      "id": "b72987a1-690b-4d6f-9291-61b358f92a30",
+      "id": "21f9d6b3-f2eb-4bd0-b5ae-df12fae5758d",
       "name": "Registrar Cobertura (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2050,10 +2050,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        6416,
-        11920
+        280064,
+        202448
       ],
-      "id": "9637be89-d0f1-40af-9499-af6b9d0397e1",
+      "id": "8644cae3-70cb-487d-bda2-bd82a81ca0e1",
       "name": "Registrar Parto (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2086,10 +2086,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        16160,
-        13872
+        289808,
+        204400
       ],
-      "id": "8d4d4387-b4a1-46ce-bcef-9f8cf617738c",
+      "id": "1b27e087-b84b-4cd0-a021-fa3e20e727a9",
       "name": "Registrar Interação (Log)",
       "credentials": {
         "supabaseApi": {
@@ -2127,10 +2127,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -6996,
-        14332
+        266656,
+        204864
       ],
-      "id": "0d609ae2-01e9-4bed-87ef-bb6a8bca21f9",
+      "id": "6e375734-641a-482c-9c68-7d31cf027aee",
       "name": "Avisar Acesso Bloqueado?"
     },
     {
@@ -2150,10 +2150,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -6696,
-        14232
+        266960,
+        204768
       ],
-      "id": "4cfa7b1a-7263-41d3-9a4e-a21f56e4df80",
+      "id": "4b9b6c24-2f28-4ebc-9dac-2dbd648e474c",
       "name": "Mensagem Acesso Bloqueado"
     },
     {
@@ -2167,10 +2167,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -6996,
-        13472
+        266656,
+        204000
       ],
-      "id": "332d4858-6878-4db4-8d8f-9d173d326e72",
+      "id": "1436bf5f-afde-4134-b5e9-5a1486f9f9e4",
       "name": "Guardar Remetente (Erro)",
       "credentials": {
         "redis": {
@@ -2194,10 +2194,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5824,
-        11696
+        279472,
+        202224
       ],
-      "id": "9a6ffa4f-5a9d-42aa-8976-4e519f494d82",
+      "id": "c1ab4c10-ec4c-44e7-a7a3-6770a64b524f",
       "name": "Registrar Leite (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2224,10 +2224,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        6124,
-        11696
+        279776,
+        202224
       ],
-      "id": "5f1f5f98-91ed-41b2-86ab-ddf501ca8971",
+      "id": "32f05f74-4c66-4bb9-9b85-103b67ea06f4",
       "name": "Confirmar Leite"
     },
     {
@@ -2244,10 +2244,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5872,
-        13408
+        279520,
+        203936
       ],
-      "id": "9ad6a98c-2e8e-4bda-93fa-964f4fcf217b",
+      "id": "d19fc4b7-1032-4b1d-bba9-d1e3681637a4",
       "name": "Cadastrar Vaca (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2271,10 +2271,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5904,
-        14112
+        279552,
+        204640
       ],
-      "id": "17fc6772-78b1-499f-8fb9-0105f3e326c7",
+      "id": "7087f005-cba4-46c9-8df8-cd058017bb78",
       "name": "Corrigir Leite (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2298,10 +2298,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5936,
-        14448
+        279584,
+        204976
       ],
-      "id": "b1fbe4bc-67c2-4ec4-afcb-92f291d58f6c",
+      "id": "1b2ec5ac-7f94-4278-820c-79acbe9144c8",
       "name": "Localizar Leite p/ Excluir (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2339,10 +2339,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        7276,
-        14448
+        280928,
+        204976
       ],
-      "id": "7547e9b6-9005-4b81-8e40-503fec9681a2",
+      "id": "473219c2-5084-4413-a80f-9da900b55b98",
       "name": "Salvar Pendência Leite?"
     },
     {
@@ -2359,10 +2359,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5968,
-        14768
+        279616,
+        205296
       ],
-      "id": "04950cb8-1e05-42a9-ac68-24a6ae5fc5c1",
+      "id": "7ca90920-3dc3-4cac-b784-d7dbc1bfff69",
       "name": "Registrar Diagnóstico (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2386,10 +2386,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5952,
-        15248
+        279600,
+        205776
       ],
-      "id": "1827cc17-1d0f-434f-a1e2-10298b45539c",
+      "id": "16528cda-5422-489b-82aa-c054b2f6222c",
       "name": "Atualizar Vaca (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2413,10 +2413,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5968,
-        15552
+        279616,
+        206080
       ],
-      "id": "337256d7-856c-46ff-a1a7-2271926f2d75",
+      "id": "c9495020-ce95-40d6-b34c-71817899bd0c",
       "name": "Registrar Financeiro (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2440,10 +2440,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        6000,
-        16176
+        279648,
+        206704
       ],
-      "id": "96910297-df25-4605-8cbf-2612fcf6c1c5",
+      "id": "62d4dda8-3d46-431e-9acb-5e375dc5046b",
       "name": "Corrigir Financeiro (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2467,10 +2467,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5984,
-        16448
+        279632,
+        206976
       ],
-      "id": "a61b0de1-848b-417f-85af-cd89e85fc2ec",
+      "id": "4d15786a-129a-4801-b97a-87b38d4176cd",
       "name": "Localizar Financeiro p/ Excluir (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2508,10 +2508,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        8668,
-        16528
+        282320,
+        207056
       ],
-      "id": "2c785251-e72f-4b1b-909a-a579bb0b2030",
+      "id": "a14dc04c-e11a-424f-adfd-e5c5e5e33676",
       "name": "Salvar Pendência Financeiro?"
     },
     {
@@ -2528,10 +2528,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        6672,
-        11088
+        280320,
+        201616
       ],
-      "id": "679abc9f-e426-484b-b826-1d5d6361c9d7",
+      "id": "b9691be1-728d-40e7-bc6a-08e26f5263e8",
       "name": "Excluir Leite (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2555,10 +2555,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        6672,
-        10608
+        280320,
+        201136
       ],
-      "id": "717075d8-9a00-4168-b29b-7f30b85dda89",
+      "id": "3396bad6-f291-4364-9c5a-78b12625e960",
       "name": "Excluir Financeiro (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2582,10 +2582,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5856,
-        12752
+        279504,
+        203280
       ],
-      "id": "d15a797f-840f-48f2-b507-bdb1d25149ef",
+      "id": "82a88e2d-28bb-4304-88a5-cdf09dc64519",
       "name": "Consultar (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2612,10 +2612,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        6156,
-        12752
+        279808,
+        203280
       ],
-      "id": "c855d00e-b62f-4c7a-8922-e3838aeaa09f",
+      "id": "3e15d891-fd68-43db-916a-3d7b06ca0a41",
       "name": "Montar Resposta Consulta"
     },
     {
@@ -2632,10 +2632,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5968,
-        16452
+        279616,
+        206992
       ],
-      "id": "908ca881-6df2-4f1f-b8a7-54df9c883ec2",
+      "id": "06508924-9d7c-4056-939b-a16f0dde0820",
       "name": "Outra Ação (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2662,10 +2662,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        6268,
-        16452
+        279920,
+        206992
       ],
-      "id": "2c3b3861-32ef-41ba-b94a-5e3fb3097d91",
+      "id": "e02b6a07-f0c7-4aa2-aba4-444df6bf97e3",
       "name": "Confirmar Outra Ação"
     },
     {
@@ -2696,10 +2696,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -6512,
-        13712
+        267136,
+        204240
       ],
-      "id": "349f308f-f102-4b53-8797-be7b62d65cb5",
+      "id": "e3f532d1-5b84-4dce-b0c1-af96abfca2c3",
       "name": "É Foto?"
     },
     {
@@ -2709,10 +2709,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -6512,
-        12812
+        267136,
+        203344
       ],
-      "id": "6b55812c-ea70-4cfb-8c67-18657b2203ee",
+      "id": "04abbf11-d4c0-4fcc-8430-61e89e90df3d",
       "name": "Extrair Foto"
     },
     {
@@ -2729,10 +2729,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -6212,
-        12812
+        267440,
+        203344
       ],
-      "id": "b606e23b-100a-40e6-911b-b159dffaeccc",
+      "id": "2656e403-7267-4867-a618-5143e2275fd2",
       "name": "Guardar Foto (Storage)",
       "credentials": {
         "supabaseApi": {
@@ -2752,10 +2752,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -5912,
-        12812
+        267744,
+        203344
       ],
-      "id": "214b21f9-64ec-41dd-bf9f-3cbef5bc660b",
+      "id": "4b90cd2d-e3cc-4cf7-be92-8a4ea7d905bb",
       "name": "Guardar Foto (Redis)",
       "credentials": {
         "redis": {
@@ -2792,10 +2792,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -5612,
-        12812
+        268048,
+        203344
       ],
-      "id": "dd28da12-5767-480b-bfdd-324d77e4e53c",
+      "id": "be22bc49-7563-4b89-8702-e149e5546464",
       "name": "Foto com Legenda?"
     },
     {
@@ -2815,10 +2815,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -5312,
-        13012
+        268336,
+        203552
       ],
-      "id": "4f9742ca-3d36-4012-a65d-04c9aeb50a95",
+      "id": "140400ad-d5ee-4adc-a221-eca10b74c846",
       "name": "Pedir Dados da Foto"
     },
     {
@@ -2831,10 +2831,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        5668,
-        16452
+        279328,
+        206992
       ],
-      "id": "bbd9281a-002d-42e5-bda5-064b22004650",
+      "id": "5043fa77-4035-4b8b-9e9b-ec36dc97a9fc",
       "name": "Ler Foto Botijão (Redis)",
       "credentials": {
         "redis": {
@@ -2858,10 +2858,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -2128,
-        13200
+        271520,
+        203728
       ],
-      "id": "a6d8d472-d7da-41e8-b7e6-3f5fab805871",
+      "id": "ecf15d8c-40fc-4632-86d0-16f26e7b777f",
       "name": "Consumir Interação (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -2899,10 +2899,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1936,
-        13200
+        271712,
+        203728
       ],
-      "id": "4394ef5b-1b9d-4d2e-aa17-2817a4db8509",
+      "id": "8b73cc33-b73a-419f-9e77-9df935adae9e",
       "name": "Dentro do Limite?"
     },
     {
@@ -2933,10 +2933,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1936,
-        12960
+        271712,
+        203488
       ],
-      "id": "aad22582-d2b6-46f3-ae79-146c1e15772a",
+      "id": "67af0a1d-7340-424e-8a08-fc513b34ca2c",
       "name": "Avisar Limite?"
     },
     {
@@ -2956,10 +2956,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -1744,
-        12880
+        271904,
+        203408
       ],
-      "id": "8d7eded2-5d29-4e39-91e6-3bfb728a764e",
+      "id": "68085f00-16f9-44cc-b495-6156ba79fefd",
       "name": "Mensagem Limite Diário"
     },
     {
@@ -2967,10 +2967,10 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        -1744,
-        13060
+        271904,
+        203600
       ],
-      "id": "fe6272f2-0cb2-4ead-9bb3-07c4d311fb7e",
+      "id": "34683dc5-ef74-4026-a17e-0b455a78debb",
       "name": "Limite Esgotado - Silêncio"
     },
     {
@@ -3001,10 +3001,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1144,
-        13216
+        272512,
+        203744
       ],
-      "id": "f5525d55-0c9c-452f-86eb-e786eac97ba7",
+      "id": "0c1fd9a1-5acb-4350-a820-8f27f2fcda3a",
       "name": "Tem Nome de Vaca?"
     },
     {
@@ -3021,10 +3021,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -944,
-        13116
+        272704,
+        203648
       ],
-      "id": "1f843567-47ee-46f0-8d73-e63f29c2dd92",
+      "id": "04bf3f42-2085-4ec2-8ffb-1b07ced7d23d",
       "name": "Resolver Vaca pelo Nome (RPC)",
       "credentials": {
         "supabaseApi": {
@@ -3041,10 +3041,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -744,
-        13216
+        272912,
+        203744
       ],
-      "id": "61b42043-be88-43f7-a033-261b7c214e60",
+      "id": "c02b0afa-e380-431e-b9ad-cd9458757bb8",
       "name": "Entidades Resolvidas"
     },
     {
@@ -3075,10 +3075,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -544,
-        13216
+        273104,
+        203744
       ],
-      "id": "8e7f6b42-8f14-49b7-a06f-44a9a7a1711d",
+      "id": "e7f0e63a-5449-441f-9c68-20ad25cc8927",
       "name": "Vaca Achada?"
     },
     {
@@ -3098,10 +3098,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -344,
-        13056
+        273312,
+        203584
       ],
-      "id": "2cb112e7-ee92-4aff-a018-34ca911e47cf",
+      "id": "9184dcaf-054b-44c7-81ca-3672663e6d3f",
       "name": "Mensagem Vaca Não Achada"
     },
     {
@@ -3127,10 +3127,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -6712,
-        12652
+        266944,
+        203184
       ],
-      "id": "9db4744f-ea92-4a46-ac3a-315ca63d39bb",
+      "id": "c2a10a22-604b-4961-ba40-f38a4d011514",
       "name": "Baixar Foto (Evolution)",
       "onError": "continueRegularOutput"
     },
@@ -3157,11 +3157,72 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -6472,
-        13312
+        267184,
+        203840
       ],
-      "id": "2e3827bf-e196-4be1-bdaf-280677fce183",
+      "id": "ee3c6460-76f2-4630-9acf-6b5df309bfb8",
       "name": "Baixar Áudio (Evolution)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "eef0f9c3-4678-4cbf-8f6f-8ee1d5b02657",
+              "leftValue": "={{ Array.isArray($json.entidades.leites) && $json.entidades.leites.length > 1 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        279248,
+        202224
+      ],
+      "id": "b13b3a9d-0bd6-40b3-b2b1-69e1631b183f",
+      "name": "Vários Leites?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zlgtkcdscwzxgnltodhb.supabase.co/rest/v1/rpc/bot_registrar_leites",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_telefone: $('Webhook').first().json.body.data.key.remoteJid,\n  p_itens: $('Entidades Resolvidas').item.json.entidades.leites,\n  p_data: ($('Entidades Resolvidas').item.json.entidades.data || null),\n  p_periodo: ($('Entidades Resolvidas').item.json.entidades.periodo || null)\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        279472,
+        202032
+      ],
+      "id": "363bcaaf-103f-42e3-8ab3-c381c1c7a58e",
+      "name": "Registrar Leites (RPC)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "n5A2qlsmhmmPqxSz",
+          "name": "Supabase account 2"
+        }
+      },
       "onError": "continueRegularOutput"
     }
   ],
@@ -3204,7 +3265,7 @@
       "main": [
         [
           {
-            "node": "Registrar Leite (RPC)",
+            "node": "Vários Leites?",
             "type": "main",
             "index": 0
           }
@@ -4652,6 +4713,35 @@
           }
         ]
       ]
+    },
+    "Vários Leites?": {
+      "main": [
+        [
+          {
+            "node": "Registrar Leites (RPC)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar Leite (RPC)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Leites (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Leite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -4664,7 +4754,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": "jGfkvwTtNi4c6fSs"
   },
-  "versionId": "70d4b210-6189-4d7f-9e0b-f48bfb2f46f5",
+  "versionId": "3147e781-2541-47cf-869d-ebacf736f0ff",
   "meta": {
     "instanceId": "3c6254208dfc25270c0f6139aedc58cb4cf18d05739e92e54e373b12bd587439"
   },

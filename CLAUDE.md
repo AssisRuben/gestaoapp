@@ -389,7 +389,8 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   (`body.instance === 'Gestao Pec'` desde 16/11/2026, número +55 85 9620-7701; antes 'Adam Rubens',
   'Gabriel Bandeira' e 'Assis Rubens') — outra instância com
   webhook pro mesmo n8n repassava as mensagens que ELA recebia (2026-10-11). Trocou a instância? Mude
-  ali, no `instanceName` dos nós da Evolution e na credencial ("Evolution Adam", id qFPyWQxioJ8lY37f).
+  ali, no `instanceName` dos nós da Evolution e na credencial dos 3 nós de envio ("Evolution GestaoPec", id ZlqMlFl3fCBjkcv4, desde 26/11/2026;
+  antes "Evolution Adam", id qFPyWQxioJ8lY37f).
 - **Modo teste** (04/11/2026; JSON do repo com `false` desde 12/11/2026 — vale só depois de reimportar no n8n): `const MODO_TESTE = true` dentro da expressão do "Acesso Liberado?" E do
   "Avisar Acesso Bloqueado?" — com true, o bot só responde à conversa do número consigo mesmo (o
   número do agente também é WhatsApp pessoal). Pra abrir pros produtores, trocar pra false nos dois.
@@ -695,6 +696,24 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   faz nada. Número falado vale mais que o nome. Bezerro continua só pelo número.
 - A resposta da consulta de uma vaca com nome sai como "Vaca 1 · Mimosa" (0062: `bot_consultar` troca
   "Vaca N" no texto pronto; os `_rel_vaca_*` não mudaram).
+- Respostas de registro também (0066): leite (registrar/corrigir/excluir), cobertura, parto, diagnóstico,
+  cadastro e atualização de vaca — sempre que a vaca tem nome, falado ou não. As funções antigas viraram
+  `_bot_<nome>_sem_nome` e `bot_<nome>` é um invólucro que passa a resposta por `_bot_resposta_com_nome`.
+  **Mudar a regra = mudar a `_sem_nome`**; recriar `bot_<nome>` copiando migration antiga tira o nome.
+
+## Bot: leite de várias vacas na mesma mensagem (0067_bot_varios_leites.sql)
+
+- "vaca 12 deu 10, a 15 deu 12 e a Mimosa 8" (texto, áudio ou mensagens seguidas que o buffer junta):
+  a IA devolve `entidades.leites` (um item por lançamento: numero_vaca ou nome_vaca, litros, periodo do
+  item só se diferente do geral); data e ordenha ditas uma vez ficam em `entidades.data`/`periodo`.
+- "Parsear Resposta IA": lista com um item vira o formato normal (caminho de sempre); com 2+, zera
+  numero/nome/litros soltos (vaca solta que não está na lista entra nela). No n8n, a saída
+  registrar_leite do "Rotear Intencao" passa por "Vários Leites?" → "Registrar Leites (RPC)"
+  (`bot_registrar_leites`) → "Confirmar Leite"; com uma vaca, "Registrar Leite (RPC)" como antes.
+- `bot_registrar_leites`: resolve número ou nome (nome de duas vacas é recusado), grava cada uma com
+  `_registrar_leite` num bloco próprio — as certas ficam, as erradas voltam listadas com o motivo; uma
+  resposta só, vaca por vaca, com total. Teto de 40 por mensagem. Conta uma interação no limite diário.
+  Vale só depois de reimportar o workflow no n8n.
 
 ## Cobertura atual (0038_cobertura_atual.sql)
 

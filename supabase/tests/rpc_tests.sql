@@ -2398,6 +2398,86 @@ begin
     if v_r->>'mensagem' not ilike '%Vaca 90002* — reprodução%' then
       raise exception 'FALHOU [0062]: vaca sem nome deveria ficar só com o número (veio %)', v_r;
     end if;
+
+    -- as respostas de registro também mostram o nome (0066)
+    v_r := bot_registrar_parto('5500000000001', 93001, _hoje_fazenda() - 10, null, null);
+    if not (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%vaca 93001 · Mimosa Bot%' then
+      raise exception 'FALHOU [0066]: resposta do parto deveria ter o nome (veio %)', v_r;
+    end if;
+    v_r := bot_registrar_leite('5500000000001', 93001, 10, _hoje_fazenda(), 'manha');
+    if not (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%10 L da vaca 93001 · Mimosa Bot %' then
+      raise exception 'FALHOU [0066]: resposta do leite deveria ter o nome (veio %)', v_r;
+    end if;
+    v_r := bot_localizar_leite_exclusao('5500000000001', 93001, _hoje_fazenda(), 'manha');
+    if not (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%vaca 93001 · Mimosa Bot,%'
+       or v_r->>'descricao' not ilike 'vaca 93001 · Mimosa Bot,%' then
+      raise exception 'FALHOU [0066]: pergunta da exclusão deveria ter o nome (veio %)', v_r;
+    end if;
+    v_r := bot_excluir_leite('5500000000001', (v_r->>'registro_id')::uuid);
+    if not (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%vaca 93001 · Mimosa Bot,%' then
+      raise exception 'FALHOU [0066]: resposta da exclusão deveria ter o nome (veio %)', v_r;
+    end if;
+    -- só o número inteiro, nunca duas vezes, e vaca sem nome fica como está
+    if _bot_nome_das_vacas(v_propriedade_id, 'Vaca 930010, vaca 93001 · Mimosa Bot e vaca 90002.')
+       <> 'Vaca 930010, vaca 93001 · Mimosa Bot e vaca 90002.' then
+      raise exception 'FALHOU [0066]: troca do nome pegou o que não devia (veio %)',
+        _bot_nome_das_vacas(v_propriedade_id, 'Vaca 930010, vaca 93001 · Mimosa Bot e vaca 90002.');
+    end if;
+    -- telefone de outra fazenda: não acrescenta nome nenhum
+    v_r := _bot_resposta_com_nome('5599999999999', '{"mensagem": "vaca 93001"}');
+    if v_r->>'mensagem' <> 'vaca 93001' then
+      raise exception 'FALHOU [0066]: telefone sem fazenda não deveria ver o nome (veio %)', v_r;
+    end if;
+
+    -- leite de várias vacas na mesma mensagem (0067)
+    v_r := bot_registrar_parto('5500000000001', 93002, _hoje_fazenda() - 10, null, null);
+    if not (v_r->>'ok')::boolean then
+      raise exception 'FALHOU [0067]: preparo — parto da 93002 (veio %)', v_r;
+    end if;
+    v_r := bot_registrar_leites('5500000000001',
+      '[{"nome_vaca": "mimosa bot", "litros": 10},
+        {"numero_vaca": "93002", "litros": "8,5"},
+        {"numero_vaca": "99999", "litros": 5},
+        {"nome_vaca": "gemea bot", "litros": 3},
+        {"numero_vaca": "93001", "litros": "muito"},
+        {"numero_vaca": "93001", "litros": 4, "periodo": "manha"}]', _hoje_fazenda(), 'tarde');
+    if not (v_r->>'ok')::boolean or (v_r->>'registrados')::int <> 3 or (v_r->>'recusados')::int <> 3
+       or v_r->>'mensagem' not ilike 'Registrei 3 de 6 lançamentos de leite em % (tarde):%'
+       or v_r->>'mensagem' not ilike '%• vaca 93001 · Mimosa Bot — 10 L' || chr(10) || '%'
+       or v_r->>'mensagem' not ilike '%• vaca 93002 · Gêmea Bot — 8,5 L%'
+       or v_r->>'mensagem' not ilike '%• vaca 93001 · Mimosa Bot — 4 L (manhã)%'
+       or v_r->>'mensagem' not ilike '%Total: 22,5 L.%'
+       or v_r->>'mensagem' not ilike '%vaca 99999: não está no cadastro%'
+       or v_r->>'mensagem' not ilike '%"gemea bot": tem mais de uma vaca com esse nome (números 93002, 93003)%'
+       or v_r->>'mensagem' not ilike '%vaca 93001 · Mimosa Bot: não entendi quantos litros%' then
+      raise exception 'FALHOU [0067]: várias vacas — grava as certas e lista as erradas (veio %)', v_r;
+    end if;
+    if (select count(*) from controle_leite c join vacas v on v.id = c.vaca_id
+        where v.propriedade_id = v_propriedade_id and v.numero_identificacao in (93001, 93002)
+          and c.data_controle = _hoje_fazenda()) <> 3 then
+      raise exception 'FALHOU [0067]: deveriam ficar 3 lançamentos gravados';
+    end if;
+    -- mandou de novo: mesma ordenha é recusada, nada duplica
+    v_r := bot_registrar_leites('5500000000001',
+      '[{"numero_vaca": "93001", "litros": 10}, {"numero_vaca": "93002", "litros": 8}]', _hoje_fazenda(), 'tarde');
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike 'Não registrei nenhum lançamento de leite:%' then
+      raise exception 'FALHOU [0067]: reenvio da mesma ordenha deveria ser recusado (veio %)', v_r;
+    end if;
+    -- lista vazia e lista grande demais
+    v_r := bot_registrar_leites('5500000000001', '[]', null, null);
+    if (v_r->>'ok')::boolean then
+      raise exception 'FALHOU [0067]: lista vazia deveria ser recusada (veio %)', v_r;
+    end if;
+    v_r := bot_registrar_leites('5500000000001',
+      (select jsonb_agg(jsonb_build_object('numero_vaca', g::text, 'litros', 5)) from generate_series(1, 41) g), null, null);
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%no máximo 40%' then
+      raise exception 'FALHOU [0067]: mais de 40 vacas deveria pedir pra dividir (veio %)', v_r;
+    end if;
+    -- telefone sem fazenda
+    v_r := bot_registrar_leites('5599999999999', '[{"numero_vaca": "93001", "litros": 10}]', null, null);
+    if (v_r->>'ok')::boolean then
+      raise exception 'FALHOU [0067]: telefone sem fazenda não grava (veio %)', v_r;
+    end if;
     perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
   end;
 
