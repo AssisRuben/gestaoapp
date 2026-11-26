@@ -1793,6 +1793,9 @@ begin
     end;
 
     -- kit cedido leva as doses (0069): uma entrega por touro da composição, uma vez só por kit
+    -- na produção a composição já tem o kit real (CODEVASF): o teste usa só o touro de teste
+    -- (o arquivo termina em rollback, a composição real volta)
+    delete from kit_composicao;
     insert into kit_composicao (touro_id, doses) values (v_touro_id, 2);
     if gestor_ceder_kit((select id from kits_inseminacao where patrimonio = '__999.001-1'),
                         v_propriedade_id, null, _hoje_fazenda(), null, true) <> 2 then
