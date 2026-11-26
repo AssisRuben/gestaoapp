@@ -753,6 +753,12 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   parto no futuro ou não posterior ao parto ativo é recusado; o parto só liga cobertura positiva
   depois do parto anterior e com 240 a 310 dias de gestação (fora disso fica sem cobertura, e o bot
   avisa). A importação de planilha grava direto e tem as próprias conferências (0045).
+- **Cobertura que não segurou pelo WhatsApp** (0072): "não segurou / repetiu cio / voltou ao cio"
+  com cobertura nova na mesma mensagem → a IA marca `anterior_nao_segurou` e a regra (em
+  `_bot_registrar_cobertura_sem_nome`) negativa a cobertura atual (positiva ou pendente) e grava a nova
+  na mesma transação; sem cobertura nova → `diagnosticar_prenhez` negativo. Cobertura repetida (mesma
+  data) também é recusada ali. O nó JavaScript "Validar Cobertura" (e os de busca antes dele) saiu do
+  workflow: recusava "vaca prenhe" sem dizer como sair (vaca 2, 26/11/2026).
 
 ## Leite da lactação e parto duplicado (0039)
 

@@ -2781,6 +2781,48 @@ begin
     end if;
   end;
 
+  -- ============================================================
+  -- cobertura que não segurou, pelo WhatsApp (0072)
+  -- ============================================================
+
+  declare
+    v_vaca uuid;
+    v_r jsonb;
+  begin
+    insert into vacas (propriedade_id, numero_identificacao, status_produtivo)
+      values (v_propriedade_id, 97001, 'lactacao') returning id into v_vaca;
+    insert into partos (vaca_id, data_parto) values (v_vaca, _hoje_fazenda() - 200);
+    insert into coberturas (vaca_id, data_cobertura, diagnostico_prenhez) values (v_vaca, _hoje_fazenda() - 40, 'positivo');
+
+    -- sem a marca: recusa com a explicação de 0052, nada muda
+    v_r := bot_registrar_cobertura('5500000000001', 97001, _hoje_fazenda(), null);
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%perdeu a prenhez%' then
+      raise exception 'FALHOU [0072]: cobertura em vaca prenhe sem a marca deveria ser recusada (veio %)', v_r;
+    end if;
+
+    -- com a marca: a anterior vira negativa e a nova entra
+    v_r := bot_registrar_cobertura('5500000000001', 97001, _hoje_fazenda(), null, true);
+    if not (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%não segurou%'
+       or (select diagnostico_prenhez from coberturas where vaca_id = v_vaca and data_cobertura = _hoje_fazenda() - 40) <> 'negativo'
+       or (select status_reprodutivo from vacas where id = v_vaca) <> 'vazia_em_servico' then
+      raise exception 'FALHOU [0072]: "não segurou" deveria negativar a anterior e registrar a nova (veio %)', v_r;
+    end if;
+
+    -- mesma data de novo: recusa como repetida
+    v_r := bot_registrar_cobertura('5500000000001', 97001, _hoje_fazenda(), null, true);
+    if (v_r->>'ok')::boolean or v_r->>'mensagem' not ilike '%Já existe uma cobertura%' then
+      raise exception 'FALHOU [0072]: cobertura repetida na mesma data deveria ser recusada (veio %)', v_r;
+    end if;
+
+    -- recusa da nova (data no futuro) desfaz o negativo da anterior
+    update coberturas set diagnostico_prenhez = 'positivo' where vaca_id = v_vaca and data_cobertura = _hoje_fazenda();
+    v_r := bot_registrar_cobertura('5500000000001', 97001, _hoje_fazenda() + 3, null, true);
+    if (v_r->>'ok')::boolean
+       or (select diagnostico_prenhez from coberturas where vaca_id = v_vaca and data_cobertura = _hoje_fazenda()) <> 'positivo' then
+      raise exception 'FALHOU [0072]: cobertura recusada não deveria deixar a anterior negativa (veio %)', v_r;
+    end if;
+  end;
+
   raise notice 'TODOS OS TESTES PASSARAM';
 end $$;
 
