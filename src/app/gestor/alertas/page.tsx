@@ -1,10 +1,12 @@
 import { exigirGestor } from "@/lib/propriedade";
+import { createServiceClient } from "@/lib/supabase/service";
 import { getResumoFazendasCache, getFinanceiroDiarioTodasCache, getAlertasReprodutivosCache } from "@/lib/cached-data";
 import { normalizarResumo, normalizarFinanceiro, hojeBrasil, diasEntre } from "@/lib/gestor";
 import {
   AlertasClient,
   type AlertaMargem,
   type AlertaReprodutivo,
+  type AlertaKit,
   type AlertaSemLancamento,
   type NivelAlerta,
 } from "./alertas-client";
@@ -52,6 +54,12 @@ export default async function GestorAlertasPage() {
     getAlertasReprodutivosCache(),
     propriedadesOcultas(),
   ]);
+  // kits de inseminação sem abastecer (0074). Sem cache: poucas linhas, e o abastecimento não tem tag.
+  // Todos os kits, inclusive em fazenda de acompanhamento: o kit é patrimônio da entidade.
+  const { data: kitsData } = await createServiceClient().rpc("alertas_kits");
+  const kits = ((kitsData ?? []) as AlertaKit[])
+    .map((k) => ({ ...k, dias: Number(k.dias) }))
+    .sort((a, b) => b.dias - a.dias);
   // fazendas de acompanhamento ficam fora, a menos que o gestor ligue no cabeçalho
   const resumoData = semOcultas(resumoTodas, ocultas);
   const financeiroData = semOcultas(financeiroTodas, ocultas);
@@ -129,6 +137,7 @@ export default async function GestorAlertasPage() {
   return (
     <AlertasClient
       reprodutivos={reprodutivos}
+      kits={kits}
       quedaMargem={quedaMargem}
       semLancamentoLeite={semLancamento((r) => r.ultimo_leite, (r) => r.vacas_lactacao > 0)}
       semLancamentoFinanceiro={semLancamento((r) => r.ultimo_financeiro)}

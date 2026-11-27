@@ -38,4 +38,4 @@ export type {
   BaixaDosesTecnico,
 } from "@/lib/programa";
 
-export type { AbastecimentoBotijao } from "@/lib/botijao";
+export type { AbastecimentoBotijao, KitComigo } from "@/lib/botijao";

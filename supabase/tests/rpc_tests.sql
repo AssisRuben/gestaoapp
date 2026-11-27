@@ -2785,6 +2785,125 @@ begin
   end;
 
   -- ============================================================
+  -- kit com quem recebe: confirmação única, abastecimento do kit e alerta de 60 dias (0074)
+  -- ============================================================
+
+  declare
+    v_kit1 uuid := (select id from kits_inseminacao where patrimonio = '__999.001-1');  -- fazenda, 2 doses pendentes (0069)
+    v_kit3 uuid;
+    v_kit4 uuid;
+    v_tec uuid;
+    v_faz uuid;
+    v_ab botijao_abastecimentos;
+    v_n integer;
+  begin
+    -- a fazenda vê o kit com as doses que vieram nele
+    if not exists (select 1 from kits_comigo(v_propriedade_id) k
+                   where k.id = v_kit1 and jsonb_array_length(k.doses) = 1 and not (k.doses->0->>'recebido')::boolean) then
+      raise exception 'FALHOU [0074]: a fazenda deveria ver o kit com as doses pendentes';
+    end if;
+
+    -- quem não é da fazenda não confirma
+    perform set_config('request.jwt.claim.sub', gen_random_uuid()::text, true);
+    begin
+      perform confirmar_recebimento_kit(v_kit1);
+      raise exception 'FALHOU [0074]: quem não está com o kit não confirma';
+    exception when others then
+      if sqlerrm not ilike '%não está com você%' then raise exception 'FALHOU [0074]: erro inesperado: %', sqlerrm; end if;
+    end;
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+
+    -- uma confirmação: o kit e as doses dele
+    v_n := confirmar_recebimento_kit(v_kit1);
+    if v_n <> 2
+       or (select recebido_em from kits_inseminacao where id = v_kit1) is null
+       or exists (select 1 from entregas_doses where kit_id = v_kit1 and recebido_em is null) then
+      raise exception 'FALHOU [0074]: confirmar o kit deveria confirmar as 2 doses dele (veio %)', v_n;
+    end if;
+    begin
+      perform confirmar_recebimento_kit(v_kit1);
+      raise exception 'FALHOU [0074]: confirmar duas vezes deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%já foi confirmado%' then raise exception 'FALHOU [0074]: erro inesperado: %', sqlerrm; end if;
+    end;
+
+    -- abastecimento do kit com a fazenda: vira despesa dela; foto fora da pasta do kit é recusada
+    v_ab := registrar_abastecimento_kit(v_kit1, _hoje_fazenda(), 40, 150, 'kit/' || v_kit1 || '/a.jpg');
+    if v_ab.propriedade_id <> v_propriedade_id or v_ab.kit_id <> v_kit1 or v_ab.financeiro_id is null then
+      raise exception 'FALHOU [0074]: abastecimento do kit da fazenda deveria lançar a despesa (veio %)', row_to_json(v_ab);
+    end if;
+    begin
+      perform registrar_abastecimento_kit(v_kit1, _hoje_fazenda(), 40, 150, v_propriedade_id || '/b.jpg');
+      raise exception 'FALHOU [0074]: foto fora da pasta do kit deveria ser recusada';
+    exception when others then
+      if sqlerrm not ilike '%foto%obrigatória%' then raise exception 'FALHOU [0074]: erro inesperado: %', sqlerrm; end if;
+    end;
+
+    -- cessão nova: o recebimento anterior deixa de valer
+    update kits_inseminacao set cedido_em = _hoje_fazenda() - 1 where id = v_kit1;
+    if (select recebido_em from kits_inseminacao where id = v_kit1) is not null then
+      raise exception 'FALHOU [0074]: cessão nova deveria zerar o recebimento';
+    end if;
+
+    -- kit com técnico: abastecimento sem fazenda e sem despesa; alerta passados 60 dias
+    insert into auth.users (id, email) values (gen_random_uuid(), '__tecnico_kit__@exemplo.invalid') returning id into v_tec;
+    insert into kits_inseminacao (entidade_id, patrimonio, tecnico_id, cedido_em)
+    values ((select entidade_id from kits_inseminacao where id = v_kit1), '__999.003-3', v_tec, _hoje_fazenda() - 90)
+    returning id into v_kit3;
+    perform set_config('request.jwt.claim.sub', v_tec::text, true);
+    if not exists (select 1 from kits_comigo(v_propriedade_id) where id = v_kit3)
+       or exists (select 1 from kits_comigo(v_propriedade_id) where id = v_kit1) then
+      raise exception 'FALHOU [0074]: o técnico deveria ver só o kit dele';
+    end if;
+    begin
+      perform registrar_abastecimento_kit(v_kit3, _hoje_fazenda() - 100, 30, 120, 'kit/' || v_kit3 || '/a.jpg');
+      raise exception 'FALHOU [0074]: abastecimento de antes da cessão deveria ser recusado';
+    exception when others then
+      if sqlerrm not ilike '%não pode ser de antes%' then raise exception 'FALHOU [0074]: erro inesperado: %', sqlerrm; end if;
+    end;
+    v_ab := registrar_abastecimento_kit(v_kit3, _hoje_fazenda() - 80, 30, 120, 'kit/' || v_kit3 || '/a.jpg');
+    if v_ab.propriedade_id is not null or v_ab.financeiro_id is not null then
+      raise exception 'FALHOU [0074]: kit com técnico não tem fazenda nem despesa (veio %)', row_to_json(v_ab);
+    end if;
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+
+    if (select dias from alertas_kits() where kit_id = v_kit3) <> 80
+       or exists (select 1 from alertas_kits() where kit_id = v_kit1) then
+      raise exception 'FALHOU [0074]: só o kit do técnico (80 dias) deveria alertar';
+    end if;
+
+    -- só o técnico do kit (ou a fazenda) apaga o abastecimento
+    begin
+      perform excluir_abastecimento_botijao(v_ab.id);
+      raise exception 'FALHOU [0074]: quem não está com o kit não apaga o abastecimento';
+    exception when others then
+      if sqlerrm not ilike '%sem acesso%' then raise exception 'FALHOU [0074]: erro inesperado: %', sqlerrm; end if;
+    end;
+    perform set_config('request.jwt.claim.sub', v_tec::text, true);
+    perform excluir_abastecimento_botijao(v_ab.id);
+    perform set_config('request.jwt.claim.sub', v_usuario_id::text, true);
+    -- sem nenhum abastecimento, conta desde a cessão
+    if (select dias from alertas_kits() where kit_id = v_kit3) <> 90 then
+      raise exception 'FALHOU [0074]: sem abastecimento o alerta conta desde a cessão';
+    end if;
+
+    -- fazenda com um kit: o abastecimento do botijão da fazenda (site antigo/WhatsApp) vai pro kit,
+    -- e o alerta é o do kit, não o do botijão da fazenda
+    insert into propriedades (nome_propriedade, nome_produtor) values ('__faz_0074__', 'x') returning id into v_faz;
+    insert into kits_inseminacao (entidade_id, patrimonio, propriedade_id, cedido_em)
+    values ((select entidade_id from kits_inseminacao where id = v_kit1), '__999.004-4', v_faz, _hoje_fazenda() - 100)
+    returning id into v_kit4;
+    v_ab := _registrar_abastecimento_botijao(v_faz, _hoje_fazenda() - 90, 10, 50, v_faz || '/x.jpg');
+    if v_ab.kit_id is distinct from v_kit4 then
+      raise exception 'FALHOU [0074]: abastecimento da fazenda com um kit deveria ir pro kit';
+    end if;
+    if (select dias from alertas_kits() where kit_id = v_kit4) <> 90
+       or exists (select 1 from alertas_reprodutivos() where propriedade_id = v_faz and tipo = 'botijao_sem_abastecer') then
+      raise exception 'FALHOU [0074]: fazenda com kit alerta pelo kit, uma vez só';
+    end if;
+  end;
+
+  -- ============================================================
   -- cobertura que não segurou, pelo WhatsApp (0072)
   -- ============================================================
 

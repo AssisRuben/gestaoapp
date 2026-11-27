@@ -35,11 +35,20 @@ export default async function EntidadesPage() {
   const erroKits = e3 ?? e4 ?? e5;
 
   // kit cedido com as doses (0069): composição do kit e quais kits já tiveram as doses entregues
-  const [{ data: composicao }, { data: kitsFazenda }, { data: kitsTecnico }] = await Promise.all([
+  const [{ data: composicao }, { data: kitsFazenda }, { data: kitsTecnico }, { data: abastecimentosKits }] = await Promise.all([
     supabase.from("kit_composicao").select("touro_id, doses").order("doses", { ascending: false }).order("touro_id"),
     supabase.from("entregas_doses").select("kit_id").not("kit_id", "is", null),
     supabase.from("entregas_doses_tecnico").select("kit_id").not("kit_id", "is", null),
+    // abastecimento do botijão do kit (0074)
+    supabase.from("botijao_abastecimentos").select("kit_id, data").not("kit_id", "is", null),
   ]);
+  const abastecimentosPorKit = new Map<string, string[]>();
+  for (const a of (abastecimentosKits ?? []) as { kit_id: string; data: string }[]) {
+    abastecimentosPorKit.set(a.kit_id, [...(abastecimentosPorKit.get(a.kit_id) ?? []), a.data]);
+  }
+  // último abastecimento desde a cessão atual (o de quem teve o kit antes não conta)
+  const ultimoAbastecimento = (k: KitEntidade) =>
+    (abastecimentosPorKit.get(k.id) ?? []).filter((d) => !k.cedido_em || d >= k.cedido_em).sort().at(-1) ?? null;
   const comDoses = new Set([...(kitsFazenda ?? []), ...(kitsTecnico ?? [])].map((e) => e.kit_id as string));
 
   return (
@@ -65,7 +74,11 @@ export default async function EntidadesPage() {
           <EntidadesClient
             entidades={(entidades ?? []) as Entidade[]}
             fazendas={(fazendas ?? []) as FazendaEntidade[]}
-            kits={((kits ?? []) as KitEntidade[]).map((k) => ({ ...k, doses_entregues: comDoses.has(k.id) }))}
+            kits={((kits ?? []) as KitEntidade[]).map((k) => ({
+              ...k,
+              doses_entregues: comDoses.has(k.id),
+              ultimo_abastecimento: ultimoAbastecimento(k),
+            }))}
             recebidas={(recebidas ?? []) as DosesRecebidasEntidade[]}
             saldos={((saldos ?? []) as SaldoEntidade[]).map((s) => ({
               ...s,

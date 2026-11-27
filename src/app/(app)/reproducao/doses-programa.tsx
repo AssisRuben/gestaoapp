@@ -41,7 +41,8 @@ export function DosesPrograma({
     }
   }, [state, onConfirmado]);
 
-  const pendentes = entregas.filter((e) => !e.recebido_em);
+  // doses de um kit são confirmadas no card do kit, de uma vez (0074)
+  const pendentes = entregas.filter((e) => !e.recebido_em && !e.kit_id);
   const tourosPorId = new Map(touros.map((t) => [t.id, t]));
   const saldosVisiveis = saldos.filter(
     (s) => s.recebidas > 0 || s.a_receber > 0 || s.utilizadas > 0 || s.baixas > 0,

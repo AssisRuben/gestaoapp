@@ -22,6 +22,10 @@ export type KitEntidade = {
   observacao: string | null;
   // as doses do kit já foram entregues (entrega com kit_id, 0069)
   doses_entregues?: boolean;
+  // quem recebeu confirmou (0074); zera a cada cessão nova
+  recebido_em?: string | null;
+  // último abastecimento do botijão do kit desde a cessão (0074)
+  ultimo_abastecimento?: string | null;
 };
 
 export type DosesRecebidasEntidade = {
@@ -190,6 +194,15 @@ export function KitsDosesEntidade({
                             {quem}
                             {k.cedido_em && <span className={TEXTO_FRACO}> · desde {formatarDataBR(k.cedido_em)}</span>}
                             {k.doses_entregues && <span className={TEXTO_FRACO}> · com as doses</span>}
+                            <span className={`block text-xs ${k.recebido_em ? "text-zinc-600 dark:text-zinc-400" : "text-financeiro-ink"}`}>
+                              {k.recebido_em
+                                ? `Recebido em ${formatarDataBR(k.recebido_em.slice(0, 10))}`
+                                : "Aguardando confirmação de quem recebeu"}
+                              {" · "}
+                              {k.ultimo_abastecimento
+                                ? `último abastecimento ${formatarDataBR(k.ultimo_abastecimento)}`
+                                : "sem abastecimento registrado"}
+                            </span>
                           </>
                         ) : (
                           <span className={TEXTO_FRACO}>Na entidade</span>

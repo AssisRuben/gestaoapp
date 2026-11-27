@@ -35,14 +35,29 @@ async function reduzirFoto(arquivo: File): Promise<File> {
 
 // Bloco "Botijão de nitrogênio": cada fazenda tem um. Produtor e técnico registram o abastecimento
 // (nível em cm, data, valor e foto obrigatória); o valor também vira despesa no Financeiro.
+// Com kitId (0074), é o botijão do kit de inseminação: o abastecimento vai pro kit e, com o técnico
+// (semFinanceiro), não vira despesa.
 export function BotijaoNitrogenio({
   abastecimentos,
   nomes,
   onSucesso,
+  kitId,
+  titulo = "Botijão de nitrogênio",
+  semFinanceiro = false,
+  podeRegistrar = true,
+  dataMinima,
+  embutido = false,
 }: {
   abastecimentos: AbastecimentoBotijao[];
   nomes: Record<string, string>;
   onSucesso: (mensagem: string) => void;
+  kitId?: string;
+  titulo?: string;
+  semFinanceiro?: boolean;
+  podeRegistrar?: boolean;
+  dataMinima?: string;
+  // dentro do card do kit: sem a borda própria
+  embutido?: boolean;
 }) {
   const [formAberto, setFormAberto] = useState(false);
   const [excluirState, excluirAction, excluindo] = useActionState(excluirAbastecimentoBotijao, undefined);
@@ -53,10 +68,10 @@ export function BotijaoNitrogenio({
     if (excluirState?.success) {
       queueMicrotask(() => {
         setConfirmandoId(null);
-        onSucesso("Abastecimento excluído (a despesa também saiu do Financeiro).");
+        onSucesso(semFinanceiro ? "Abastecimento excluído." : "Abastecimento excluído (a despesa também saiu do Financeiro).");
       });
     }
-  }, [excluirState, onSucesso]);
+  }, [excluirState, onSucesso, semFinanceiro]);
 
   const ultimo = abastecimentos[0];
   const recentes = abastecimentos.slice(0, 3);
@@ -89,7 +104,9 @@ export function BotijaoNitrogenio({
         {confirmandoId === a.id ? (
           <form action={excluirAction} className="flex flex-wrap items-center gap-2 pt-1">
             <input type="hidden" name="abastecimento_id" value={a.id} />
-            <span className="text-sm text-zinc-600 dark:text-zinc-400">Apagar também a despesa de {moeda(a.valor)}?</span>
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+              {semFinanceiro ? "Excluir esse abastecimento?" : `Apagar também a despesa de ${moeda(a.valor)}?`}
+            </span>
             <button
               type="submit"
               disabled={excluindo}
@@ -115,23 +132,35 @@ export function BotijaoNitrogenio({
   );
 
   return (
-    <section className="flex flex-col gap-3 rounded-2xl border border-black/[.08] p-4 dark:border-white/[.145]">
+    <section
+      className={
+        embutido
+          ? "flex flex-col gap-3"
+          : "flex flex-col gap-3 rounded-2xl border border-black/[.08] p-4 dark:border-white/[.145]"
+      }
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Botijão de nitrogênio</h2>
+          {embutido ? (
+            <h3 className="text-base font-semibold text-black dark:text-zinc-50">{titulo}</h3>
+          ) : (
+            <h2 className="text-lg font-semibold text-black dark:text-zinc-50">{titulo}</h2>
+          )}
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             {ultimo
               ? `Último abastecimento: ${formatarDataBR(ultimo.data)} · nível ${nivel(ultimo.nivel_cm)}`
               : "Nenhum abastecimento registrado ainda."}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setFormAberto(true)}
-          className="whitespace-nowrap rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark"
-        >
-          + Registrar abastecimento
-        </button>
+        {podeRegistrar && (
+          <button
+            type="button"
+            onClick={() => setFormAberto(true)}
+            className="whitespace-nowrap rounded-full bg-brand-green px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-green-dark"
+          >
+            + Registrar abastecimento
+          </button>
+        )}
       </div>
 
       {excluirState?.error && <p className="text-sm text-red-700 dark:text-red-400">{excluirState.error}</p>}
@@ -148,10 +177,13 @@ export function BotijaoNitrogenio({
 
       {formAberto && (
         <AbastecimentoModal
+          kitId={kitId}
+          semFinanceiro={semFinanceiro}
+          dataMinima={dataMinima}
           onFechar={() => setFormAberto(false)}
           onSucesso={() => {
             setFormAberto(false);
-            onSucesso("Abastecimento registrado — a despesa foi lançada no Financeiro.");
+            onSucesso(semFinanceiro ? "Abastecimento do kit registrado." : "Abastecimento registrado — a despesa foi lançada no Financeiro.");
           }}
         />
       )}
@@ -159,7 +191,19 @@ export function BotijaoNitrogenio({
   );
 }
 
-function AbastecimentoModal({ onFechar, onSucesso }: { onFechar: () => void; onSucesso: () => void }) {
+function AbastecimentoModal({
+  onFechar,
+  onSucesso,
+  kitId,
+  semFinanceiro,
+  dataMinima,
+}: {
+  onFechar: () => void;
+  onSucesso: () => void;
+  kitId?: string;
+  semFinanceiro?: boolean;
+  dataMinima?: string;
+}) {
   const [state, action, pending] = useActionState(registrarAbastecimentoBotijao, undefined);
   const [preparando, setPreparando] = useState(false);
   const [previa, setPrevia] = useState<string | null>(null);
@@ -203,6 +247,7 @@ function AbastecimentoModal({ onFechar, onSucesso }: { onFechar: () => void; onS
         className="relative flex max-h-full w-full max-w-sm flex-col gap-4 overflow-y-auto rounded-2xl bg-white p-6 dark:bg-zinc-950"
       >
         <h2 className="text-lg font-semibold text-black dark:text-zinc-50">Abastecimento do botijão</h2>
+        {kitId && <input type="hidden" name="kit_id" value={kitId} />}
 
         <div className="flex flex-col gap-1">
           <label htmlFor="botijao_data" className={LABEL_CLASSES}>
@@ -215,6 +260,7 @@ function AbastecimentoModal({ onFechar, onSucesso }: { onFechar: () => void; onS
             required
             defaultValue={hojeBrasil()}
             max={hojeBrasil()}
+            min={dataMinima}
             className={CAMPO_CLASSES}
           />
         </div>
@@ -247,9 +293,11 @@ function AbastecimentoModal({ onFechar, onSucesso }: { onFechar: () => void; onS
             placeholder="Ex.: 180,00"
             className={CAMPO_CLASSES}
           />
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Também entra no Financeiro como despesa (inseminação artificial).
-          </p>
+          {!semFinanceiro && (
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Também entra no Financeiro como despesa (inseminação artificial).
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-1">

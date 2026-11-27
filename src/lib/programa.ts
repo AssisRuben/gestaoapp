@@ -27,6 +27,8 @@ export type EntregaDoses = {
   entidade?: { nome: string; cnpj?: string | null; responsavel: string | null; telefone: string | null } | null;
   // transferência: doses que um técnico passou pra fazenda (0055)
   origem_tecnico_id?: string | null;
+  // doses que vieram num kit (0069): confirmadas junto com o kit (0074)
+  kit_id?: string | null;
 };
 
 export type SaldoDoses = {
@@ -117,6 +119,8 @@ export type EntregaDosesTecnico = {
   recebido_em: string | null;
   touro: { id: string; nome: string; codigo: string | null };
   entidade?: { nome: string; responsavel: string | null; telefone: string | null } | null;
+  // doses que vieram num kit (0069): confirmadas junto com o kit (0074)
+  kit_id?: string | null;
 };
 
 export type SaldoDosesTecnico = {

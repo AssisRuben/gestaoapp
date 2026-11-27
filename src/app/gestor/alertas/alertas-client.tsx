@@ -36,6 +36,21 @@ export type AlertaReprodutivo = {
   itens: { tipo: string; numero: number | null; dataRef: string; dias: number }[];
 };
 
+// kit de inseminação cedido sem abastecimento do botijão há mais de 60 dias (0074)
+export type AlertaKit = {
+  kit_id: string;
+  patrimonio: string;
+  entidade_nome: string;
+  propriedade_id: string | null;
+  tecnico_id: string | null;
+  com_quem: string;
+  telefone: string | null;
+  cedido_em: string;
+  recebido: boolean;
+  ultimo_abastecimento: string | null;
+  dias: number;
+};
+
 function textoItemReprodutivo(i: AlertaReprodutivo["itens"][number]) {
   const vaca = i.numero !== null ? `Vaca ${i.numero}` : "";
   switch (i.tipo) {
@@ -156,7 +171,8 @@ function AcoesAlerta({
 }: {
   telefone: string | null;
   mensagem: string;
-  fazendaId: string;
+  // sem fazenda (kit com técnico): só o WhatsApp
+  fazendaId?: string | null;
 }) {
   return (
     <div className="flex shrink-0 gap-1.5">
@@ -172,14 +188,16 @@ function AcoesAlerta({
           <WhatsAppIcon className="h-4 w-4" />
         </span>
       )}
-      <Link
-        href={`/gestor/fazendas/${fazendaId}?de=alertas`}
-        title="Abrir fazenda (resumo pra imprimir ou salvar em PDF)"
-        aria-label="Abrir fazenda"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/[.08] text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
-      >
-        <DocumentIcon className="h-4 w-4" />
-      </Link>
+      {fazendaId && (
+        <Link
+          href={`/gestor/fazendas/${fazendaId}?de=alertas`}
+          title="Abrir fazenda (resumo pra imprimir ou salvar em PDF)"
+          aria-label="Abrir fazenda"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/[.08] text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/[.06]"
+        >
+          <DocumentIcon className="h-4 w-4" />
+        </Link>
+      )}
     </div>
   );
 }
@@ -197,12 +215,14 @@ function Vazio() {
 
 export function AlertasClient({
   reprodutivos,
+  kits = [],
   quedaMargem,
   semLancamentoLeite,
   semLancamentoFinanceiro,
   rotuloMeses,
 }: {
   reprodutivos: AlertaReprodutivo[];
+  kits?: AlertaKit[];
   quedaMargem: AlertaMargem[];
   semLancamentoLeite: AlertaSemLancamento[];
   semLancamentoFinanceiro: AlertaSemLancamento[];
@@ -210,11 +230,13 @@ export function AlertasClient({
 }) {
   const totalAlertas =
     reprodutivos.reduce((s, a) => s + a.itens.length, 0) +
+    kits.length +
     quedaMargem.length +
     semLancamentoLeite.length +
     semLancamentoFinanceiro.length;
   const fazendasAfetadas = new Set([
     ...reprodutivos.map((a) => a.id),
+    ...kits.flatMap((k) => (k.propriedade_id ? [k.propriedade_id] : [])),
     ...quedaMargem.map((a) => a.id),
     ...semLancamentoLeite.map((a) => a.id),
     ...semLancamentoFinanceiro.map((a) => a.id),
@@ -272,6 +294,47 @@ export function AlertasClient({
                     </div>
                   </div>
                   <AcoesAlerta telefone={a.telefone} mensagem={mensagem} fazendaId={a.id} />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      <div className="rounded-2xl border bg-surface border-black/[.08] p-4 dark:border-white/[.145]">
+        <p className="mb-1 flex items-center gap-2 text-base font-semibold text-black dark:text-zinc-50">
+          <span className="h-2.5 w-2.5 rounded-full bg-reproducao" aria-hidden="true" />
+          Kits de inseminação sem abastecer há mais de 60 dias
+        </p>
+        <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">
+          Kits cedidos a fazendas e técnicos. Conta desde o último abastecimento do botijão — ou desde a cessão,
+          se quem recebeu nunca registrou.
+        </p>
+        {kits.length === 0 && <p className="text-sm text-zinc-600 dark:text-zinc-400">Nenhum kit nesta situação.</p>}
+        <ul className="flex flex-col gap-3">
+          {kits.map((k) => {
+            const mensagem = `Olá! Aqui é da equipe Gestão Pec. O kit de inseminação ${k.patrimonio} (${k.entidade_nome}) está há ${k.dias} dias sem registro de abastecimento do botijão de nitrogênio. Pode abastecer e registrar no site (Reprodução → Kit de inseminação)?`;
+            return (
+              <li key={k.kit_id} className="flex flex-col gap-3 rounded-xl border border-black/[.08] p-3 dark:border-white/[.145]">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-black dark:text-zinc-50">
+                      {k.tecnico_id ? `Técnico: ${k.com_quem}` : k.com_quem}
+                    </p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Kit <span className="font-mono tabular-nums">{k.patrimonio}</span> · {k.entidade_nome}
+                    </p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      {k.ultimo_abastecimento
+                        ? `Último abastecimento há ${k.dias} dias (${formatarDataBR(k.ultimo_abastecimento)})`
+                        : `Nenhum abastecimento desde a cessão, há ${k.dias} dias (${formatarDataBR(k.cedido_em)})`}
+                      {!k.recebido && " · recebimento ainda não confirmado"}
+                    </p>
+                    <div className="mt-2">
+                      <Badge nivel={k.dias > 90 ? "critico" : "atencao"} />
+                    </div>
+                  </div>
+                  <AcoesAlerta telefone={k.telefone} mensagem={mensagem} fazendaId={k.propriedade_id} />
                 </div>
               </li>
             );

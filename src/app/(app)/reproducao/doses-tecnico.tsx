@@ -48,7 +48,8 @@ export function DosesTecnicoBloco({
     }
   }, [cancelarState, onSucesso]);
 
-  const pendentes = doses.entregas.filter((e) => !e.recebido_em);
+  // doses de um kit são confirmadas no card do kit, de uma vez (0074)
+  const pendentes = doses.entregas.filter((e) => !e.recebido_em && !e.kit_id);
   const tourosPorId = new Map(touros.map((t) => [t.id, t]));
   const saldosVisiveis = doses.saldos.filter((s) => s.recebidas + s.a_receber + s.utilizadas + s.baixas + s.transferidas > 0);
   const comSaldo = saldosVisiveis.filter((s) => s.saldo > 0);

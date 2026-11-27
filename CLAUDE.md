@@ -317,6 +317,16 @@ do bot passam pelas funções do banco — ver seções "Bot: todas as escritas 
   touro de `kit_composicao` (doses por kit; CODEVASF = 220: Holandês 70, Holandês sexado 40, Girolando ¾
   35, Girolando 5/8 35, Girolando ¾ sexado 20, Girolando 5/8 sexado 20). A entrega guarda `kit_id`: as
   doses de um kit saem uma vez só (devolvido e cedido de novo, vai sem doses).
+- **Kit com quem recebe** (0074): a fazenda ou o técnico vê o kit em Reprodução (`kits_comigo`;
+  `kit-inseminacao.tsx`) com o aviso de que o kit e o botijão ficam sob a responsabilidade dele, e
+  confirma UMA vez (`confirmar_recebimento_kit`: grava `recebido_em/por` no kit e confirma as entregas com
+  esse `kit_id`; elas saem da lista de confirmação touro a touro). Cessão nova zera o recebimento
+  (trigger). Quem recebe registra o abastecimento do botijão DO KIT (`registrar_abastecimento_kit`, foto
+  em `kit/<kit_id>/`): com a fazenda vira despesa dela; com o técnico, `propriedade_id` nulo e sem
+  despesa. Abastecimento da fazenda que tem UM kit (site antigo/WhatsApp) vai pro kit por trigger.
+  Alerta (`alertas_kits()`, seção própria em Alertas do gestor, todas as fazendas): kit cedido com mais
+  de 60 dias desde o último abastecimento posterior à cessão — ou desde a cessão, se nunca abasteceu.
+  Fazenda com kit sai do `botijao_sem_abastecer` antigo (não alerta duas vezes).
 - Fazenda "participa" do programa = tem alguma linha em `entregas_doses`. Sem isso, o site do
   produtor/técnico não mostra nada do programa (catálogo de touros e dose na cobertura, Reprodução
   e Lançar no campo; bloco "Programa de sêmen" nos Índices). A comparação com a linha de base da

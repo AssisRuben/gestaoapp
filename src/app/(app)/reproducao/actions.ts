@@ -4,7 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPropriedadeAtual } from "@/lib/propriedade";
 import { createServiceClient } from "@/lib/supabase/service";
-import { BUCKET_BOTIJAO } from "@/lib/botijao";
+import { BUCKET_BOTIJAO, kitEstaComigo } from "@/lib/botijao";
 
 export type RegistrarCoberturaState = { error?: string; success?: boolean } | undefined;
 
@@ -343,6 +343,8 @@ export async function registrarAbastecimentoBotijao(
 ): Promise<BotijaoState> {
   const propriedadeAtual = await getPropriedadeAtual();
   if (!propriedadeAtual) return { error: "Nenhuma propriedade vinculada à sua conta." };
+  // abastecimento do kit de inseminação (0074); vazio = botijão da fazenda (0058)
+  const kitId = String(formData.get("kit_id") ?? "") || null;
 
   const nivel = lerNumero(formData.get("nivel_cm"));
   const valor = lerNumero(formData.get("valor"));
@@ -357,8 +359,12 @@ export async function registrarAbastecimentoBotijao(
   if (!extensao) return { error: "A foto precisa ser JPG, PNG ou WebP." };
   if (foto.size > LIMITE_FOTO) return { error: "A foto passa de 5 MB." };
 
-  // o RPC confere o vínculo com a fazenda; o upload só acontece depois de a sessão já ter fazenda
-  const caminho = `${propriedadeAtual.id}/${crypto.randomUUID()}.${extensao}`;
+  // o RPC confere o vínculo com a fazenda (ou o kit); o upload só acontece depois de a sessão já ter
+  // fazenda — e, no kit, depois de conferir que o kit está com ela
+  if (kitId && !(await kitEstaComigo(propriedadeAtual.id, kitId))) return { error: "Esse kit não está com você." };
+  const caminho = kitId
+    ? `kit/${kitId}/${crypto.randomUUID()}.${extensao}`
+    : `${propriedadeAtual.id}/${crypto.randomUUID()}.${extensao}`;
   const storage = createServiceClient().storage.from(BUCKET_BOTIJAO);
   const { error: erroUpload } = await storage.upload(caminho, await foto.arrayBuffer(), {
     contentType: foto.type,
@@ -366,13 +372,21 @@ export async function registrarAbastecimentoBotijao(
   if (erroUpload) return { error: `Não foi possível enviar a foto: ${erroUpload.message}` };
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("registrar_abastecimento_botijao", {
-    p_propriedade_id: propriedadeAtual.id,
-    p_data: data,
-    p_nivel_cm: nivel,
-    p_valor: valor,
-    p_foto_path: caminho,
-  });
+  const { error } = kitId
+    ? await supabase.rpc("registrar_abastecimento_kit", {
+        p_kit_id: kitId,
+        p_data: data,
+        p_nivel_cm: nivel,
+        p_valor: valor,
+        p_foto_path: caminho,
+      })
+    : await supabase.rpc("registrar_abastecimento_botijao", {
+        p_propriedade_id: propriedadeAtual.id,
+        p_data: data,
+        p_nivel_cm: nivel,
+        p_valor: valor,
+        p_foto_path: caminho,
+      });
 
   if (error) {
     // não deixa foto órfã quando o banco recusa
@@ -404,5 +418,18 @@ export async function excluirAbastecimentoBotijao(
   revalidatePath("/reproducao");
   revalidatePath("/financeiro");
   updateTag("financeiro");
+  return { success: true };
+}
+
+// Kit de inseminação (0074): confirma o kit e as doses que vieram com ele, de uma vez
+export async function confirmarRecebimentoKit(_state: BotijaoState, formData: FormData): Promise<BotijaoState> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("confirmar_recebimento_kit", { p_kit_id: formData.get("kit_id") as string });
+  if (error) return { error: error.message };
+  revalidatePath("/reproducao");
+  revalidatePath("/campo");
+  revalidatePath("/gestor/programa");
+  revalidatePath("/gestor/entidades");
+  updateTag("entregas_doses");
   return { success: true };
 }

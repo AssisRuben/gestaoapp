@@ -16,6 +16,7 @@ import { Autoria } from "../autoria";
 import { formatarDataBR } from "../format";
 import { DosesPrograma, CamposTouro } from "./doses-programa";
 import { BotijaoNitrogenio } from "./botijao-nitrogenio";
+import { KitInseminacao } from "./kit-inseminacao";
 import { DosesTecnicoBloco } from "./doses-tecnico";
 import { temDosesTecnico } from "@/lib/programa";
 import type {
@@ -28,6 +29,7 @@ import type {
   BaixaDoses,
   AbastecimentoBotijao,
   DosesTecnico,
+  KitComigo,
 } from "./types";
 import { hojeBrasil, somarDias } from "@/lib/datas";
 import { rotuloVaca } from "../vaca-opcao";
@@ -73,8 +75,10 @@ export function ReproducaoClient({
   nomes = {},
   dosesTecnico,
   abastecimentos = [],
+  kits = [],
   nomeFazenda = "",
 }: {
+  kits?: KitComigo[];
   dosesTecnico?: DosesTecnico;
   abastecimentos?: AbastecimentoBotijao[];
   nomeFazenda?: string;
@@ -89,6 +93,8 @@ export function ReproducaoClient({
 }) {
   // fazenda no programa de sêmen, ou técnico logado com doses dele (0055)
   const participa = entregas.length > 0 || (!!dosesTecnico && temDosesTecnico(dosesTecnico));
+  const temKitDaFazenda = kits.some((k) => !k.com_tecnico);
+  const abastecimentosSemKit = abastecimentos.filter((a) => !a.kit_id);
   const [busca, setBusca] = useState("");
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [coberturaEmEdicao, setCoberturaEmEdicao] = useState<Cobertura | null>(null);
@@ -202,7 +208,20 @@ export function ReproducaoClient({
         <DosesTecnicoBloco touros={touros} doses={dosesTecnico} nomeFazenda={nomeFazenda} onSucesso={mostrarToast} />
       )}
 
-      <BotijaoNitrogenio abastecimentos={abastecimentos} nomes={nomes} onSucesso={mostrarToast} />
+      {kits.map((k) => (
+        <KitInseminacao key={k.id} kit={k} nomeFazenda={nomeFazenda} nomes={nomes} onSucesso={mostrarToast} />
+      ))}
+
+      {/* botijão da fazenda (0058); com kit na fazenda, o abastecimento é no kit e aqui fica só o histórico */}
+      {(!temKitDaFazenda || abastecimentosSemKit.length > 0) && (
+        <BotijaoNitrogenio
+          abastecimentos={abastecimentosSemKit}
+          nomes={nomes}
+          onSucesso={mostrarToast}
+          podeRegistrar={!temKitDaFazenda}
+          titulo={temKitDaFazenda ? "Botijão da fazenda (antes do kit)" : undefined}
+        />
+      )}
 
       <Link
         href="/campo"
